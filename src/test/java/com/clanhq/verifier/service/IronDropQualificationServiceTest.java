@@ -117,6 +117,33 @@ public class IronDropQualificationServiceTest
             "Hill giant club");
     }
 
+    @Test
+    public void verifiesOwnedRaidUniquesAndGrandmasterReward()
+    {
+        List<ObservedItem> items = Arrays.asList(
+            bankItem(101, "Dexterous prayer scroll"),
+            bankItem(102, "Dragon hunter crossbow"),
+            bankItem(103, "Twisted buckler"),
+            bankItem(104, "Twisted bow"),
+            bankItem(105, "Osmumten's fang"),
+            bankItem(106, "Lightbearer"),
+            bankItem(107, "Masori body (f)"),
+            bankItem(108, "Avernic defender"),
+            bankItem(109, "Scythe of vitur"),
+            bankItem(110, "Ghommal's hilt 6"));
+        VerificationSnapshot snapshot = new VerificationSnapshot(
+            "Mr Dimples", 2350, 126, items, true,
+            false, false, false, false, 99, new DiaryProgress(12, 12, 12));
+
+        RankQualificationResult diamond = service.evaluateTarget(snapshot, "Diamond");
+        assertPassed(diamond, "4 Chambers of Xeric uniques");
+        assertPassed(diamond, "3 Tombs of Amascut uniques");
+        assertPassed(service.evaluateTarget(snapshot, "Onyx"),
+            "2 Theatre of Blood uniques (including Avernic)");
+        assertPassed(service.evaluateTarget(snapshot, "Zenyte"),
+            "Grandmaster Combat Achievements");
+    }
+
     private static ObservedItem bankItem(int id, String name)
     {
         return new ObservedItem(id, name, 1, EvidenceSource.BANK);

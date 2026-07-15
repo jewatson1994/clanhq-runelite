@@ -154,8 +154,8 @@ public final class IronDropQualificationService
 
     private List<RequirementResult> diamond(VerificationSnapshot s)
     {
-        return list(level(s, 2175), manual("4 Chambers of Xeric uniques", "Collection-log evidence required"),
-            manual("3 Tombs of Amascut uniques", "Collection-log evidence required"),
+        return list(level(s, 2175), raidUniques(s, "Chambers of Xeric", 4, coxUniques()),
+            raidUniques(s, "Tombs of Amascut", 3, toaUniques()),
             item(s, "Assembler kit", "masori assembler", "max cape"),
             item(s, "Voidwaker", "voidwaker"),
             manual("Rite of Vile Transference", "Prayer unlock detection pending"));
@@ -190,14 +190,17 @@ public final class IronDropQualificationService
     private List<RequirementResult> onyx(VerificationSnapshot s)
     {
         return list(level(s, 2325), item(s, "Blessed Dizana's quiver", "blessed dizana's quiver"),
-            manual("2 Theatre of Blood uniques (including Avernic)", "Collection-log evidence required"),
-            manual("1 Nex unique", "Collection-log evidence required"),
+            tobUniquesIncludingAvernic(s, 2),
+            item(s, "1 Nex unique", "zaryte vambraces", "nihil horn", "zaryte crossbow",
+                "torva full helm", "torva platebody", "torva platelegs"),
             manual("All Doom uniques", "Collection-log evidence required"));
     }
 
     private List<RequirementResult> kitten(VerificationSnapshot s)
     {
-        return list(level(s, 2350), manual("7 COX / 5 TOA / 3 TOB uniques", "Collection-log evidence required"),
+        return list(level(s, 2350), raidUniques(s, "Chambers of Xeric", 7, coxUniques()),
+            raidUniques(s, "Tombs of Amascut", 5, toaUniques()),
+            raidUniques(s, "Theatre of Blood", 3, tobUniques()),
             count(s, "3 Ancient rings", 3, "ultor ring", "bellator ring", "magus ring", "venator ring"),
             state("750 collection-log slots", s.getCollectionLogSlots() >= 750,
                 s.getCollectionLogSlots() + " / 750"),
@@ -229,7 +232,7 @@ public final class IronDropQualificationService
 
     private List<RequirementResult> zenyte(VerificationSnapshot s)
     {
-        return list(manual("Grandmaster Combat Achievements", "Combat-achievement evidence required"),
+        return list(manualPassItem(s, "Grandmaster Combat Achievements", "ghommal's hilt 6"),
             manual("All raids green logged", "Collection-log evidence required"),
             item(s, "Hill giant club", "hill giant club"));
     }
@@ -271,6 +274,59 @@ public final class IronDropQualificationService
         int combined = snapshot.getRaidKillCounts().getCombined();
         return state(required + " combined raids KC", combined >= required,
             snapshot.getRaidKillCounts().toSummary());
+    }
+    private RequirementResult raidUniques(VerificationSnapshot snapshot,
+        String raid, int required, String[] uniqueGroups)
+    {
+        long found = Arrays.stream(uniqueGroups).filter(fragment ->
+            snapshot.getItems().stream().anyMatch(item -> matches(item, fragment))).count();
+        if (found >= required)
+        {
+            return state(required + " " + raid + " uniques", true,
+                found + " / " + required + " currently owned");
+        }
+        return manual(required + " " + raid + " uniques",
+            found + " / " + required + " currently owned; collection log can confirm consumed items");
+    }
+    private RequirementResult tobUniquesIncludingAvernic(
+        VerificationSnapshot snapshot, int required)
+    {
+        boolean avernic = snapshot.getItems().stream()
+            .anyMatch(item -> matches(item, "avernic defender"));
+        long found = Arrays.stream(tobUniques()).filter(fragment ->
+            snapshot.getItems().stream().anyMatch(item -> matches(item, fragment))).count();
+        if (avernic && found >= required)
+        {
+            return state(required + " Theatre of Blood uniques (including Avernic)",
+                true, found + " / " + required + " currently owned");
+        }
+        return manual(required + " Theatre of Blood uniques (including Avernic)",
+            found + " / " + required + "; Avernic " + (avernic ? "found" : "not found"));
+    }
+    private RequirementResult manualPassItem(VerificationSnapshot snapshot,
+        String name, String... fragments)
+    {
+        return snapshot.getItems().stream().anyMatch(item -> matches(item, fragments))
+            ? state(name, true, "Definitive reward item found")
+            : manual(name, "Reward item not found; staff can verify the account state");
+    }
+    private static String[] coxUniques()
+    {
+        return new String[] {"dexterous prayer scroll", "arcane prayer scroll",
+            "dragon hunter crossbow", "twisted buckler", "dinh's bulwark",
+            "ancestral hat", "ancestral robe top", "ancestral robe bottom",
+            "dragon claws", "elder maul", "kodai", "twisted bow"};
+    }
+    private static String[] toaUniques()
+    {
+        return new String[] {"osmumten's fang", "lightbearer", "elidinis' ward",
+            "masori mask", "masori body", "masori chaps", "tumeken's shadow"};
+    }
+    private static String[] tobUniques()
+    {
+        return new String[] {"avernic defender", "ghrazi rapier", "sanguinesti staff",
+            "scythe of vitur", "justiciar faceguard", "justiciar chestguard",
+            "justiciar legguards"};
     }
     private RequirementResult oathplateOrTorva(VerificationSnapshot snapshot)
     {

@@ -29,7 +29,8 @@ public final class RankItemCatalog
         "venator ring", "godsword", "max cape", "ancestral", "masori", "torva",
         "oathplate", "twisted bow", "zaryte crossbow", "kodai", "nightmare staff",
         "inquisitor", "justiciar", "dinh's bulwark", "dragon hunter crossbow",
-        "hill giant club");
+        "hill giant club", "prayer scroll", "twisted buckler", "lightbearer",
+        "elidinis' ward", "zaryte vambraces", "nihil horn");
 
     @Inject
     public RankItemCatalog()
