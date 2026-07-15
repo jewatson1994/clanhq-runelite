@@ -3,6 +3,7 @@ package com.clanhq.verifier;
 import net.runelite.client.RuneLite;
 import net.runelite.client.externalplugins.ExternalPluginManager;
 
+@SuppressWarnings("unchecked")
 public final class ClanHQVerifierPluginTest
 {
     private ClanHQVerifierPluginTest()

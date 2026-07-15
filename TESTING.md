@@ -62,8 +62,9 @@ the current build never submits evidence.
 - Confirm raid unique counts combine bank ownership and matching log entries
   without counting the same unique twice.
 - Verify Doom only passes after cloth, boots, and eye are all present.
-- This collector needs special attention: confirm unacquired slots are not
-  mistaken for acquired items and the selected page title is detected correctly.
+- This collector uses RuneLite's active Collection Log header and item
+  container directly. Confirm unacquired slots are not mistaken for acquired
+  items and the selected page title is detected correctly.
 
 ### Boat
 

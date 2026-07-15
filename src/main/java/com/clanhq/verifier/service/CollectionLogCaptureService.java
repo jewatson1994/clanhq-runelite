@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import javax.inject.Inject;
 import net.runelite.api.Client;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.widgets.Widget;
 
 public final class CollectionLogCaptureService
@@ -22,24 +23,31 @@ public final class CollectionLogCaptureService
 
     public CollectionLogEvidence captureVisiblePage()
     {
-        PageScan scan = new PageScan();
-        Set<Widget> visited = Collections.newSetFromMap(new IdentityHashMap<>());
-        for (Widget root : client.getWidgetRoots())
-        {
-            scan(root, visited, scan);
-        }
-        if (!scan.collectionLogVisible)
+        Widget frame = client.getWidget(InterfaceID.Collection.FRAME);
+        Widget header = client.getWidget(InterfaceID.Collection.HEADER_TEXT);
+        Widget items = client.getWidget(InterfaceID.Collection.ITEMS);
+        if (frame == null || frame.isHidden() || header == null || items == null)
         {
             throw new IllegalStateException(
                 "Open the Collection Log to the required page before capturing.");
         }
-        if (scan.pageTitle == null || scan.visibleItemCount == 0)
+        String pageTitle = clean(header.getText());
+        if (!isKnownPageTitle(pageTitle))
+        {
+            throw new IllegalStateException(
+                "Open a supported Doom or raid Collection Log page.");
+        }
+
+        PageScan scan = new PageScan();
+        Set<Widget> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+        scan(items, visited, scan);
+        if (scan.visibleItemCount == 0)
         {
             throw new IllegalStateException(
                 "The Collection Log page has not finished loading.");
         }
         return new CollectionLogEvidence(Collections.singletonMap(
-            scan.pageTitle, scan.items));
+            pageTitle, scan.items));
     }
 
     private void scan(Widget widget, Set<Widget> visited, PageScan scan)
@@ -47,15 +55,6 @@ public final class CollectionLogCaptureService
         if (widget == null || widget.isHidden() || !visited.add(widget))
         {
             return;
-        }
-        String text = clean(widget.getText());
-        if (text.equalsIgnoreCase("Collection Log"))
-        {
-            scan.collectionLogVisible = true;
-        }
-        if (isKnownPageTitle(text))
-        {
-            scan.pageTitle = text;
         }
         if (widget.getItemId() > 0)
         {
@@ -95,8 +94,6 @@ public final class CollectionLogCaptureService
 
     private static final class PageScan
     {
-        private boolean collectionLogVisible;
-        private String pageTitle;
         private int visibleItemCount;
         private final Map<String, Integer> items = new LinkedHashMap<>();
     }
