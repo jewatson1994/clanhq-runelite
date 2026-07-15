@@ -207,8 +207,16 @@ public final class IronDropQualificationService
         return list(item(s, "Max cape", "max cape"), raidKillCount(s, 1000),
             count(s, "2 mega weapons", 2, "twisted bow", "scythe of vitur", "tumeken's shadow"),
             item(s, "Soulreaper axe", "soulreaper axe"),
-            manual("Full Ancestral, fortified Masori, and Oathplate/Torva", "Exact set verification pending"),
-            manual("Maxed Avernic treads", "Upgrade-state verification pending"));
+            armourSet(s, "Full Ancestral", "ancestral robes set",
+                new String[] {"ancestral hat"},
+                new String[] {"ancestral robe top"},
+                new String[] {"ancestral robe bottom"}),
+            armourSet(s, "Full fortified Masori", "masori armour set (f)",
+                new String[] {"masori mask (f)"},
+                new String[] {"masori body (f)"},
+                new String[] {"masori chaps (f)"}),
+            oathplateOrTorva(s),
+            item(s, "Maxed Avernic treads", "avernic treads (max)"));
     }
 
     private List<RequirementResult> completionism()
@@ -261,6 +269,57 @@ public final class IronDropQualificationService
         int combined = snapshot.getRaidKillCounts().getCombined();
         return state(required + " combined raids KC", combined >= required,
             snapshot.getRaidKillCounts().toSummary());
+    }
+    private RequirementResult oathplateOrTorva(VerificationSnapshot snapshot)
+    {
+        boolean oathplate = hasCompleteSet(snapshot, "oathplate armour set",
+            new String[] {"oathplate helm"},
+            new String[] {"oathplate chest"},
+            new String[] {"oathplate legs"});
+        boolean torva = hasCompleteSet(snapshot, "torva armour set",
+            new String[] {"torva full helm"},
+            new String[] {"torva platebody"},
+            new String[] {"torva platelegs"});
+        return setEvidenceResult(snapshot, "Full Oathplate or Torva",
+            oathplate || torva,
+            oathplate ? "Complete Oathplate set found"
+                : torva ? "Complete Torva set found" : "No complete set");
+    }
+    private RequirementResult armourSet(VerificationSnapshot snapshot,
+        String name, String boxedSet, String[]... slots)
+    {
+        return setEvidenceResult(snapshot, name,
+            hasCompleteSet(snapshot, boxedSet, slots), "Complete set");
+    }
+    private RequirementResult setEvidenceResult(VerificationSnapshot snapshot,
+        String name, boolean passed, String detail)
+    {
+        if (passed)
+        {
+            return state(name, true, detail);
+        }
+        if (!snapshot.isBankEvidenceCaptured())
+        {
+            return manual(name, "Open the bank during capture");
+        }
+        return new RequirementResult(name, RequirementStatus.MISSING,
+            detail.equals("Complete set") ? "Complete set not found" : detail);
+    }
+    private boolean hasCompleteSet(VerificationSnapshot snapshot,
+        String boxedSet, String[]... slots)
+    {
+        if (snapshot.getItems().stream().anyMatch(item ->
+            matchesUsable(item, boxedSet)))
+        {
+            return true;
+        }
+        return Arrays.stream(slots).allMatch(slot -> snapshot.getItems().stream()
+            .anyMatch(item -> matchesUsable(item, slot)));
+    }
+    private static boolean matchesUsable(ObservedItem item, String... fragments)
+    {
+        return !item.getName().toLowerCase(Locale.ENGLISH).contains("damaged")
+            && matches(item, fragments);
     }
     private RequirementResult item(VerificationSnapshot s, String name, String... fragments) { return matched(s, name, 1, false, fragments); }
     private RequirementResult count(VerificationSnapshot s, String name, int required, String... fragments) { return matched(s, name, required, true, fragments); }
