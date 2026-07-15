@@ -35,6 +35,24 @@ From this directory:
 RuneLite starts in developer mode with `ClanHQ Verifier` loaded. Log into a
 test account, open the ClanHQ sidebar panel, and capture the current character.
 
+### Jagex Account login
+
+Jagex Accounts cannot sign directly into the standalone development client.
+RuneLite provides a development-only credential handoff:
+
+1. Close the development client.
+2. Open **RuneLite (configure)** from the Windows Start menu.
+3. Add `--insecure-write-credentials` to **Client arguments** and save.
+4. Launch RuneLite once through the official Jagex Launcher and select the
+   test character.
+5. Close that RuneLite window, then run `.\gradlew.bat run` again.
+
+The launcher writes `%USERPROFILE%\.runelite\credentials.properties`, which
+the development client uses for login. Treat that file like a password. Never
+share it or commit it. When development is finished, remove the client
+argument and delete `credentials.properties`. If it may have been exposed,
+use **End sessions** in the RuneScape account settings.
+
 ## Privacy boundary
 
 - Only the local logged-in player is inspected.
