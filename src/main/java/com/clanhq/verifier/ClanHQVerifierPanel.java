@@ -151,6 +151,13 @@ final class ClanHQVerifierPanel extends PluginPanel
         previewArea.setText("Open your bank during the capture window.");
     }
 
+    void setStageBusy(EvidenceStage stage)
+    {
+        setControlsEnabled(false);
+        showStageStatus(stage, EvidenceStageStatus.CAPTURING);
+        statusLabel.setText("Capturing " + stage.getDisplayName() + "...");
+    }
+
     void showCaptureProgress(int secondsRemaining)
     {
         statusLabel.setText("Capturing gear... " + secondsRemaining

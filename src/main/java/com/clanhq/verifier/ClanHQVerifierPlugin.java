@@ -194,27 +194,37 @@ public final class ClanHQVerifierPlugin extends Plugin
 
     private void captureAccount()
     {
-        verificationSession.setStatus(EvidenceStage.CHARACTER,
-            EvidenceStageStatus.CAPTURING);
-        panel.showStageStatus(EvidenceStage.CHARACTER,
-            EvidenceStageStatus.CAPTURING);
+        VerificationSession session = verificationSession;
+        beginStage(EvidenceStage.CHARACTER);
         clientThread.invokeLater(() ->
         {
             try
             {
                 VerificationSnapshot snapshot = snapshotService.captureAccountEvidence();
-                SwingUtilities.invokeLater(() -> acceptAccountSnapshot(snapshot));
+                SwingUtilities.invokeLater(() ->
+                {
+                    if (isCurrentSession(session))
+                    {
+                        acceptAccountSnapshot(snapshot);
+                    }
+                });
             }
             catch (RuntimeException exception)
             {
-                SwingUtilities.invokeLater(() -> failStage(
-                    EvidenceStage.CHARACTER, exception));
+                SwingUtilities.invokeLater(() ->
+                {
+                    if (isCurrentSession(session))
+                    {
+                        failStage(EvidenceStage.CHARACTER, exception);
+                    }
+                });
             }
         });
     }
 
     private void capturePrayers()
     {
+        VerificationSession session = verificationSession;
         beginStage(EvidenceStage.PRAYERS);
         clientThread.invokeLater(() ->
         {
@@ -224,6 +234,10 @@ public final class ClanHQVerifierPlugin extends Plugin
                     snapshotService.captureAccountEvidence();
                 SwingUtilities.invokeLater(() ->
                 {
+                    if (!isCurrentSession(session))
+                    {
+                        return;
+                    }
                     if (capturedSnapshot == null)
                     {
                         acceptAccountSnapshot(evidence);
@@ -239,8 +253,13 @@ public final class ClanHQVerifierPlugin extends Plugin
             }
             catch (RuntimeException exception)
             {
-                SwingUtilities.invokeLater(() -> failStage(
-                    EvidenceStage.PRAYERS, exception));
+                SwingUtilities.invokeLater(() ->
+                {
+                    if (isCurrentSession(session))
+                    {
+                        failStage(EvidenceStage.PRAYERS, exception);
+                    }
+                });
             }
         });
     }
@@ -268,10 +287,8 @@ public final class ClanHQVerifierPlugin extends Plugin
 
     private void fetchRaidKillCounts()
     {
-        verificationSession.setStatus(EvidenceStage.RAID_KC,
-            EvidenceStageStatus.CAPTURING);
-        panel.showStageStatus(EvidenceStage.RAID_KC,
-            EvidenceStageStatus.CAPTURING);
+        VerificationSession session = verificationSession;
+        beginStage(EvidenceStage.RAID_KC);
         clientThread.invokeLater(() ->
         {
             try
@@ -279,20 +296,32 @@ public final class ClanHQVerifierPlugin extends Plugin
                 VerificationSnapshot account = capturedSnapshot == null
                     ? snapshotService.captureAccountEvidence() : capturedSnapshot;
                 String rsn = account.getRsn();
-                SwingUtilities.invokeLater(() -> acceptAccountSnapshot(account));
                 raidKillCountService.lookupAsync(rsn).thenAccept(counts ->
-                    SwingUtilities.invokeLater(() -> acceptRaidKillCounts(counts)));
+                    SwingUtilities.invokeLater(() ->
+                    {
+                        if (isCurrentSession(session))
+                        {
+                            acceptAccountSnapshot(account);
+                            acceptRaidKillCounts(counts);
+                        }
+                    }));
             }
             catch (RuntimeException exception)
             {
-                SwingUtilities.invokeLater(() -> failStage(
-                    EvidenceStage.RAID_KC, exception));
+                SwingUtilities.invokeLater(() ->
+                {
+                    if (isCurrentSession(session))
+                    {
+                        failStage(EvidenceStage.RAID_KC, exception);
+                    }
+                });
             }
         });
     }
 
     private void captureCollectionLog()
     {
+        VerificationSession session = verificationSession;
         beginStage(EvidenceStage.COLLECTION_LOG);
         clientThread.invokeLater(() ->
         {
@@ -304,6 +333,10 @@ public final class ClanHQVerifierPlugin extends Plugin
                     collectionLogCaptureService.captureVisiblePage();
                 SwingUtilities.invokeLater(() ->
                 {
+                    if (!isCurrentSession(session))
+                    {
+                        return;
+                    }
                     acceptAccountSnapshot(account);
                     capturedSnapshot = capturedSnapshot.withCollectionLogEvidence(evidence);
                     completeStage(EvidenceStage.COLLECTION_LOG,
@@ -312,14 +345,20 @@ public final class ClanHQVerifierPlugin extends Plugin
             }
             catch (RuntimeException exception)
             {
-                SwingUtilities.invokeLater(() -> failStage(
-                    EvidenceStage.COLLECTION_LOG, exception));
+                SwingUtilities.invokeLater(() ->
+                {
+                    if (isCurrentSession(session))
+                    {
+                        failStage(EvidenceStage.COLLECTION_LOG, exception);
+                    }
+                });
             }
         });
     }
 
     private void capturePoh()
     {
+        VerificationSession session = verificationSession;
         beginStage(EvidenceStage.POH);
         clientThread.invokeLater(() ->
         {
@@ -330,6 +369,10 @@ public final class ClanHQVerifierPlugin extends Plugin
                 PohEvidence evidence = pohCaptureService.capture();
                 SwingUtilities.invokeLater(() ->
                 {
+                    if (!isCurrentSession(session))
+                    {
+                        return;
+                    }
                     acceptAccountSnapshot(account);
                     capturedSnapshot = capturedSnapshot.withPohEvidence(evidence);
                     completeStage(EvidenceStage.POH, "Owner POH captured.");
@@ -337,14 +380,20 @@ public final class ClanHQVerifierPlugin extends Plugin
             }
             catch (RuntimeException exception)
             {
-                SwingUtilities.invokeLater(() -> failStage(
-                    EvidenceStage.POH, exception));
+                SwingUtilities.invokeLater(() ->
+                {
+                    if (isCurrentSession(session))
+                    {
+                        failStage(EvidenceStage.POH, exception);
+                    }
+                });
             }
         });
     }
 
     private void captureBoat()
     {
+        VerificationSession session = verificationSession;
         beginStage(EvidenceStage.BOAT);
         clientThread.invokeLater(() ->
         {
@@ -356,6 +405,10 @@ public final class ClanHQVerifierPlugin extends Plugin
                     boatCaptureService.captureVisiblePanel();
                 SwingUtilities.invokeLater(() ->
                 {
+                    if (!isCurrentSession(session))
+                    {
+                        return;
+                    }
                     acceptAccountSnapshot(account);
                     capturedSnapshot = capturedSnapshot.withBoatEvidence(evidence);
                     completeStage(EvidenceStage.BOAT,
@@ -364,8 +417,13 @@ public final class ClanHQVerifierPlugin extends Plugin
             }
             catch (RuntimeException exception)
             {
-                SwingUtilities.invokeLater(() -> failStage(
-                    EvidenceStage.BOAT, exception));
+                SwingUtilities.invokeLater(() ->
+                {
+                    if (isCurrentSession(session))
+                    {
+                        failStage(EvidenceStage.BOAT, exception);
+                    }
+                });
             }
         });
     }
@@ -373,7 +431,7 @@ public final class ClanHQVerifierPlugin extends Plugin
     private void beginStage(EvidenceStage stage)
     {
         verificationSession.setStatus(stage, EvidenceStageStatus.CAPTURING);
-        panel.showStageStatus(stage, EvidenceStageStatus.CAPTURING);
+        panel.setStageBusy(stage);
     }
 
     private void completeStage(EvidenceStage stage, String message)
@@ -513,6 +571,11 @@ public final class ClanHQVerifierPlugin extends Plugin
         {
             startSession(rankName);
         }
+    }
+
+    private boolean isCurrentSession(VerificationSession session)
+    {
+        return verificationSession == session;
     }
 
     private void refreshApiDestination()
