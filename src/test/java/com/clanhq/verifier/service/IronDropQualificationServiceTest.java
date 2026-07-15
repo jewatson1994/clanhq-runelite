@@ -12,6 +12,7 @@ import com.clanhq.verifier.model.PohEvidence;
 import com.clanhq.verifier.model.CollectionLogEvidence;
 import com.clanhq.verifier.model.BoatEvidence;
 import com.clanhq.verifier.model.BoatConfiguration;
+import com.clanhq.verifier.model.ProgressionEvaluation;
 import java.util.Collections;
 import java.util.Arrays;
 import java.util.List;
@@ -30,7 +31,7 @@ public class IronDropQualificationServiceTest
         new IronDropQualificationService(new OpalQualificationService());
 
     @Test
-    public void evaluatesEveryProgressionRankAndBlocksCumulativeSkipping()
+    public void evaluatesEveryProgressionRankFromTheSameSnapshot()
     {
         VerificationSnapshot snapshot = new VerificationSnapshot(
             "Mr Dimples", 2350, 126, Collections.emptyList(), true,
@@ -42,12 +43,12 @@ public class IronDropQualificationServiceTest
         assertEquals("Opal", results.get(0).getRankName());
         assertEquals("Zenyte", results.get(14).getRankName());
         assertFalse(results.get(1).isQualified());
-        assertEquals(RequirementStatus.MISSING,
+        assertEquals(RequirementStatus.PASSED,
             results.get(1).getRequirements().get(0).getStatus());
     }
 
     @Test
-    public void evaluatesOnlyTheSelectedTargetAndDefersPriorRankToClanHQ()
+    public void evaluatesAnIndividualRankWithoutAClanHqPlaceholder()
     {
         VerificationSnapshot snapshot = new VerificationSnapshot(
             "Mr Dimples", 2000, 126, Collections.emptyList(), false,
@@ -56,9 +57,9 @@ public class IronDropQualificationServiceTest
         RankQualificationResult result = service.evaluateTarget(snapshot, "Jade");
 
         assertEquals("Jade", result.getRankName());
-        assertEquals("Previous rank verified in ClanHQ",
+        assertEquals("1950 total level",
             result.getRequirements().get(0).getName());
-        assertEquals(RequirementStatus.UNVERIFIED,
+        assertEquals(RequirementStatus.PASSED,
             result.getRequirements().get(0).getStatus());
         assertTrue(service.getRankNames().contains("Zenyte"));
         assertTrue(service.getRequiredStages("Dragon").contains(EvidenceStage.POH));
@@ -72,6 +73,27 @@ public class IronDropQualificationServiceTest
         assertTrue(service.getRequiredStages("Zenyte")
             .containsAll(Arrays.asList(EvidenceStage.COX_LOG,
                 EvidenceStage.TOB_LOG, EvidenceStage.TOA_LOG)));
+        assertEquals(EvidenceStage.values().length,
+            service.getAllEvidenceStages().size());
+    }
+
+    @Test
+    public void calculatesTheHighestContiguousVerifiedRank()
+    {
+        VerificationSnapshot snapshot = new VerificationSnapshot(
+            "Mr Dimples", 2094, 122, Arrays.asList(
+                bankItem(ItemID.GHOMMALS_HILT_3, "Ghommal's hilt 3"),
+                bankItem(ItemID.BARROWS_GLOVES, "Barrows gloves"),
+                bankItem(ItemID.TRIDENT_OF_THE_SEAS, "Trident of the seas"),
+                bankItem(ItemID.ABYSSAL_WHIP, "Abyssal whip"),
+                bankItem(ItemID.AVERNIC_DEFENDER, "Avernic defender")),
+            true, true);
+
+        ProgressionEvaluation progression =
+            service.evaluateProgression(snapshot);
+
+        assertEquals("Opal", progression.getHighestVerifiedRankName());
+        assertEquals("Jade", progression.getNextRank().get().getRankName());
     }
 
     @Test

@@ -91,7 +91,7 @@ public final class OpalQualificationService
         {
             return new RequirementResult(
                 name,
-                RequirementStatus.UNVERIFIED,
+                RequirementStatus.NOT_CAPTURED,
                 "Open the bank once, then capture again");
         }
 

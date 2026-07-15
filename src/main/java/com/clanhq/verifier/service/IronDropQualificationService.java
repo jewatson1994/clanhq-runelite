@@ -2,6 +2,7 @@ package com.clanhq.verifier.service;
 
 import com.clanhq.verifier.model.ObservedItem;
 import com.clanhq.verifier.model.EvidenceStage;
+import com.clanhq.verifier.model.ProgressionEvaluation;
 import com.clanhq.verifier.model.RankQualificationResult;
 import com.clanhq.verifier.model.RequirementResult;
 import com.clanhq.verifier.model.RequirementStatus;
@@ -35,26 +36,38 @@ public final class IronDropQualificationService
     {
         List<RankQualificationResult> ranks = new ArrayList<>();
         ranks.add(opalService.evaluate(snapshot));
-        ranks.add(rank("Jade", ranks, jade(snapshot)));
-        ranks.add(rank("Topaz", ranks, topaz(snapshot)));
-        ranks.add(rank("Sapphire", ranks, sapphire(snapshot)));
-        ranks.add(rank("Emerald", ranks, emerald(snapshot)));
-        ranks.add(rank("Ruby", ranks, ruby(snapshot)));
-        ranks.add(rank("Diamond", ranks, diamond(snapshot)));
-        ranks.add(rank("Dragon", ranks, dragon(snapshot)));
-        ranks.add(rank("Dragonstone", ranks, dragonstone(snapshot)));
-        ranks.add(rank("TzKal", ranks, tzkal(snapshot)));
-        ranks.add(rank("Onyx", ranks, onyx(snapshot)));
-        ranks.add(rank("Kitten", ranks, kitten(snapshot)));
-        ranks.add(rank("Maxed", ranks, maxed(snapshot)));
-        ranks.add(rank("Completionism", ranks, completionism(snapshot)));
-        ranks.add(rank("Zenyte", ranks, zenyte(snapshot)));
+        ranks.add(new RankQualificationResult("Jade", jade(snapshot)));
+        ranks.add(new RankQualificationResult("Topaz", topaz(snapshot)));
+        ranks.add(new RankQualificationResult("Sapphire", sapphire(snapshot)));
+        ranks.add(new RankQualificationResult("Emerald", emerald(snapshot)));
+        ranks.add(new RankQualificationResult("Ruby", ruby(snapshot)));
+        ranks.add(new RankQualificationResult("Diamond", diamond(snapshot)));
+        ranks.add(new RankQualificationResult("Dragon", dragon(snapshot)));
+        ranks.add(new RankQualificationResult("Dragonstone", dragonstone(snapshot)));
+        ranks.add(new RankQualificationResult("TzKal", tzkal(snapshot)));
+        ranks.add(new RankQualificationResult("Onyx", onyx(snapshot)));
+        ranks.add(new RankQualificationResult("Kitten", kitten(snapshot)));
+        ranks.add(new RankQualificationResult("Maxed", maxed(snapshot)));
+        ranks.add(new RankQualificationResult("Completionism", completionism(snapshot)));
+        ranks.add(new RankQualificationResult("Zenyte", zenyte(snapshot)));
         return ranks;
+    }
+
+    public ProgressionEvaluation evaluateProgression(
+        VerificationSnapshot snapshot)
+    {
+        return new ProgressionEvaluation(evaluate(snapshot));
     }
 
     public List<String> getRankNames()
     {
         return RANK_NAMES;
+    }
+
+    public Set<EvidenceStage> getAllEvidenceStages()
+    {
+        return Collections.unmodifiableSet(
+            EnumSet.allOf(EvidenceStage.class));
     }
 
     public Set<EvidenceStage> getRequiredStages(String rankName)
@@ -112,11 +125,8 @@ public final class IronDropQualificationService
             return opalService.evaluate(snapshot);
         }
 
-        List<RequirementResult> requirements = requirementsFor(snapshot, rankName);
-        requirements.add(0, manual(
-            "Previous rank verified in ClanHQ",
-            "ClanHQ will validate this when the review ticket is created"));
-        return new RankQualificationResult(rankName, requirements);
+        return new RankQualificationResult(rankName,
+            requirementsFor(snapshot, rankName));
     }
 
     private List<RequirementResult> requirementsFor(
@@ -305,30 +315,6 @@ public final class IronDropQualificationService
             item(s, "Hill giant club", "hill giant club"));
     }
 
-    private RankQualificationResult rank(String name, List<RankQualificationResult> prior, List<RequirementResult> own)
-    {
-        boolean missing = prior.stream().anyMatch(RankQualificationResult::hasMissingEvidence);
-        boolean manualReview = prior.stream().anyMatch(RankQualificationResult::requiresManualReview);
-        RequirementResult previousRanks;
-        if (missing)
-        {
-            previousRanks = new RequirementResult("Previous-rank evidence",
-                RequirementStatus.MISSING, "A preceding rank has missing automated evidence");
-        }
-        else if (manualReview)
-        {
-            previousRanks = manual("Previous-rank evidence",
-                "A preceding rank includes staff-review requirements");
-        }
-        else
-        {
-            previousRanks = state("Previous-rank evidence", true,
-                "Automated evidence is complete");
-        }
-        own.add(0, previousRanks);
-        return new RankQualificationResult(name, own);
-    }
-
     private RequirementResult level(VerificationSnapshot s, int required) { return skill(required + " total level", s.getTotalLevel(), required); }
     private RequirementResult skill(String name, int actual, int required) { return state(name, actual >= required, actual + " / " + required); }
     private RequirementResult prayer(String name, boolean unlocked) { return unlocked ? state(name, true, "Unlock detected") : new RequirementResult(name, RequirementStatus.MISSING, "Not unlocked"); }
@@ -347,7 +333,8 @@ public final class IronDropQualificationService
     {
         if (!snapshot.getPohEvidence().isOwnerBuildMode())
         {
-            return manual("Maxed POH", "Capture your own POH in build mode");
+            return captureRequired("Maxed POH",
+                "Capture your own POH in build mode");
         }
         return state("Maxed POH", snapshot.getPohEvidence().isMaxed(),
             snapshot.getPohEvidence().toSummary());
@@ -356,12 +343,12 @@ public final class IronDropQualificationService
     {
         if (!snapshot.getBoatEvidence().isCaptured())
         {
-            return manual("Maxed skiff and sloop",
-                "Capture each vessel's Sailing panel for staff review");
+            return captureRequired("Maxed skiff and sloop",
+                "Verify Character or Capture Boat to read saved vessels");
         }
         if (!snapshot.getBoatEvidence().hasStructuredConfigurations())
         {
-            return manual("Maxed skiff and sloop",
+            return captureRequired("Maxed skiff and sloop",
                 snapshot.getBoatEvidence().toSummary()
                     + "; recapture to read authoritative boat components");
         }
@@ -376,7 +363,7 @@ public final class IronDropQualificationService
             .getObtainedSlotCount();
         if (obtained == null)
         {
-            return manual("Dragon Collection Log rank",
+            return captureRequired("Dragon Collection Log rank",
                 "Capture any required Collection Log page");
         }
         return state("Dragon Collection Log rank", obtained >= 1200,
@@ -389,7 +376,7 @@ public final class IronDropQualificationService
             .getObtainedSlotCount();
         if (obtained == null)
         {
-            return manual(required + " collection-log slots",
+            return captureRequired(required + " collection-log slots",
                 "Capture any required Collection Log page");
         }
         return state(required + " collection-log slots", obtained >= required,
@@ -404,7 +391,7 @@ public final class IronDropQualificationService
             .collect(java.util.stream.Collectors.toList());
         if (!missingPages.isEmpty())
         {
-            return manual("All raids green logged",
+            return captureRequired("All raids green logged",
                 "Capture COX, TOB, and TOA Collection Log pages");
         }
         boolean green = Arrays.stream(raids).allMatch(raid ->
@@ -422,7 +409,7 @@ public final class IronDropQualificationService
             "masori crafting kit"};
         if (!snapshot.getCollectionLogEvidence().hasPage("tombs of amascut"))
         {
-            return manual("All TOA cosmetics and transmogs",
+            return captureRequired("All TOA cosmetics and transmogs",
                 "Capture the TOA Collection Log page");
         }
         List<String> missing = Arrays.stream(required)
@@ -456,7 +443,7 @@ public final class IronDropQualificationService
             return new RequirementResult(requirementName,
                 RequirementStatus.MISSING, "Not owned or logged");
         }
-        return manual(requirementName,
+        return captureRequired(requirementName,
             "Capture bank and the matching raid Collection Log page");
     }
     private RequirementResult collectionLogItem(VerificationSnapshot snapshot,
@@ -464,7 +451,7 @@ public final class IronDropQualificationService
     {
         if (!snapshot.getCollectionLogEvidence().hasPage(page))
         {
-            return manual(requirementName,
+            return captureRequired(requirementName,
                 "Capture the " + page + " Collection Log page");
         }
         return state(requirementName,
@@ -477,7 +464,7 @@ public final class IronDropQualificationService
     {
         if (!snapshot.getCollectionLogEvidence().hasPage("doom"))
         {
-            return manual("All Doom uniques",
+            return captureRequired("All Doom uniques",
                 "Capture the Doom collection-log page");
         }
         return state("All Doom uniques",
@@ -507,7 +494,7 @@ public final class IronDropQualificationService
                 RequirementStatus.MISSING,
                 found + " / " + required + " owned or logged");
         }
-        return manual(required + " " + raid + " uniques",
+        return captureRequired(required + " " + raid + " uniques",
             found + " / " + required + " owned or logged; capture bank and "
                 + raid + " Collection Log page");
     }
@@ -547,15 +534,9 @@ public final class IronDropQualificationService
                 found + " / " + required + "; Avernic "
                     + (avernic ? "found" : "not found"));
         }
-        return manual(required + " Theatre of Blood uniques (including Avernic)",
+        return captureRequired(
+            required + " Theatre of Blood uniques (including Avernic)",
             found + " / " + required + "; capture bank and TOB Collection Log");
-    }
-    private RequirementResult manualPassItem(VerificationSnapshot snapshot,
-        String name, String... fragments)
-    {
-        return snapshot.getItems().stream().anyMatch(item -> matches(item, fragments))
-            ? state(name, true, "Definitive reward item found")
-            : manual(name, "Reward item not found; staff can verify the account state");
     }
     private static String[] coxUniques()
     {
@@ -623,7 +604,7 @@ public final class IronDropQualificationService
         }
         if (!snapshot.isBankEvidenceCaptured())
         {
-            return manual(name, "Open the bank during capture");
+            return captureRequired(name, "Open the bank during capture");
         }
         return new RequirementResult(name, RequirementStatus.MISSING,
             detail.equals("Complete set") ? "Complete set not found" : detail);
@@ -668,7 +649,8 @@ public final class IronDropQualificationService
     {
         if (passed) return state(name, true, detail);
         return s.isBankEvidenceCaptured() ? new RequirementResult(name, RequirementStatus.MISSING, detail + " found")
-            : manual(name, "Open the bank during capture (" + detail + " found so far)");
+            : captureRequired(name, "Open the bank during capture (" + detail
+                + " found so far)");
     }
     private static boolean matches(ObservedItem item, String... fragments)
     {
@@ -676,6 +658,7 @@ public final class IronDropQualificationService
         return Arrays.stream(fragments).anyMatch(f -> name.contains(f.toLowerCase(Locale.ENGLISH)));
     }
     private RequirementResult state(String name, boolean passed, String detail) { return new RequirementResult(name, passed ? RequirementStatus.PASSED : RequirementStatus.MISSING, detail); }
+    private RequirementResult captureRequired(String name, String detail) { return new RequirementResult(name, RequirementStatus.NOT_CAPTURED, detail); }
     private RequirementResult manual(String name, String detail) { return new RequirementResult(name, RequirementStatus.UNVERIFIED, detail); }
     private List<RequirementResult> list(RequirementResult... results) { return new ArrayList<>(Arrays.asList(results)); }
 }

@@ -10,11 +10,13 @@ hiscore lookup for the selected character's raid completion counts. It does
 not send captured evidence to ClanHQ, Discord, or any other service.
 
 The checklist covers every Iron Drop progression rank from Opal through
-Zenyte. The player selects the requested rank before capture, and the panel
-shows only that rank's evidence. Character, prayers, gear, raid KC, individual
+Zenyte. A single screen exposes every evidence collector and recalculates the
+entire cumulative rank ladder after each capture. It shows the highest fully
+verified rank, the next rank, that rank's missing requirements, and anything
+that still needs staff review. Character, prayers, gear, raid KC, individual
 Collection Log sources, boat, and owner-POH are independent evidence stages.
 Collection Log buttons are split into COX, TOB, TOA, Yama, and Doom and
-only appear when the selected rank needs them. Captured raid pages retain
+remain available in the same session. Captured raid pages retain
 acquired and total visible slot counts and are combined with current item evidence
 for unique-count requirements without double-counting the same unique. Every
 Collection Log page capture also records the global obtained/total count
@@ -55,9 +57,10 @@ alone. ClanHQ will eventually own the final rules and combine evidence from
 approved sources. The RuneLite plugin collects transparent evidence; it does
 not independently award ranks.
 
-Rank progression remains cumulative in ClanHQ. The local plugin evaluates the
-selected target rank; it does not attempt to replace ClanHQ's authoritative
-record of previously awarded ranks.
+Rank progression is cumulative. The plugin never skips a failed or unverified
+rank even if evidence happens to satisfy a later rank. ClanHQ remains the
+authority for recorded membership and awarded ranks; the plugin reports the
+highest rank supported by the current evidence session.
 
 RuneLite's Plugin Hub also restricts plugins that expose player information
 over HTTP. Keeping submission behind `VerificationTransport` lets us evaluate
@@ -102,8 +105,7 @@ use **End sessions** in the RuneScape account settings.
 - Only the local logged-in player is inspected.
 - The captured RSN is sent to RuneScape's public hiscore service for raid KC.
 - Capture happens only after an explicit button click.
-- Changing the selected rank starts a fresh evidence session.
-- Reset Session clears all locally accumulated evidence for the selected rank.
+- Reset Session clears all locally accumulated evidence and rank calculations.
 - Evidence from different RSNs cannot be combined in one session.
 - The ClanHQ API destination is configured by each member in RuneLite settings.
 - HTTPS is required except for localhost development; changing settings never submits evidence automatically.

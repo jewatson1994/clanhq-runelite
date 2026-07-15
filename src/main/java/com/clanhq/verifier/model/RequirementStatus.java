@@ -4,6 +4,7 @@ public enum RequirementStatus
 {
     PASSED("[PASS]"),
     MISSING("[MISS]"),
+    NOT_CAPTURED("[CAPTURE]"),
     UNVERIFIED("[CHECK]");
 
     private final String symbol;

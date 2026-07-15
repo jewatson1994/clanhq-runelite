@@ -13,12 +13,13 @@ the current build never submits evidence.
 
 ## Session safety
 
-1. Select a rank and capture Character.
-2. Confirm the RSN, total level, combat level, diary totals, and selected rank.
-3. Start a slow source such as Raid KC and confirm the rank selector and other
-   capture buttons remain disabled until it finishes.
-4. Change rank after it finishes. Confirm all prior statuses and preview data
-   reset.
+1. Capture Character.
+2. Confirm the RSN, total level, combat level, diary totals, highest verified
+   rank, and next rank appear.
+3. Start a slow source such as Raid KC and confirm the other capture buttons
+   remain disabled until it finishes.
+4. Click Reset Session. Confirm all statuses, captured evidence, and calculated
+   ranks reset.
 5. Log out during Gear capture. Confirm capture stops with a cancellation
    message and no evidence is retained for another character.
 
@@ -62,8 +63,7 @@ the current build never submits evidence.
 
 ### Collection Log
 
-- Use the specific COX, TOB, TOA, Yama, or Doom button shown for the
-  selected rank. Open that exact page before capture.
+- Use each COX, TOB, TOA, Yama, or Doom button after opening that exact page.
 - Expected: the page name appears and only acquired visible items are retained.
 - Capture multiple pages and confirm earlier pages remain in the same session.
 - Confirm each page capture records the global `obtained/total` count shown at
@@ -113,6 +113,20 @@ the current build never submits evidence.
 - Dragon Collection Log rank should pass at 1,200 obtained slots. The 750-slot
   check uses the same window-header count. The TOA set passes
   only when all eight configured cosmetic/transmog entries are acquired.
+
+## Cumulative rank result
+
+- Capture enough evidence to satisfy Opal but leave at least one Jade
+  requirement missing. Expected: `Highest verified rank: Opal`, `Next rank:
+  Jade`, and only Jade's outstanding requirements are listed.
+- Satisfy an isolated later-rank requirement while Opal or Jade remains
+  incomplete. The highest verified rank must not skip the incomplete rank.
+- Confirm passed next-rank requirements contribute to `Passed` but do not
+  appear under `Next Rank requires`.
+- Confirm missing automated requirements and staff-review requirements are
+  listed separately.
+- When every configured rank passes, expected: the next-rank label says all
+  configured ranks are verified.
 
 ## Known boundary
 

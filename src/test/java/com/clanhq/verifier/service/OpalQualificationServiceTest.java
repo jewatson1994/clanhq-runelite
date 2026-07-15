@@ -39,7 +39,7 @@ public class OpalQualificationServiceTest
     }
 
     @Test
-    public void leavesUnseenItemsUnverifiedUntilBankIsCaptured()
+    public void marksUnseenItemsNotCapturedUntilBankIsCaptured()
     {
         VerificationSnapshot snapshot = new VerificationSnapshot(
             "Mr Dimples",
@@ -53,7 +53,7 @@ public class OpalQualificationServiceTest
 
         assertFalse(result.isQualified());
         assertTrue(result.getRequirements().stream().anyMatch(requirement ->
-            requirement.getStatus() == RequirementStatus.UNVERIFIED));
+            requirement.getStatus() == RequirementStatus.NOT_CAPTURED));
     }
 
     @Test

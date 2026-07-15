@@ -9,15 +9,13 @@ import java.util.Set;
 
 public final class VerificationSession
 {
-    private final String requestedRank;
     private final Set<EvidenceStage> requiredStages;
     private final Map<EvidenceStage, EvidenceStageStatus> statuses =
         new EnumMap<>(EvidenceStage.class);
     private String rsn;
 
-    public VerificationSession(String requestedRank, Set<EvidenceStage> requiredStages)
+    public VerificationSession(Set<EvidenceStage> requiredStages)
     {
-        this.requestedRank = Objects.requireNonNull(requestedRank);
         this.requiredStages = Collections.unmodifiableSet(
             EnumSet.copyOf(requiredStages));
         for (EvidenceStage stage : EvidenceStage.values())
@@ -41,7 +39,6 @@ public final class VerificationSession
         statuses.put(stage, status);
     }
 
-    public String getRequestedRank() { return requestedRank; }
     public String getRsn() { return rsn; }
     public Set<EvidenceStage> getRequiredStages() { return requiredStages; }
     public EvidenceStageStatus getStatus(EvidenceStage stage) { return statuses.get(stage); }

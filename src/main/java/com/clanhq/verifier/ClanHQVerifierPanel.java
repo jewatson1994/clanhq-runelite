@@ -2,23 +2,20 @@ package com.clanhq.verifier;
 
 import com.clanhq.verifier.model.EvidenceStage;
 import com.clanhq.verifier.model.EvidenceStageStatus;
-import com.clanhq.verifier.model.RankQualificationResult;
+import com.clanhq.verifier.model.ProgressionEvaluation;
 import com.clanhq.verifier.model.RequirementStatus;
 import com.clanhq.verifier.model.VerificationSnapshot;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.util.EnumMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.EnumSet;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
-import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -29,7 +26,6 @@ import net.runelite.client.ui.PluginPanel;
 final class ClanHQVerifierPanel extends PluginPanel
 {
     private static final int STATUS_WRAP_WIDTH = 190;
-    private final JComboBox<String> rankSelector;
     private final JPanel stagePanel = new JPanel();
     private final Map<EvidenceStage, JPanel> stageRows =
         new EnumMap<>(EvidenceStage.class);
@@ -45,6 +41,8 @@ final class ClanHQVerifierPanel extends PluginPanel
     private final JLabel apiDestinationLabel = new JLabel("API: Not configured");
     private final JLabel statusLabel = new JLabel();
     private final JTextArea previewArea = new JTextArea();
+    private final JLabel highestRankSummary = new JLabel();
+    private final JLabel nextRankSummary = new JLabel();
     private final JLabel evidenceSummary = new JLabel("Evidence: 0/0 sources");
     private final JLabel passedSummary = new JLabel("Passed: 0");
     private final JLabel missingSummary = new JLabel("Missing: 0");
@@ -53,11 +51,9 @@ final class ClanHQVerifierPanel extends PluginPanel
     private int missingRequirements;
     private int reviewRequirements;
 
-    ClanHQVerifierPanel(List<String> rankNames,
-        BiConsumer<String, EvidenceStage> captureAction,
-        Consumer<String> rankChangedAction)
+    ClanHQVerifierPanel(Consumer<EvidenceStage> captureAction,
+        Runnable resetAction)
     {
-        rankSelector = new JComboBox<>(rankNames.toArray(new String[0]));
         setLayout(new BorderLayout(0, 8));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -70,10 +66,6 @@ final class ClanHQVerifierPanel extends PluginPanel
         header.add(Box.createRigidArea(new Dimension(0, 4)));
         header.add(apiDestinationLabel);
         header.add(Box.createRigidArea(new Dimension(0, 10)));
-        header.add(new JLabel("Requested rank:"));
-        header.add(Box.createRigidArea(new Dimension(0, 4)));
-        header.add(rankSelector);
-        header.add(Box.createRigidArea(new Dimension(0, 10)));
 
         stagePanel.setLayout(new BoxLayout(stagePanel, BoxLayout.Y_AXIS));
         stagePanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -83,14 +75,20 @@ final class ClanHQVerifierPanel extends PluginPanel
         }
         header.add(stagePanel);
         header.add(Box.createRigidArea(new Dimension(0, 8)));
+        setWrappedLabelText(highestRankSummary,
+            "Highest verified rank: Not evaluated");
+        setWrappedLabelText(nextRankSummary,
+            "Next rank: Verify character to begin");
+        header.add(highestRankSummary);
+        header.add(nextRankSummary);
+        header.add(Box.createRigidArea(new Dimension(0, 4)));
         header.add(evidenceSummary);
         header.add(passedSummary);
         header.add(missingSummary);
         header.add(reviewSummary);
         header.add(Box.createRigidArea(new Dimension(0, 8)));
 
-        resetButton.addActionListener(event -> rankChangedAction.accept(
-            (String) rankSelector.getSelectedItem()));
+        resetButton.addActionListener(event -> resetAction.run());
         header.add(resetButton);
         header.add(Box.createRigidArea(new Dimension(0, 6)));
 
@@ -101,9 +99,6 @@ final class ClanHQVerifierPanel extends PluginPanel
         setStatusText("Start a verification session.");
         header.add(statusLabel);
 
-        rankSelector.addActionListener(event -> rankChangedAction.accept(
-            (String) rankSelector.getSelectedItem()));
-
         previewArea.setEditable(false);
         previewArea.setLineWrap(true);
         previewArea.setWrapStyleWord(true);
@@ -111,8 +106,21 @@ final class ClanHQVerifierPanel extends PluginPanel
         previewArea.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
         previewArea.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
-        add(header, BorderLayout.NORTH);
-        add(new JScrollPane(previewArea), BorderLayout.CENTER);
+        JScrollPane previewScroll = new JScrollPane(previewArea);
+        previewScroll.setPreferredSize(new Dimension(200, 320));
+        previewScroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 320));
+
+        JPanel content = verticalPanel();
+        content.add(header);
+        content.add(Box.createRigidArea(new Dimension(0, 8)));
+        content.add(previewScroll);
+
+        JScrollPane panelScroll = new JScrollPane(content,
+            JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+            JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        panelScroll.setBorder(null);
+        panelScroll.getVerticalScrollBar().setUnitIncrement(16);
+        add(panelScroll, BorderLayout.CENTER);
     }
 
     void setRequiredStages(Set<EvidenceStage> requiredStages)
@@ -130,7 +138,11 @@ final class ClanHQVerifierPanel extends PluginPanel
             stageRows.get(stage).setVisible(required);
             showStageStatus(stage, EvidenceStageStatus.NOT_CAPTURED);
         }
-        previewArea.setText("Capture each required evidence source for the selected rank.");
+        previewArea.setText("Capture evidence to calculate the highest verified rank.");
+        setWrappedLabelText(highestRankSummary,
+            "Highest verified rank: Not evaluated");
+        setWrappedLabelText(nextRankSummary,
+            "Next rank: Verify character to begin");
         setStatusText("New verification session.");
         updateProgressSummary();
         revalidate();
@@ -157,19 +169,23 @@ final class ClanHQVerifierPanel extends PluginPanel
     }
 
     void showSnapshot(VerificationSnapshot snapshot,
-        RankQualificationResult qualification, String status)
+        ProgressionEvaluation progression, String status)
     {
         setControlsEnabled(true);
         setStatusText(status);
-        previewArea.setText(qualification.toChecklistText()
+        previewArea.setText(progression.toProgressText()
             + "\n\nCaptured evidence\n" + snapshot.toPreviewText());
         previewArea.setCaretPosition(0);
-        passedRequirements = (int) qualification.getRequirements().stream()
-            .filter(item -> item.getStatus() == RequirementStatus.PASSED).count();
-        missingRequirements = (int) qualification.getRequirements().stream()
-            .filter(item -> item.getStatus() == RequirementStatus.MISSING).count();
-        reviewRequirements = (int) qualification.getRequirements().stream()
-            .filter(item -> item.getStatus() == RequirementStatus.UNVERIFIED).count();
+        setWrappedLabelText(highestRankSummary, "Highest verified rank: "
+            + progression.getHighestVerifiedRankName());
+        setWrappedLabelText(nextRankSummary, "Next rank: "
+            + progression.getNextRank()
+                .map(result -> result.getRankName())
+                .orElse("All configured ranks verified"));
+        passedRequirements = (int) progression.count(RequirementStatus.PASSED);
+        missingRequirements = (int) (progression.count(RequirementStatus.MISSING)
+            + progression.count(RequirementStatus.NOT_CAPTURED));
+        reviewRequirements = (int) progression.count(RequirementStatus.UNVERIFIED);
         updateRequirementSummary();
         updateProgressSummary();
     }
@@ -188,13 +204,12 @@ final class ClanHQVerifierPanel extends PluginPanel
     }
 
     private void addStage(EvidenceStage stage,
-        BiConsumer<String, EvidenceStage> captureAction)
+        Consumer<EvidenceStage> captureAction)
     {
         JPanel row = verticalPanel();
         JButton button = new JButton(buttonLabel(stage));
         JLabel status = new JLabel(EvidenceStageStatus.NOT_CAPTURED.getDisplayText());
-        button.addActionListener(event -> captureAction.accept(
-            (String) rankSelector.getSelectedItem(), stage));
+        button.addActionListener(event -> captureAction.accept(stage));
         row.add(button);
         row.add(status);
         row.add(Box.createRigidArea(new Dimension(0, 6)));
@@ -207,7 +222,6 @@ final class ClanHQVerifierPanel extends PluginPanel
 
     private void setControlsEnabled(boolean enabled)
     {
-        rankSelector.setEnabled(enabled);
         resetButton.setEnabled(enabled);
         stageButtons.values().forEach(button -> button.setEnabled(enabled));
     }
@@ -229,7 +243,12 @@ final class ClanHQVerifierPanel extends PluginPanel
 
     private void setStatusText(String message)
     {
-        statusLabel.setText("<html><body style='width: "
+        setWrappedLabelText(statusLabel, message);
+    }
+
+    private static void setWrappedLabelText(JLabel label, String message)
+    {
+        label.setText("<html><body style='width: "
             + STATUS_WRAP_WIDTH + "px'>" + escapeHtml(message)
             + "</body></html>");
     }

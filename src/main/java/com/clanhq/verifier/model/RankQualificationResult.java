@@ -28,7 +28,8 @@ public final class RankQualificationResult
     public boolean hasMissingEvidence()
     {
         return requirements.stream()
-            .anyMatch(result -> result.getStatus() == RequirementStatus.MISSING);
+            .anyMatch(result -> result.getStatus() == RequirementStatus.MISSING
+                || result.getStatus() == RequirementStatus.NOT_CAPTURED);
     }
 
     public boolean requiresManualReview()

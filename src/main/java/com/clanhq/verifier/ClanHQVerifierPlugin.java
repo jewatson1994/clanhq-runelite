@@ -1,7 +1,7 @@
 package com.clanhq.verifier;
 
 import com.clanhq.verifier.model.VerificationSnapshot;
-import com.clanhq.verifier.model.RankQualificationResult;
+import com.clanhq.verifier.model.ProgressionEvaluation;
 import com.clanhq.verifier.model.EvidenceStage;
 import com.clanhq.verifier.model.EvidenceStageStatus;
 import com.clanhq.verifier.model.RaidKillCounts;
@@ -74,7 +74,6 @@ public final class ClanHQVerifierPlugin extends Plugin
 
     private ClanHQVerifierPanel panel;
     private NavigationButton navigationButton;
-    private String requestedRank;
     private VerificationSession verificationSession;
     private VerificationSnapshot capturedSnapshot;
     private RaidKillCounts raidKillCounts;
@@ -95,11 +94,10 @@ public final class ClanHQVerifierPlugin extends Plugin
     protected void startUp()
     {
         panel = new ClanHQVerifierPanel(
-            qualificationService.getRankNames(),
             this::captureEvidence,
             this::startSession);
         refreshApiDestination();
-        startSession(qualificationService.getRankNames().get(0));
+        startSession();
         navigationButton = NavigationButton.builder()
             .tooltip("ClanHQ Verifier")
             .icon(createIcon())
@@ -126,9 +124,8 @@ public final class ClanHQVerifierPlugin extends Plugin
         }
     }
 
-    private void captureEvidence(String rankName, EvidenceStage stage)
+    private void captureEvidence(EvidenceStage stage)
     {
-        ensureSession(rankName);
         switch (stage)
         {
             case CHARACTER:
@@ -511,30 +508,20 @@ public final class ClanHQVerifierPlugin extends Plugin
             panel.showMessage(status);
             return;
         }
-        RankQualificationResult qualification =
-            qualificationService.evaluateTarget(capturedSnapshot, requestedRank);
-        panel.showSnapshot(capturedSnapshot, qualification, status);
+        ProgressionEvaluation progression =
+            qualificationService.evaluateProgression(capturedSnapshot);
+        panel.showSnapshot(capturedSnapshot, progression, status);
     }
 
-    private void startSession(String rankName)
+    private void startSession()
     {
-        requestedRank = rankName;
         capturedSnapshot = null;
         raidKillCounts = null;
-        verificationSession = new VerificationSession(rankName,
-            qualificationService.getRequiredStages(rankName));
+        verificationSession = new VerificationSession(
+            qualificationService.getAllEvidenceStages());
         if (panel != null)
         {
             panel.setRequiredStages(verificationSession.getRequiredStages());
-        }
-    }
-
-    private void ensureSession(String rankName)
-    {
-        if (verificationSession == null
-            || !verificationSession.getRequestedRank().equals(rankName))
-        {
-            startSession(rankName);
         }
     }
 
