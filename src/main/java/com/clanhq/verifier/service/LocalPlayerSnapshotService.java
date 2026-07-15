@@ -3,6 +3,7 @@ package com.clanhq.verifier.service;
 import com.clanhq.verifier.model.EvidenceSource;
 import com.clanhq.verifier.model.ObservedItem;
 import com.clanhq.verifier.model.VerificationSnapshot;
+import com.clanhq.verifier.rules.RankItemCatalog;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,6 +21,7 @@ import net.runelite.api.gameval.VarbitID;
 public final class LocalPlayerSnapshotService
 {
     private final Client client;
+    private final RankItemCatalog rankItemCatalog;
     private final Map<String, ObservedItem> observedItems =
         new LinkedHashMap<>();
     private boolean captureActive;
@@ -28,9 +30,12 @@ public final class LocalPlayerSnapshotService
     private String sessionRsn;
 
     @Inject
-    public LocalPlayerSnapshotService(Client client)
+    public LocalPlayerSnapshotService(
+        Client client,
+        RankItemCatalog rankItemCatalog)
     {
         this.client = client;
+        this.rankItemCatalog = rankItemCatalog;
     }
 
     public void startCaptureSession()
@@ -149,6 +154,12 @@ public final class LocalPlayerSnapshotService
         for (Item item : container.getItems())
         {
             if (item.getId() <= 0)
+            {
+                continue;
+            }
+
+            if (source == EvidenceSource.BANK
+                && !rankItemCatalog.isRelevant(item.getId()))
             {
                 continue;
             }

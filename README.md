@@ -64,5 +64,7 @@ use **End sessions** in the RuneScape account settings.
 - Only the local logged-in player is inspected.
 - Capture happens only after an explicit button click.
 - Each capture session lasts 30 seconds and discards its evidence afterward.
+- Bank capture retains and displays only items used by configured rank rules;
+  unrelated bank contents are discarded immediately.
 - The preview lists the exact data collected.
 - The current transport never performs a network request.
