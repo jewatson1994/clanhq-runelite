@@ -1,6 +1,7 @@
 package com.clanhq.verifier.service;
 
 import com.clanhq.verifier.model.ObservedItem;
+import com.clanhq.verifier.model.EvidenceStage;
 import com.clanhq.verifier.model.RankQualificationResult;
 import com.clanhq.verifier.model.RequirementResult;
 import com.clanhq.verifier.model.RequirementStatus;
@@ -9,6 +10,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.Locale;
 import javax.inject.Inject;
 import net.runelite.api.ItemID;
@@ -52,6 +55,30 @@ public final class IronDropQualificationService
     public List<String> getRankNames()
     {
         return RANK_NAMES;
+    }
+
+    public Set<EvidenceStage> getRequiredStages(String rankName)
+    {
+        if (!RANK_NAMES.contains(rankName))
+        {
+            throw new IllegalArgumentException("Unknown Iron Drop rank: " + rankName);
+        }
+        EnumSet<EvidenceStage> stages = EnumSet.of(
+            EvidenceStage.ACCOUNT, EvidenceStage.GEAR);
+        if ("Maxed".equals(rankName))
+        {
+            stages.add(EvidenceStage.RAID_KC);
+        }
+        if (Arrays.asList("Diamond", "Onyx", "Kitten", "Completionism", "Zenyte")
+            .contains(rankName))
+        {
+            stages.add(EvidenceStage.COLLECTION_LOG);
+        }
+        if ("Dragon".equals(rankName))
+        {
+            stages.add(EvidenceStage.POH);
+        }
+        return Collections.unmodifiableSet(stages);
     }
 
     public RankQualificationResult evaluateTarget(

@@ -2,6 +2,7 @@ package com.clanhq.verifier.service;
 
 import com.clanhq.verifier.model.DiaryProgress;
 import com.clanhq.verifier.model.EvidenceSource;
+import com.clanhq.verifier.model.EvidenceStage;
 import com.clanhq.verifier.model.ObservedItem;
 import com.clanhq.verifier.model.RankQualificationResult;
 import com.clanhq.verifier.model.RaidKillCounts;
@@ -53,6 +54,8 @@ public class IronDropQualificationServiceTest
         assertEquals(RequirementStatus.UNVERIFIED,
             result.getRequirements().get(0).getStatus());
         assertTrue(service.getRankNames().contains("Zenyte"));
+        assertTrue(service.getRequiredStages("Dragon").contains(EvidenceStage.POH));
+        assertTrue(service.getRequiredStages("Maxed").contains(EvidenceStage.RAID_KC));
     }
 
     @Test
