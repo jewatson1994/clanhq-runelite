@@ -92,6 +92,10 @@ the current build never submits evidence.
 
 ## Completionism
 
+- Confirm Completionism requests Overview, COX, TOB, and TOA Collection Log
+  captures.
+- Metamorphic dust should pass from COX; Sanguine dust and both ornament kits
+  should pass from TOB even when their physical items are not in the bank.
 - With the bank captured, verify separate results for Metamorphic dust,
   Sanguine dust, both ornament kits, Saturated heart, Amulet of rancour, three
   Twisted ancestral colour kits, Champion's cape, and the Expert dragon archer

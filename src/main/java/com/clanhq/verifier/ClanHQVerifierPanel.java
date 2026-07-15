@@ -44,10 +44,11 @@ final class ClanHQVerifierPanel extends PluginPanel
     private final JLabel apiDestinationLabel = new JLabel("API: Not configured");
     private final JLabel statusLabel = new JLabel("Start a verification session.");
     private final JTextArea previewArea = new JTextArea();
-    private final JLabel evidenceSummary = new JLabel("Evidence: 0/0 sources captured");
-    private final JLabel requirementSummary = new JLabel(
-        wrapSummary("Requirements: not evaluated"));
-    private final JLabel readinessSummary = new JLabel("Capture evidence to continue");
+    private final JLabel evidenceSummary = new JLabel("Evidence: 0/0 sources");
+    private final JLabel passedSummary = new JLabel("Passed: 0");
+    private final JLabel missingSummary = new JLabel("Missing: 0");
+    private final JLabel reviewSummary = new JLabel("Staff Review: 0");
+    private int passedRequirements;
     private int missingRequirements;
     private int reviewRequirements;
 
@@ -82,8 +83,9 @@ final class ClanHQVerifierPanel extends PluginPanel
         header.add(stagePanel);
         header.add(Box.createRigidArea(new Dimension(0, 8)));
         header.add(evidenceSummary);
-        header.add(requirementSummary);
-        header.add(readinessSummary);
+        header.add(passedSummary);
+        header.add(missingSummary);
+        header.add(reviewSummary);
         header.add(Box.createRigidArea(new Dimension(0, 8)));
 
         resetButton.addActionListener(event -> rankChangedAction.accept(
@@ -116,9 +118,10 @@ final class ClanHQVerifierPanel extends PluginPanel
         this.requiredStages = requiredStages.isEmpty()
             ? EnumSet.noneOf(EvidenceStage.class)
             : EnumSet.copyOf(requiredStages);
+        passedRequirements = 0;
         missingRequirements = 0;
         reviewRequirements = 0;
-        requirementSummary.setText(wrapSummary("Requirements: not evaluated"));
+        updateRequirementSummary();
         for (EvidenceStage stage : EvidenceStage.values())
         {
             boolean required = requiredStages.contains(stage);
@@ -173,15 +176,13 @@ final class ClanHQVerifierPanel extends PluginPanel
         previewArea.setText(qualification.toChecklistText()
             + "\n\nCaptured evidence\n" + snapshot.toPreviewText());
         previewArea.setCaretPosition(0);
-        long passed = qualification.getRequirements().stream()
+        passedRequirements = (int) qualification.getRequirements().stream()
             .filter(item -> item.getStatus() == RequirementStatus.PASSED).count();
         missingRequirements = (int) qualification.getRequirements().stream()
             .filter(item -> item.getStatus() == RequirementStatus.MISSING).count();
         reviewRequirements = (int) qualification.getRequirements().stream()
             .filter(item -> item.getStatus() == RequirementStatus.UNVERIFIED).count();
-        requirementSummary.setText(wrapSummary("Requirements: " + passed
-            + " passed • " + missingRequirements + " missing • "
-            + reviewRequirements + " staff review"));
+        updateRequirementSummary();
         updateProgressSummary();
     }
 
@@ -231,9 +232,11 @@ final class ClanHQVerifierPanel extends PluginPanel
         return panel;
     }
 
-    private static String wrapSummary(String text)
+    private void updateRequirementSummary()
     {
-        return "<html><body style='width: 190px'>" + text + "</body></html>";
+        passedSummary.setText("Passed: " + passedRequirements);
+        missingSummary.setText("Missing: " + missingRequirements);
+        reviewSummary.setText("Staff Review: " + reviewRequirements);
     }
 
     private static String buttonLabel(EvidenceStage stage)
@@ -262,23 +265,6 @@ final class ClanHQVerifierPanel extends PluginPanel
                 EvidenceStageStatus.NOT_CAPTURED).isSubmissionReady())
             .count();
         evidenceSummary.setText("Evidence: " + ready + "/"
-            + requiredStages.size() + " sources captured");
-        if (ready < requiredStages.size())
-        {
-            readinessSummary.setText("Capture " + (requiredStages.size() - ready)
-                + " remaining source(s)");
-        }
-        else if (missingRequirements > 0)
-        {
-            readinessSummary.setText("Missing requirements");
-        }
-        else if (reviewRequirements > 0)
-        {
-            readinessSummary.setText("Ready for staff review");
-        }
-        else
-        {
-            readinessSummary.setText("Automated evidence complete");
-        }
+            + requiredStages.size() + " sources");
     }
 }

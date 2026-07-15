@@ -32,7 +32,8 @@ retired-staff designation rather than a progression rank.
 Completionism bank items are reported individually. Overview capture verifies
 Dragon Collection Log rank and the 750-slot requirement. TOA capture checks
 the four boss remnants, Menaphite ornament kit, Cursed phalanx, Ancient
-remnant, and Masori crafting kit. COX, TOB, and TOA captures can verify raid
+remnant, and Masori crafting kit. COX capture can prove Metamorphic dust; TOB
+capture can prove Sanguine dust and both ornament kits. COX, TOB, and TOA captures can verify raid
 green logs from acquired-versus-total visible slots. Sailing upgrade state
 remains a staff-review requirement instead of being inferred.
 Raid KC shrouds are excluded from green-log totals.

@@ -64,6 +64,9 @@ public class IronDropQualificationServiceTest
         assertTrue(service.getRequiredStages("Maxed").contains(EvidenceStage.RAID_KC));
         assertTrue(service.getRequiredStages("Topaz").contains(EvidenceStage.PRAYERS));
         assertTrue(service.getRequiredStages("Completionism").contains(EvidenceStage.BOAT));
+        assertTrue(service.getRequiredStages("Completionism")
+            .containsAll(Arrays.asList(EvidenceStage.COX_LOG,
+                EvidenceStage.TOB_LOG, EvidenceStage.TOA_LOG)));
         assertTrue(service.getRequiredStages("Kitten")
             .contains(EvidenceStage.COLLECTION_OVERVIEW));
         assertTrue(service.getRequiredStages("Zenyte")
@@ -304,6 +307,31 @@ public class IronDropQualificationServiceTest
 
         assertPassed(service.evaluateTarget(snapshot, "Completionism"),
             "All TOA cosmetics and transmogs");
+    }
+
+    @Test
+    public void verifiesCoxAndTobCosmeticsFromCollectionLogs()
+    {
+        Map<String, Integer> cox = Collections.singletonMap(
+            "Metamorphic dust", 1);
+        Map<String, Integer> tob = new LinkedHashMap<>();
+        tob.put("Sanguine dust", 1);
+        tob.put("Sanguine ornament kit", 1);
+        tob.put("Holy ornament kit", 1);
+        CollectionLogEvidence evidence = CollectionLogEvidence.page(
+            "Chambers of Xeric", cox, 1, 12)
+            .merge(CollectionLogEvidence.page(
+                "Theatre of Blood", tob, 3, 12));
+        VerificationSnapshot snapshot = new VerificationSnapshot(
+            "Mr Dimples", 2350, 126, Collections.emptyList(), false, false)
+            .withCollectionLogEvidence(evidence);
+
+        RankQualificationResult result = service.evaluateTarget(
+            snapshot, "Completionism");
+        assertPassed(result, "Metamorphic dust");
+        assertPassed(result, "Sanguine dust");
+        assertPassed(result, "Sanguine ornament kit");
+        assertPassed(result, "Holy ornament kit");
     }
 
     private static ObservedItem bankItem(int id, String name)

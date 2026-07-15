@@ -77,18 +77,16 @@ public final class IronDropQualificationService
         {
             stages.add(EvidenceStage.COLLECTION_OVERVIEW);
         }
-        if (Arrays.asList("Diamond", "Kitten", "Zenyte").contains(rankName))
+        if (Arrays.asList("Diamond", "Kitten", "Completionism", "Zenyte")
+            .contains(rankName))
         {
             stages.add(EvidenceStage.COX_LOG);
             stages.add(EvidenceStage.TOA_LOG);
         }
-        if (Arrays.asList("Onyx", "Kitten", "Zenyte").contains(rankName))
+        if (Arrays.asList("Onyx", "Kitten", "Completionism", "Zenyte")
+            .contains(rankName))
         {
             stages.add(EvidenceStage.TOB_LOG);
-        }
-        if ("Completionism".equals(rankName))
-        {
-            stages.add(EvidenceStage.TOA_LOG);
         }
         if ("Onyx".equals(rankName))
         {
@@ -278,10 +276,14 @@ public final class IronDropQualificationService
     {
         return list(
             collectionLogRank(snapshot),
-            item(snapshot, "Metamorphic dust", "metamorphic dust"),
-            item(snapshot, "Sanguine dust", "sanguine dust"),
-            item(snapshot, "Sanguine ornament kit", "sanguine ornament kit"),
-            item(snapshot, "Holy ornament kit", "holy ornament kit"),
+            ownedOrLoggedItem(snapshot, "Metamorphic dust",
+                "chambers of xeric", "metamorphic dust"),
+            ownedOrLoggedItem(snapshot, "Sanguine dust",
+                "theatre of blood", "sanguine dust"),
+            ownedOrLoggedItem(snapshot, "Sanguine ornament kit",
+                "theatre of blood", "sanguine ornament kit"),
+            ownedOrLoggedItem(snapshot, "Holy ornament kit",
+                "theatre of blood", "holy ornament kit"),
             toaCosmetics(snapshot),
             item(snapshot, "Saturated heart", "saturated heart"),
             item(snapshot, "Amulet of rancour", "amulet of rancour"),
@@ -428,6 +430,27 @@ public final class IronDropQualificationService
         }
         return state("All TOA cosmetics and transmogs",
             missing.isEmpty(), detail);
+    }
+    private RequirementResult ownedOrLoggedItem(VerificationSnapshot snapshot,
+        String requirementName, String page, String... fragments)
+    {
+        boolean owned = snapshot.getItems().stream()
+            .anyMatch(item -> matches(item, fragments));
+        boolean logged = Arrays.stream(fragments).anyMatch(fragment ->
+            snapshot.getCollectionLogEvidence().hasAcquiredItem(page, fragment));
+        if (owned || logged)
+        {
+            return state(requirementName, true,
+                owned ? "Currently owned" : "Collection Log entry acquired");
+        }
+        if (snapshot.isBankEvidenceCaptured()
+            && snapshot.getCollectionLogEvidence().hasPage(page))
+        {
+            return new RequirementResult(requirementName,
+                RequirementStatus.MISSING, "Not owned or logged");
+        }
+        return manual(requirementName,
+            "Capture bank and the matching raid Collection Log page");
     }
     private RequirementResult doomUniques(VerificationSnapshot snapshot)
     {
