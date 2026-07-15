@@ -45,7 +45,8 @@ final class ClanHQVerifierPanel extends PluginPanel
     private final JLabel statusLabel = new JLabel("Start a verification session.");
     private final JTextArea previewArea = new JTextArea();
     private final JLabel evidenceSummary = new JLabel("Evidence: 0/0 sources captured");
-    private final JLabel requirementSummary = new JLabel("Requirements: not evaluated");
+    private final JLabel requirementSummary = new JLabel(
+        wrapSummary("Requirements: not evaluated"));
     private final JLabel readinessSummary = new JLabel("Capture evidence to continue");
     private int missingRequirements;
     private int reviewRequirements;
@@ -117,7 +118,7 @@ final class ClanHQVerifierPanel extends PluginPanel
             : EnumSet.copyOf(requiredStages);
         missingRequirements = 0;
         reviewRequirements = 0;
-        requirementSummary.setText("Requirements: not evaluated");
+        requirementSummary.setText(wrapSummary("Requirements: not evaluated"));
         for (EvidenceStage stage : EvidenceStage.values())
         {
             boolean required = requiredStages.contains(stage);
@@ -178,9 +179,9 @@ final class ClanHQVerifierPanel extends PluginPanel
             .filter(item -> item.getStatus() == RequirementStatus.MISSING).count();
         reviewRequirements = (int) qualification.getRequirements().stream()
             .filter(item -> item.getStatus() == RequirementStatus.UNVERIFIED).count();
-        requirementSummary.setText("Requirements: " + passed + " passed • "
-            + missingRequirements + " missing • " + reviewRequirements
-            + " staff review");
+        requirementSummary.setText(wrapSummary("Requirements: " + passed
+            + " passed • " + missingRequirements + " missing • "
+            + reviewRequirements + " staff review"));
         updateProgressSummary();
     }
 
@@ -228,6 +229,11 @@ final class ClanHQVerifierPanel extends PluginPanel
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(ColorScheme.DARK_GRAY_COLOR);
         return panel;
+    }
+
+    private static String wrapSummary(String text)
+    {
+        return "<html><body style='width: 190px'>" + text + "</body></html>";
     }
 
     private static String buttonLabel(EvidenceStage stage)
