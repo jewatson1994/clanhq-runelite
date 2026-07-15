@@ -78,9 +78,9 @@ public final class LocalPlayerSnapshotService
             Collections.emptyList(),
             false,
             client.getVarbitValue(VarbitID.PRAYER_PIETY) == 1,
-            varbit("PRAYER_RIGOUR_UNLOCKED") == 1,
-            varbit("PRAYER_DEADEYE_UNLOCKED") == 1,
-            varbit("PRAYER_MYSTIC_VIGOUR_UNLOCKED") == 1,
+            client.getVarbitValue(VarbitID.PRAYER_RIGOUR_UNLOCKED) == 1,
+            client.getVarbitValue(VarbitID.PRAYER_DEADEYE_UNLOCKED) == 1,
+            client.getVarbitValue(VarbitID.PRAYER_MYSTIC_VIGOUR_UNLOCKED) == 1,
             client.getRealSkillLevel(Skill.HERBLORE),
             captureDiaryProgress(),
             com.clanhq.verifier.model.RaidKillCounts.unavailable("Not fetched"),
@@ -107,11 +107,11 @@ public final class LocalPlayerSnapshotService
         pietyObserved = pietyObserved
             || client.getVarbitValue(VarbitID.PRAYER_PIETY) == 1;
         rigourObserved = rigourObserved
-            || varbit("PRAYER_RIGOUR_UNLOCKED") == 1;
+            || client.getVarbitValue(VarbitID.PRAYER_RIGOUR_UNLOCKED) == 1;
         deadeyeObserved = deadeyeObserved
-            || varbit("PRAYER_DEADEYE_UNLOCKED") == 1;
+            || client.getVarbitValue(VarbitID.PRAYER_DEADEYE_UNLOCKED) == 1;
         mysticVigourObserved = mysticVigourObserved
-            || varbit("PRAYER_MYSTIC_VIGOUR_UNLOCKED") == 1;
+            || client.getVarbitValue(VarbitID.PRAYER_MYSTIC_VIGOUR_UNLOCKED) == 1;
     }
 
     public VerificationSnapshot finishCaptureSession()
@@ -224,37 +224,46 @@ public final class LocalPlayerSnapshotService
 
     private DiaryProgress captureDiaryProgress()
     {
-        String[] regions = {"ARDOUGNE", "FALADOR", "WILDERNESS", "WESTERN",
-            "KANDARIN", "VARROCK", "DESERT", "MORYTANIA", "FREMENNIK",
-            "LUMBRIDGE", "KOUREND"};
+        int[] hardFlags = {VarbitID.ARDOUGNE_DIARY_HARD_COMPLETE,
+            VarbitID.FALADOR_DIARY_HARD_COMPLETE,
+            VarbitID.WILDERNESS_DIARY_HARD_COMPLETE,
+            VarbitID.WESTERN_DIARY_HARD_COMPLETE,
+            VarbitID.KANDARIN_DIARY_HARD_COMPLETE,
+            VarbitID.VARROCK_DIARY_HARD_COMPLETE,
+            VarbitID.DESERT_DIARY_HARD_COMPLETE,
+            VarbitID.MORYTANIA_DIARY_HARD_COMPLETE,
+            VarbitID.FREMENNIK_DIARY_HARD_COMPLETE,
+            VarbitID.LUMBRIDGE_DIARY_HARD_COMPLETE,
+            VarbitID.KOUREND_DIARY_HARD_COMPLETE};
+        int[] eliteFlags = {VarbitID.ARDOUGNE_DIARY_ELITE_COMPLETE,
+            VarbitID.FALADOR_DIARY_ELITE_COMPLETE,
+            VarbitID.WILDERNESS_DIARY_ELITE_COMPLETE,
+            VarbitID.WESTERN_DIARY_ELITE_COMPLETE,
+            VarbitID.KANDARIN_DIARY_ELITE_COMPLETE,
+            VarbitID.VARROCK_DIARY_ELITE_COMPLETE,
+            VarbitID.DESERT_DIARY_ELITE_COMPLETE,
+            VarbitID.MORYTANIA_DIARY_ELITE_COMPLETE,
+            VarbitID.FREMENNIK_DIARY_ELITE_COMPLETE,
+            VarbitID.LUMBRIDGE_DIARY_ELITE_COMPLETE,
+            VarbitID.KOUREND_DIARY_ELITE_COMPLETE};
         int hard = 0;
         int elite = 0;
-        for (String region : regions)
+        for (int flag : hardFlags)
         {
-            hard += completed(region + "_DIARY_HARD_COMPLETE");
-            elite += completed(region + "_DIARY_ELITE_COMPLETE");
+            hard += completed(flag);
         }
-        hard += varbit("KARAMJA_HARD_COUNT") >= 10 ? 1 : 0;
-        elite += completed("KARAMJA_DIARY_ELITE_COMPLETE");
+        for (int flag : eliteFlags)
+        {
+            elite += completed(flag);
+        }
+        hard += client.getVarbitValue(VarbitID.KARAMJA_HARD_COUNT) >= 10 ? 1 : 0;
+        elite += completed(VarbitID.KARAMJA_DIARY_ELITE_COMPLETE);
         return new DiaryProgress(hard, elite, 12);
     }
 
-    private int completed(String constantName)
+    private int completed(int varbitId)
     {
-        return varbit(constantName) > 0 ? 1 : 0;
-    }
-
-    private int varbit(String constantName)
-    {
-        try
-        {
-            int id = VarbitID.class.getField(constantName).getInt(null);
-            return client.getVarbitValue(id);
-        }
-        catch (ReflectiveOperationException ignored)
-        {
-            return 0;
-        }
+        return client.getVarbitValue(varbitId) > 0 ? 1 : 0;
     }
 
     private void ensureSamePlayer(Player player)
