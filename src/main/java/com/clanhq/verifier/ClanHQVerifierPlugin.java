@@ -1,7 +1,9 @@
 package com.clanhq.verifier;
 
 import com.clanhq.verifier.model.VerificationSnapshot;
+import com.clanhq.verifier.model.RankQualificationResult;
 import com.clanhq.verifier.service.LocalPlayerSnapshotService;
+import com.clanhq.verifier.service.OpalQualificationService;
 import com.clanhq.verifier.transport.PreviewOnlyVerificationTransport;
 import com.clanhq.verifier.transport.VerificationTransport;
 import com.clanhq.verifier.transport.VerificationTransportResult;
@@ -11,12 +13,17 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
+import net.runelite.api.GameState;
+import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.ItemContainerChanged;
 
 @PluginDescriptor(
     name = "ClanHQ Verifier",
@@ -24,6 +31,8 @@ import net.runelite.client.ui.NavigationButton;
     tags = {"clan", "gear", "rank", "verification"})
 public final class ClanHQVerifierPlugin extends Plugin
 {
+    private static final int CAPTURE_DURATION_SECONDS = 30;
+
     @Inject
     private ClientThread clientThread;
 
@@ -36,8 +45,13 @@ public final class ClanHQVerifierPlugin extends Plugin
     @Inject
     private VerificationTransport transport;
 
+    @Inject
+    private OpalQualificationService opalQualificationService;
+
     private ClanHQVerifierPanel panel;
     private NavigationButton navigationButton;
+    private Timer captureTimer;
+    private int secondsRemaining;
 
     @Provides
     ClanHQVerifierConfig provideConfig(ConfigManager configManager)
@@ -67,25 +81,48 @@ public final class ClanHQVerifierPlugin extends Plugin
     @Override
     protected void shutDown()
     {
+        stopCaptureTimer();
         clientToolbar.removeNavigation(navigationButton);
+        snapshotService.cancelCaptureSession();
         navigationButton = null;
         panel = null;
     }
 
+    @Subscribe
+    public void onItemContainerChanged(ItemContainerChanged event)
+    {
+        snapshotService.observeItemContainer(event);
+    }
+
+    @Subscribe
+    public void onGameStateChanged(GameStateChanged event)
+    {
+        if (event.getGameState() == GameState.LOGIN_SCREEN)
+        {
+            boolean captureWasActive = snapshotService.isCaptureActive();
+            snapshotService.cancelCaptureSession();
+
+            if (captureWasActive)
+            {
+                SwingUtilities.invokeLater(() ->
+                {
+                    stopCaptureTimer();
+                    panel.showError("Capture cancelled because you logged out.");
+                });
+            }
+        }
+    }
+
     private void captureCurrentCharacter()
     {
-        panel.setBusy();
+        panel.setBusy(CAPTURE_DURATION_SECONDS);
 
         clientThread.invokeLater(() ->
         {
             try
             {
-                VerificationSnapshot snapshot = snapshotService.capture();
-                VerificationTransportResult result = transport.submit(snapshot);
-
-                SwingUtilities.invokeLater(() -> panel.showSnapshot(
-                    snapshot,
-                    result.getMessage()));
+                snapshotService.startCaptureSession();
+                SwingUtilities.invokeLater(this::startCaptureTimer);
             }
             catch (RuntimeException exception)
             {
@@ -93,6 +130,71 @@ public final class ClanHQVerifierPlugin extends Plugin
                     exception.getMessage()));
             }
         });
+    }
+
+    private void startCaptureTimer()
+    {
+        stopCaptureTimer();
+        secondsRemaining = CAPTURE_DURATION_SECONDS;
+        captureTimer = new Timer(1000, event -> captureTick());
+        captureTimer.start();
+    }
+
+    private void captureTick()
+    {
+        int remainingAfterTick = --secondsRemaining;
+        boolean shouldFinish = remainingAfterTick <= 0;
+        panel.showCaptureProgress(Math.max(remainingAfterTick, 0));
+
+        if (shouldFinish)
+        {
+            stopCaptureTimer();
+        }
+
+        clientThread.invokeLater(() ->
+        {
+            try
+            {
+                snapshotService.observeCurrentState();
+
+                if (shouldFinish && snapshotService.isCaptureActive())
+                {
+                    finishCapture();
+                }
+            }
+            catch (RuntimeException exception)
+            {
+                snapshotService.cancelCaptureSession();
+                SwingUtilities.invokeLater(() ->
+                {
+                    stopCaptureTimer();
+                    panel.showError(exception.getMessage());
+                });
+            }
+        });
+    }
+
+    private void finishCapture()
+    {
+        VerificationSnapshot snapshot =
+            snapshotService.finishCaptureSession();
+        RankQualificationResult qualification =
+            opalQualificationService.evaluate(snapshot);
+        VerificationTransportResult result = transport.submit(snapshot);
+
+        SwingUtilities.invokeLater(() -> panel.showSnapshot(
+            snapshot,
+            qualification,
+            result.getMessage()));
+    }
+
+    private void stopCaptureTimer()
+    {
+        if (captureTimer != null)
+        {
+            captureTimer.stop();
+            captureTimer = null;
+        }
     }
 
     private static BufferedImage createIcon()

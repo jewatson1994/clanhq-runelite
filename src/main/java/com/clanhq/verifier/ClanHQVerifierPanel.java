@@ -1,6 +1,7 @@
 package com.clanhq.verifier;
 
 import com.clanhq.verifier.model.VerificationSnapshot;
+import com.clanhq.verifier.model.RankQualificationResult;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import javax.swing.BorderFactory;
@@ -58,17 +59,32 @@ final class ClanHQVerifierPanel extends PluginPanel
         add(new JScrollPane(previewArea), BorderLayout.CENTER);
     }
 
-    void setBusy()
+    void setBusy(int secondsRemaining)
     {
         captureButton.setEnabled(false);
-        statusLabel.setText("Capturing…");
+        showCaptureProgress(secondsRemaining);
+        previewArea.setText(
+            "Open your bank and activate Piety at any point during "
+                + "the capture window.");
     }
 
-    void showSnapshot(VerificationSnapshot snapshot, String status)
+    void showCaptureProgress(int secondsRemaining)
+    {
+        statusLabel.setText(
+            "Capturing… " + secondsRemaining + " seconds remaining");
+    }
+
+    void showSnapshot(
+        VerificationSnapshot snapshot,
+        RankQualificationResult qualification,
+        String status)
     {
         captureButton.setEnabled(true);
         statusLabel.setText(status);
-        previewArea.setText(snapshot.toPreviewText());
+        previewArea.setText(
+            qualification.toChecklistText()
+                + "\n\nCaptured evidence\n"
+                + snapshot.toPreviewText());
         previewArea.setCaretPosition(0);
     }
 

@@ -4,25 +4,32 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 
 public final class VerificationSnapshot
 {
     private final String rsn;
     private final int totalLevel;
     private final int combatLevel;
-    private final List<EquipmentItem> equipment;
+    private final List<ObservedItem> items;
+    private final boolean bankEvidenceCaptured;
+    private final boolean pietyActive;
 
     public VerificationSnapshot(
         String rsn,
         int totalLevel,
         int combatLevel,
-        List<EquipmentItem> equipment)
+        List<ObservedItem> items,
+        boolean bankEvidenceCaptured,
+        boolean pietyActive)
     {
         this.rsn = Objects.requireNonNull(rsn);
         this.totalLevel = totalLevel;
         this.combatLevel = combatLevel;
-        this.equipment = Collections.unmodifiableList(
-            new ArrayList<>(equipment));
+        this.items = Collections.unmodifiableList(new ArrayList<>(items));
+        this.bankEvidenceCaptured = bankEvidenceCaptured;
+        this.pietyActive = pietyActive;
     }
 
     public String getRsn()
@@ -40,9 +47,26 @@ public final class VerificationSnapshot
         return combatLevel;
     }
 
-    public List<EquipmentItem> getEquipment()
+    public List<ObservedItem> getItems()
     {
-        return equipment;
+        return items;
+    }
+
+    public boolean isBankEvidenceCaptured()
+    {
+        return bankEvidenceCaptured;
+    }
+
+    public boolean isPietyActive()
+    {
+        return pietyActive;
+    }
+
+    public Optional<ObservedItem> findItem(Set<Integer> acceptedItemIds)
+    {
+        return items.stream()
+            .filter(item -> acceptedItemIds.contains(item.getItemId()))
+            .findFirst();
     }
 
     public String toPreviewText()
@@ -51,28 +75,49 @@ public final class VerificationSnapshot
         preview.append("RSN: ").append(rsn).append('\n');
         preview.append("Total level: ").append(totalLevel).append('\n');
         preview.append("Combat level: ").append(combatLevel).append('\n');
-        preview.append("Equipped items:").append('\n');
+        preview.append("Bank evidence: ")
+            .append(bankEvidenceCaptured ? "Captured" : "Not captured")
+            .append('\n');
+        preview.append("Piety active: ")
+            .append(pietyActive ? "Yes" : "No")
+            .append('\n');
 
-        if (equipment.isEmpty())
+        for (EvidenceSource source : EvidenceSource.values())
         {
-            preview.append("- None detected");
-            return preview.toString();
-        }
-
-        for (EquipmentItem item : equipment)
-        {
-            preview.append("- ")
-                .append(item.getName())
-                .append(" (ID ")
-                .append(item.getItemId())
-                .append(")");
-
-            if (item.getQuantity() > 1)
+            if (source == EvidenceSource.BANK && !bankEvidenceCaptured)
             {
-                preview.append(" x").append(item.getQuantity());
+                continue;
             }
 
-            preview.append('\n');
+            preview.append(source.getDisplayName()).append(':').append('\n');
+
+            boolean found = false;
+            for (ObservedItem item : items)
+            {
+                if (item.getSource() != source)
+                {
+                    continue;
+                }
+
+                found = true;
+                preview.append("- ")
+                    .append(item.getName())
+                    .append(" (ID ")
+                    .append(item.getItemId())
+                    .append(")");
+
+                if (item.getQuantity() > 1)
+                {
+                    preview.append(" x").append(item.getQuantity());
+                }
+
+                preview.append('\n');
+            }
+
+            if (!found)
+            {
+                preview.append("- None detected").append('\n');
+            }
         }
 
         return preview.toString().trim();

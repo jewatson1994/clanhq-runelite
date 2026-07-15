@@ -4,8 +4,10 @@ This is the development foundation for ClanHQ rank verification.
 
 The current build is deliberately preview-only. It reads the logged-in
 player's RuneScape name, total level, combat level, and currently equipped
-items after the player clicks **Capture Current Character**. It does not send
-data to ClanHQ, Discord, or any other service.
+items after the player clicks **Capture Current Character**. A 30-second
+capture session accumulates equipment and inventory evidence, captures the
+bank when it is opened, and remembers Piety if it is activated. It does not
+send data to ClanHQ, Discord, or any other service.
 
 ## Why preview-only first?
 
@@ -14,6 +16,10 @@ alone, including banked items, collection-log counts, quests, diaries,
 prayers, combat achievements, raid KC, and cosmetics. ClanHQ will eventually
 own those rules and combine evidence from approved sources. The RuneLite
 plugin should collect evidence, not independently award ranks.
+
+Rank progression is cumulative. Every requirement for each previous rank must
+pass before a later rank can qualify; a higher-tier item can satisfy an
+earlier "or better" item requirement but cannot bypass unrelated requirements.
 
 RuneLite's Plugin Hub also restricts plugins that expose player information
 over HTTP. Keeping submission behind `VerificationTransport` lets us evaluate
@@ -57,5 +63,6 @@ use **End sessions** in the RuneScape account settings.
 
 - Only the local logged-in player is inspected.
 - Capture happens only after an explicit button click.
+- Each capture session lasts 30 seconds and discards its evidence afterward.
 - The preview lists the exact data collected.
 - The current transport never performs a network request.

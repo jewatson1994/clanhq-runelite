@@ -16,7 +16,13 @@ public class VerificationSnapshotTest
             2325,
             126,
             Collections.singletonList(
-                new EquipmentItem(22322, "Avernic defender", 1)));
+                new ObservedItem(
+                    22322,
+                    "Avernic defender",
+                    1,
+                    EvidenceSource.EQUIPMENT)),
+            true,
+            true);
 
         String preview = snapshot.toPreviewText();
 
@@ -24,6 +30,7 @@ public class VerificationSnapshotTest
         assertTrue(preview.contains("Total level: 2325"));
         assertTrue(preview.contains("Combat level: 126"));
         assertTrue(preview.contains("Avernic defender (ID 22322)"));
-        assertEquals(1, snapshot.getEquipment().size());
+        assertTrue(preview.contains("Bank evidence: Captured"));
+        assertEquals(1, snapshot.getItems().size());
     }
 }
