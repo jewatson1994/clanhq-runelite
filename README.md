@@ -15,7 +15,9 @@ Zenyte. The player selects the requested rank before capture, and the panel
 shows only that rank's evidence. Character, prayers, gear, raid KC, Collection
 Log, boat, and owner-POH are independent evidence stages with their own capture status.
 Collection Log capture reads the visible Doom or raid page and can accumulate
-multiple pages. Boat capture reads only visible text from RuneLite's Sailing
+multiple pages. Captured raid pages are combined with current item evidence
+for unique-count requirements without double-counting the same unique. Boat
+capture reads only visible text from RuneLite's Sailing
 boat-selection or customisation interface and can accumulate Skiff and Sloop
 panels; staff still confirms that each vessel is maxed. POH capture requires
 the player's house in build mode and scans the loaded scene for all five configured facilities. ClanHQ

@@ -37,6 +37,8 @@ public class CollectorEvidenceTest
             Collections.singletonMap("Doom of Mokhaiotl", items));
 
         assertTrue(evidence.hasDoomUniques());
+        assertTrue(evidence.hasPage("doom"));
+        assertTrue(evidence.hasAcquiredItem("Doom", "cloth"));
     }
 
     @Test

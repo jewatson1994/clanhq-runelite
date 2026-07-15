@@ -32,6 +32,21 @@ public final class CollectionLogEvidence
     public Map<String, Map<String, Integer>> getPages() { return pages; }
     public boolean isCaptured() { return !pages.isEmpty(); }
 
+    public boolean hasPage(String pageFragment)
+    {
+        String expected = normalize(pageFragment);
+        return pages.keySet().stream()
+            .anyMatch(page -> normalize(page).contains(expected));
+    }
+
+    public boolean hasAcquiredItem(String pageFragment, String itemFragment)
+    {
+        String expectedPage = normalize(pageFragment);
+        return pages.entrySet().stream()
+            .filter(entry -> normalize(entry.getKey()).contains(expectedPage))
+            .anyMatch(entry -> hasName(entry.getValue(), itemFragment));
+    }
+
     public boolean hasDoomUniques()
     {
         return pages.entrySet().stream()
@@ -49,8 +64,9 @@ public final class CollectionLogEvidence
 
     private static boolean hasName(Map<String, Integer> items, String fragment)
     {
+        String expected = normalize(fragment);
         return items.entrySet().stream().anyMatch(entry -> entry.getValue() > 0
-            && normalize(entry.getKey()).contains(fragment));
+            && normalize(entry.getKey()).contains(expected));
     }
 
     private static String normalize(String value)

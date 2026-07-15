@@ -349,15 +349,39 @@ public final class IronDropQualificationService
     private RequirementResult raidUniques(VerificationSnapshot snapshot,
         String raid, int required, String[] uniqueGroups)
     {
+        String pageFragment = collectionLogPageFragment(raid);
         long found = Arrays.stream(uniqueGroups).filter(fragment ->
-            snapshot.getItems().stream().anyMatch(item -> matches(item, fragment))).count();
+            snapshot.getItems().stream().anyMatch(item -> matches(item, fragment))
+                || snapshot.getCollectionLogEvidence()
+                    .hasAcquiredItem(pageFragment, fragment)).count();
         if (found >= required)
         {
             return state(required + " " + raid + " uniques", true,
-                found + " / " + required + " currently owned");
+                found + " / " + required + " owned or logged");
+        }
+        boolean bankCaptured = snapshot.isBankEvidenceCaptured();
+        boolean logCaptured = snapshot.getCollectionLogEvidence()
+            .hasPage(pageFragment);
+        if (bankCaptured && logCaptured)
+        {
+            return new RequirementResult(required + " " + raid + " uniques",
+                RequirementStatus.MISSING,
+                found + " / " + required + " owned or logged");
         }
         return manual(required + " " + raid + " uniques",
-            found + " / " + required + " currently owned; collection log can confirm consumed items");
+            found + " / " + required + " owned or logged; capture bank and "
+                + raid + " Collection Log page");
+    }
+
+    private static String collectionLogPageFragment(String raid)
+    {
+        switch (raid)
+        {
+            case "Chambers of Xeric": return "chambers of xeric";
+            case "Tombs of Amascut": return "tombs of amascut";
+            case "Theatre of Blood": return "theatre of blood";
+            default: throw new IllegalArgumentException("Unsupported raid: " + raid);
+        }
     }
     private RequirementResult tobUniquesIncludingAvernic(
         VerificationSnapshot snapshot, int required)

@@ -156,6 +156,24 @@ public class IronDropQualificationServiceTest
     }
 
     @Test
+    public void combinesOwnedAndCollectionLogRaidUniques()
+    {
+        Map<String, Integer> logged = new LinkedHashMap<>();
+        logged.put("Dexterous prayer scroll", 1);
+        logged.put("Arcane prayer scroll", 1);
+        logged.put("Twisted buckler", 1);
+        CollectionLogEvidence collectionLog = new CollectionLogEvidence(
+            Collections.singletonMap("Chambers of Xeric", logged));
+        VerificationSnapshot snapshot = new VerificationSnapshot(
+            "Mr Dimples", 2350, 126,
+            Collections.singletonList(bankItem(200, "Twisted bow")), true,
+            false).withCollectionLogEvidence(collectionLog);
+
+        assertPassed(service.evaluateTarget(snapshot, "Diamond"),
+            "4 Chambers of Xeric uniques");
+    }
+
+    @Test
     public void verifiesCapturedMaxedPohAndDoomCollectionLog()
     {
         VerificationSnapshot base = new VerificationSnapshot(
