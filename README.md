@@ -2,10 +2,9 @@
 
 This is the development foundation for ClanHQ rank verification.
 
-The current build is deliberately preview-only. A 15-second development capture session
-accumulates equipment and inventory evidence, captures only rank-relevant
-bank items when the bank is opened, and remembers supported prayers activated
-during the session. It also reads levels and authoritative hard/elite
+The current build is deliberately preview-only. With the bank open, one click
+captures equipment, inventory, and rank-relevant bank items. It also reads
+levels and authoritative hard/elite
 achievement-diary completion state. Capture also performs a public RuneScape
 hiscore lookup for the selected character's raid completion counts. It does
 not send captured evidence to ClanHQ, Discord, or any other service.
@@ -14,12 +13,12 @@ The checklist covers every Iron Drop progression rank from Opal through
 Zenyte. The player selects the requested rank before capture, and the panel
 shows only that rank's evidence. Character, prayers, gear, raid KC, individual
 Collection Log sources, boat, and owner-POH are independent evidence stages.
-Collection Log buttons are split into Overview, COX, TOB, TOA, and Doom and
+Collection Log buttons are split into COX, TOB, TOA, and Doom and
 only appear when the selected rank needs them. Captured raid pages retain
 acquired and total visible slot counts and are combined with current item evidence
 for unique-count requirements without double-counting the same unique. The
-Collection Log overview can also capture the current Bronze-through-Dragon
-rank. Boat
+Every Collection Log page capture also records the global obtained/total count
+shown in the window header. Boat
 capture reads only visible text from RuneLite's Sailing
 boat-selection or customisation interface and can accumulate Skiff and Sloop
 panels; staff still confirms that each vessel is maxed. POH capture requires
@@ -29,8 +28,8 @@ rank and ensure the request is the next valid progression step when ticket
 submission is connected. Colonel is intentionally excluded because it is a
 retired-staff designation rather than a progression rank.
 
-Completionism bank items are reported individually. Overview capture verifies
-Dragon Collection Log rank and the 750-slot requirement. TOA capture checks
+Completionism bank items are reported individually. The global Collection Log
+count verifies Dragon rank (1,200 slots) and the 750-slot requirement. TOA capture checks
 the four boss remnants, Menaphite ornament kit, Cursed phalanx, Ancient
 remnant, and Masori crafting kit. COX capture can prove Metamorphic dust; TOB
 capture can prove Sanguine dust and both ornament kits. COX, TOB, and TOA captures can verify raid
@@ -107,8 +106,9 @@ use **End sessions** in the RuneScape account settings.
 - Collection Log capture stores only visible acquired item names and quantities.
 - Boat capture stores visible Sailing panel text, not cargo item contents.
 - POH capture stores only the five configured facility results and requires owner build mode.
-- The Gear capture window lasts 15 seconds. Captured evidence remains only in
-  the local panel until the rank changes, the session is reset, or RuneLite closes.
+- Bank, inventory, and equipped gear are captured once while the bank is open.
+  Evidence remains only in the local panel until the rank changes, the session
+  is reset, or RuneLite closes.
 - Bank capture retains and displays only items used by configured rank rules;
   unrelated bank contents are discarded immediately.
 - The preview lists the exact data collected.

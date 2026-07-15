@@ -147,25 +147,11 @@ final class ClanHQVerifierPanel extends PluginPanel
         updateProgressSummary();
     }
 
-    void setGearBusy(int secondsRemaining)
-    {
-        setControlsEnabled(false);
-        showStageStatus(EvidenceStage.GEAR, EvidenceStageStatus.CAPTURING);
-        showCaptureProgress(secondsRemaining);
-        previewArea.setText("Open your bank during the capture window.");
-    }
-
     void setStageBusy(EvidenceStage stage)
     {
         setControlsEnabled(false);
         showStageStatus(stage, EvidenceStageStatus.CAPTURING);
         statusLabel.setText("Capturing " + stage.getDisplayName() + "...");
-    }
-
-    void showCaptureProgress(int secondsRemaining)
-    {
-        statusLabel.setText("Capturing gear... " + secondsRemaining
-            + " seconds remaining");
     }
 
     void showSnapshot(VerificationSnapshot snapshot,
@@ -245,9 +231,8 @@ final class ClanHQVerifierPanel extends PluginPanel
         {
             case CHARACTER: return "Verify Character";
             case PRAYERS: return "Capture Prayers";
-            case GEAR: return "Capture Gear";
+            case GEAR: return "Capture Bank & Gear";
             case RAID_KC: return "Fetch Raid KC";
-            case COLLECTION_OVERVIEW: return "Capture Collection Overview";
             case COX_LOG: return "Capture COX Log";
             case TOB_LOG: return "Capture TOB Log";
             case TOA_LOG: return "Capture TOA Log";

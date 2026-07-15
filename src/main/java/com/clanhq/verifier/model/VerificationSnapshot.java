@@ -199,6 +199,25 @@ public final class VerificationSnapshot
         return copy;
     }
 
+    public VerificationSnapshot withItemEvidenceFrom(VerificationSnapshot evidence)
+    {
+        if (!rsn.equals(evidence.rsn))
+        {
+            throw new IllegalArgumentException(
+                "Item evidence belongs to another character.");
+        }
+        VerificationSnapshot copy = new VerificationSnapshot(rsn,
+            totalLevel, combatLevel, evidence.items,
+            evidence.bankEvidenceCaptured, pietyActive,
+            rigourActive, deadeyeActive,
+            mysticVigourActive, herbloreLevel,
+            diaryProgress, raidKillCounts, collectionLogSlots);
+        copy.collectionLogEvidence = collectionLogEvidence;
+        copy.pohEvidence = pohEvidence;
+        copy.boatEvidence = boatEvidence;
+        return copy;
+    }
+
     public Optional<ObservedItem> findItem(Set<Integer> acceptedItemIds)
     {
         return items.stream()

@@ -66,4 +66,38 @@ public class VerificationSnapshotTest
         assertTrue(updated.isMysticVigourActive());
         assertTrue(updated.isBankEvidenceCaptured());
     }
+
+    @Test
+    public void updatesItemEvidenceWithoutDiscardingOtherStages()
+    {
+        VerificationSnapshot original = new VerificationSnapshot(
+            "Mr Dimples", 2325, 126, Collections.emptyList(), false,
+            true, true, true, true, 99, new DiaryProgress(12, 12, 12))
+            .withCollectionLogEvidence(CollectionLogEvidence.slotCount(1200))
+            .withPohEvidence(new PohEvidence(true,
+                new java.util.LinkedHashSet<>(java.util.Arrays.asList(
+                    PohEvidence.SPIRITUAL_FAIRY, PohEvidence.JEWELLERY_BOX,
+                    PohEvidence.OCCULT_ALTAR, PohEvidence.PORTAL_NEXUS,
+                    PohEvidence.REJUVENATION_POOL))))
+            .withBoatEvidence(new BoatEvidence(
+                new java.util.LinkedHashSet<>(java.util.Arrays.asList(
+                    "Skiff", "Sloop")),
+                Collections.singletonList("Captured")));
+        VerificationSnapshot itemEvidence = new VerificationSnapshot(
+            "Mr Dimples", 2325, 126,
+            Collections.singletonList(new ObservedItem(
+                22322, "Avernic defender", 1, EvidenceSource.BANK)),
+            true, false);
+
+        VerificationSnapshot updated = original.withItemEvidenceFrom(itemEvidence);
+
+        assertTrue(updated.isBankEvidenceCaptured());
+        assertEquals(1, updated.getItems().size());
+        assertTrue(updated.isPietyActive());
+        assertTrue(updated.isRigourActive());
+        assertEquals(Integer.valueOf(1200),
+            updated.getCollectionLogEvidence().getObtainedSlotCount());
+        assertTrue(updated.getPohEvidence().isMaxed());
+        assertTrue(updated.getBoatEvidence().isCaptured());
+    }
 }

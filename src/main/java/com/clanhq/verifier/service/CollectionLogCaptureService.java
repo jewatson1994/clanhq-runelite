@@ -27,17 +27,6 @@ public final class CollectionLogCaptureService
         this.client = client;
     }
 
-    public CollectionLogEvidence captureOverview()
-    {
-        Widget overview = client.getWidget(InterfaceID.CollectionOverview.FRAME);
-        if (overview == null || overview.isHidden())
-        {
-            throw new IllegalStateException(
-                "Open the Collection Log overview before capturing.");
-        }
-        return captureOverviewEvidence(overview);
-    }
-
     public CollectionLogEvidence capturePage(String expectedPageTitle)
     {
         Widget frame = client.getWidget(InterfaceID.Collection.FRAME);
@@ -74,8 +63,11 @@ public final class CollectionLogCaptureService
             throw new IllegalStateException(
                 "The Collection Log page has not finished loading.");
         }
-        return CollectionLogEvidence.page(pageTitle, scan.items,
-            scan.acquiredSlotCount, scan.visibleItemCount);
+        CollectionLogEvidence page = CollectionLogEvidence.page(pageTitle,
+            scan.items, scan.acquiredSlotCount, scan.visibleItemCount);
+        Integer obtainedSlots = parseObtainedSlots(readVisibleText(frame));
+        return obtainedSlots == null ? page : page.merge(
+            CollectionLogEvidence.slotCount(obtainedSlots));
     }
 
     private String firstKnownPageTitle(Widget... candidates)
@@ -93,20 +85,6 @@ public final class CollectionLogCaptureService
             }
         }
         return null;
-    }
-
-    private CollectionLogEvidence captureOverviewEvidence(Widget overview)
-    {
-        Widget rank = client.getWidget(InterfaceID.CollectionOverview.CURRENT_RANK);
-        String rankName = rank == null || rank.isHidden()
-            ? null : knownCollectionRank(readVisibleText(rank));
-        Integer obtainedSlots = parseObtainedSlots(readVisibleText(overview));
-        if (rankName == null && obtainedSlots == null)
-        {
-            throw new IllegalStateException(
-                "Unable to read Collection Log rank or slot progress.");
-        }
-        return CollectionLogEvidence.overview(rankName, obtainedSlots);
     }
 
     private String readVisibleText(Widget root)
@@ -195,21 +173,6 @@ public final class CollectionLogCaptureService
         if (normalized.contains("tombs of amascut"))
         {
             return "Tombs of Amascut";
-        }
-        return null;
-    }
-
-    private static String knownCollectionRank(String text)
-    {
-        String normalized = text.toLowerCase(Locale.ENGLISH);
-        String[] ranks = {"Dragon", "Rune", "Adamant", "Mithril", "Black",
-            "Steel", "Iron", "Bronze"};
-        for (String rank : ranks)
-        {
-            if (normalized.contains(rank.toLowerCase(Locale.ENGLISH)))
-            {
-                return rank;
-            }
         }
         return null;
     }

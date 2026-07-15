@@ -8,36 +8,27 @@ import java.util.Map;
 public final class CollectionLogEvidence
 {
     private final Map<String, CollectionLogPageEvidence> pages;
-    private final String collectionRank;
     private final Integer obtainedSlotCount;
 
     public CollectionLogEvidence(Map<String, Map<String, Integer>> legacyPages)
-    {
-        this(legacyPages, null);
-    }
-
-    public CollectionLogEvidence(Map<String, Map<String, Integer>> legacyPages,
-        String collectionRank)
     {
         Map<String, CollectionLogPageEvidence> converted = new LinkedHashMap<>();
         legacyPages.forEach((title, items) -> converted.put(title,
             new CollectionLogPageEvidence(title, items, items.size(), items.size())));
         this.pages = Collections.unmodifiableMap(converted);
-        this.collectionRank = collectionRank;
         this.obtainedSlotCount = null;
     }
 
     private CollectionLogEvidence(Map<String, CollectionLogPageEvidence> pages,
-        String collectionRank, Integer obtainedSlotCount)
+        Integer obtainedSlotCount)
     {
         this.pages = Collections.unmodifiableMap(new LinkedHashMap<>(pages));
-        this.collectionRank = collectionRank;
         this.obtainedSlotCount = obtainedSlotCount;
     }
 
     public static CollectionLogEvidence empty()
     {
-        return new CollectionLogEvidence(Collections.emptyMap(), null, null);
+        return new CollectionLogEvidence(Collections.emptyMap(), null);
     }
 
     public static CollectionLogEvidence page(String title,
@@ -46,14 +37,12 @@ public final class CollectionLogEvidence
         CollectionLogPageEvidence page = new CollectionLogPageEvidence(
             title, acquiredItems, acquiredSlots, totalSlots);
         return new CollectionLogEvidence(Collections.singletonMap(title, page),
-            null, null);
+            null);
     }
 
-    public static CollectionLogEvidence overview(String rank,
-        Integer obtainedSlots)
+    public static CollectionLogEvidence slotCount(int obtainedSlots)
     {
-        return new CollectionLogEvidence(Collections.emptyMap(), rank,
-            obtainedSlots);
+        return new CollectionLogEvidence(Collections.emptyMap(), obtainedSlots);
     }
 
     public CollectionLogEvidence merge(CollectionLogEvidence other)
@@ -61,23 +50,14 @@ public final class CollectionLogEvidence
         Map<String, CollectionLogPageEvidence> merged = new LinkedHashMap<>(pages);
         merged.putAll(other.pages);
         return new CollectionLogEvidence(merged,
-            other.collectionRank == null ? collectionRank : other.collectionRank,
             other.obtainedSlotCount == null ? obtainedSlotCount
                 : other.obtainedSlotCount);
     }
 
-    public String getCollectionRank() { return collectionRank; }
     public Integer getObtainedSlotCount() { return obtainedSlotCount; }
     public boolean isCaptured()
     {
-        return !pages.isEmpty() || collectionRank != null
-            || obtainedSlotCount != null;
-    }
-
-    public boolean hasCollectionRank(String expectedRank)
-    {
-        return collectionRank != null
-            && normalize(collectionRank).equals(normalize(expectedRank));
+        return !pages.isEmpty() || obtainedSlotCount != null;
     }
 
     public boolean hasPage(String pageFragment)
@@ -114,10 +94,6 @@ public final class CollectionLogEvidence
     public String toSummary()
     {
         StringBuilder summary = new StringBuilder();
-        if (collectionRank != null)
-        {
-            summary.append("Rank ").append(collectionRank);
-        }
         if (obtainedSlotCount != null)
         {
             appendSeparator(summary);

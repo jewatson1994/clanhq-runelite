@@ -6,7 +6,6 @@ public enum EvidenceStage
     PRAYERS("Prayers"),
     GEAR("Gear"),
     RAID_KC("Raid KC"),
-    COLLECTION_OVERVIEW("Collection Overview"),
     COX_LOG("COX Collection Log"),
     TOB_LOG("TOB Collection Log"),
     TOA_LOG("TOA Collection Log"),

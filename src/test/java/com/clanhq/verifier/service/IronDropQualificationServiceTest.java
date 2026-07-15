@@ -67,8 +67,6 @@ public class IronDropQualificationServiceTest
         assertTrue(service.getRequiredStages("Completionism")
             .containsAll(Arrays.asList(EvidenceStage.COX_LOG,
                 EvidenceStage.TOB_LOG, EvidenceStage.TOA_LOG)));
-        assertTrue(service.getRequiredStages("Kitten")
-            .contains(EvidenceStage.COLLECTION_OVERVIEW));
         assertTrue(service.getRequiredStages("Zenyte")
             .containsAll(Arrays.asList(EvidenceStage.COX_LOG,
                 EvidenceStage.TOB_LOG, EvidenceStage.TOA_LOG)));
@@ -127,8 +125,7 @@ public class IronDropQualificationServiceTest
             "Mr Dimples", 2350, 126, items, true,
             false, false, false, false, 99, new DiaryProgress(12, 12, 12),
             RaidKillCounts.unavailable("Not requested"), 0)
-            .withCollectionLogEvidence(CollectionLogEvidence.overview(
-                "Dragon", 800));
+            .withCollectionLogEvidence(CollectionLogEvidence.slotCount(800));
 
         assertPassed(service.evaluateTarget(snapshot, "Dragon"),
             "All Cerberus boots or 2-upgrade Avernic treads");
@@ -254,12 +251,11 @@ public class IronDropQualificationServiceTest
     }
 
     @Test
-    public void verifiesDragonCollectionLogRankFromOverview()
+    public void verifiesDragonCollectionLogRankFromHeaderCount()
     {
         VerificationSnapshot snapshot = new VerificationSnapshot(
             "Mr Dimples", 2350, 126, Collections.emptyList(), false, false)
-            .withCollectionLogEvidence(new CollectionLogEvidence(
-                Collections.emptyMap(), "Dragon"));
+            .withCollectionLogEvidence(CollectionLogEvidence.slotCount(1200));
 
         assertPassed(service.evaluateTarget(snapshot, "Completionism"),
             "Dragon Collection Log rank");
@@ -269,8 +265,7 @@ public class IronDropQualificationServiceTest
     public void verifiesCollectionSlotsAndRaidGreenLogs()
     {
         Map<String, Integer> item = Collections.singletonMap("Unique", 1);
-        CollectionLogEvidence evidence = CollectionLogEvidence.overview(
-            "Dragon", 800)
+        CollectionLogEvidence evidence = CollectionLogEvidence.slotCount(800)
             .merge(CollectionLogEvidence.page(
                 "Chambers of Xeric", item, 12, 12))
             .merge(CollectionLogEvidence.page(

@@ -24,7 +24,6 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
-import javax.swing.Timer;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -32,9 +31,6 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
-import net.runelite.api.GameState;
-import net.runelite.api.events.GameStateChanged;
-import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.client.events.ConfigChanged;
 
 @PluginDescriptor(
@@ -43,8 +39,6 @@ import net.runelite.client.events.ConfigChanged;
     tags = {"clan", "gear", "rank", "verification"})
 public final class ClanHQVerifierPlugin extends Plugin
 {
-    private static final int CAPTURE_DURATION_SECONDS = 15;
-
     @Inject
     private ClientThread clientThread;
 
@@ -80,8 +74,6 @@ public final class ClanHQVerifierPlugin extends Plugin
 
     private ClanHQVerifierPanel panel;
     private NavigationButton navigationButton;
-    private Timer captureTimer;
-    private int secondsRemaining;
     private String requestedRank;
     private VerificationSession verificationSession;
     private VerificationSnapshot capturedSnapshot;
@@ -120,17 +112,9 @@ public final class ClanHQVerifierPlugin extends Plugin
     @Override
     protected void shutDown()
     {
-        stopCaptureTimer();
         clientToolbar.removeNavigation(navigationButton);
-        snapshotService.cancelCaptureSession();
         navigationButton = null;
         panel = null;
-    }
-
-    @Subscribe
-    public void onItemContainerChanged(ItemContainerChanged event)
-    {
-        snapshotService.observeItemContainer(event);
     }
 
     @Subscribe
@@ -139,25 +123,6 @@ public final class ClanHQVerifierPlugin extends Plugin
         if (ClanHQVerifierConfig.GROUP.equals(event.getGroup()))
         {
             SwingUtilities.invokeLater(this::refreshApiDestination);
-        }
-    }
-
-    @Subscribe
-    public void onGameStateChanged(GameStateChanged event)
-    {
-        if (event.getGameState() == GameState.LOGIN_SCREEN)
-        {
-            boolean captureWasActive = snapshotService.isCaptureActive();
-            snapshotService.cancelCaptureSession();
-
-            if (captureWasActive)
-            {
-                SwingUtilities.invokeLater(() ->
-                {
-                    stopCaptureTimer();
-                    panel.showError("Capture cancelled because you logged out.");
-                });
-            }
         }
     }
 
@@ -178,7 +143,6 @@ public final class ClanHQVerifierPlugin extends Plugin
             case RAID_KC:
                 fetchRaidKillCounts();
                 break;
-            case COLLECTION_OVERVIEW:
             case COX_LOG:
             case TOB_LOG:
             case TOA_LOG:
@@ -270,21 +234,32 @@ public final class ClanHQVerifierPlugin extends Plugin
 
     private void captureGear()
     {
-        panel.setGearBusy(CAPTURE_DURATION_SECONDS);
-        verificationSession.setStatus(EvidenceStage.GEAR,
-            EvidenceStageStatus.CAPTURING);
+        VerificationSession session = verificationSession;
+        beginStage(EvidenceStage.GEAR);
 
         clientThread.invokeLater(() ->
         {
             try
             {
-                snapshotService.startCaptureSession();
-                SwingUtilities.invokeLater(this::startCaptureTimer);
+                VerificationSnapshot snapshot =
+                    snapshotService.captureItemsEvidence();
+                SwingUtilities.invokeLater(() ->
+                {
+                    if (isCurrentSession(session))
+                    {
+                        acceptItemSnapshot(snapshot);
+                    }
+                });
             }
             catch (RuntimeException exception)
             {
-                SwingUtilities.invokeLater(() -> failStage(
-                    EvidenceStage.GEAR, exception));
+                SwingUtilities.invokeLater(() ->
+                {
+                    if (isCurrentSession(session))
+                    {
+                        failStage(EvidenceStage.GEAR, exception);
+                    }
+                });
             }
         });
     }
@@ -362,8 +337,6 @@ public final class ClanHQVerifierPlugin extends Plugin
     {
         switch (stage)
         {
-            case COLLECTION_OVERVIEW:
-                return collectionLogCaptureService.captureOverview();
             case COX_LOG:
                 return collectionLogCaptureService.capturePage("Chambers of Xeric");
             case TOB_LOG:
@@ -462,67 +435,24 @@ public final class ClanHQVerifierPlugin extends Plugin
         renderSnapshot(message);
     }
 
-    private void startCaptureTimer()
+    private void acceptItemSnapshot(VerificationSnapshot snapshot)
     {
-        stopCaptureTimer();
-        secondsRemaining = CAPTURE_DURATION_SECONDS;
-        captureTimer = new Timer(1000, event -> captureTick());
-        captureTimer.start();
-    }
-
-    private void captureTick()
-    {
-        int remainingAfterTick = --secondsRemaining;
-        boolean shouldFinish = remainingAfterTick <= 0;
-        panel.showCaptureProgress(Math.max(remainingAfterTick, 0));
-
-        if (shouldFinish)
+        capturedSnapshot = capturedSnapshot == null
+            ? snapshot : capturedSnapshot.withItemEvidenceFrom(snapshot);
+        if (raidKillCounts != null)
         {
-            stopCaptureTimer();
+            capturedSnapshot = capturedSnapshot.withRaidKillCounts(raidKillCounts);
         }
-
-        clientThread.invokeLater(() ->
-        {
-            try
-            {
-                snapshotService.observeCurrentState();
-
-                if (shouldFinish && snapshotService.isCaptureActive())
-                {
-                    finishCapture();
-                }
-            }
-            catch (RuntimeException exception)
-            {
-                snapshotService.cancelCaptureSession();
-                SwingUtilities.invokeLater(() ->
-                {
-                    stopCaptureTimer();
-                    failStage(EvidenceStage.GEAR, exception);
-                });
-            }
-        });
-    }
-
-    private void finishCapture()
-    {
-        VerificationSnapshot snapshot =
-            snapshotService.finishCaptureSession();
-        SwingUtilities.invokeLater(() ->
-        {
-            capturedSnapshot = raidKillCounts == null
-                ? snapshot : snapshot.withRaidKillCounts(raidKillCounts);
-            verificationSession.bindRsn(snapshot.getRsn());
-            verificationSession.setStatus(EvidenceStage.CHARACTER,
-                EvidenceStageStatus.CAPTURED);
-            verificationSession.setStatus(EvidenceStage.GEAR,
-                EvidenceStageStatus.CAPTURED);
-            panel.showStageStatus(EvidenceStage.CHARACTER,
-                EvidenceStageStatus.CAPTURED);
-            panel.showStageStatus(EvidenceStage.GEAR,
-                EvidenceStageStatus.CAPTURED);
-            renderSnapshot("Gear captured.");
-        });
+        verificationSession.bindRsn(snapshot.getRsn());
+        verificationSession.setStatus(EvidenceStage.CHARACTER,
+            EvidenceStageStatus.CAPTURED);
+        verificationSession.setStatus(EvidenceStage.GEAR,
+            EvidenceStageStatus.CAPTURED);
+        panel.showStageStatus(EvidenceStage.CHARACTER,
+            EvidenceStageStatus.CAPTURED);
+        panel.showStageStatus(EvidenceStage.GEAR,
+            EvidenceStageStatus.CAPTURED);
+        renderSnapshot("Bank, inventory, and equipped gear captured.");
     }
 
     private void acceptAccountSnapshot(VerificationSnapshot snapshot)
@@ -605,15 +535,6 @@ public final class ClanHQVerifierPlugin extends Plugin
         {
             panel.showApiDestination(apiDestinationService.describe(
                 config.apiBaseUrl(), config.clanCode()));
-        }
-    }
-
-    private void stopCaptureTimer()
-    {
-        if (captureTimer != null)
-        {
-            captureTimer.stop();
-            captureTimer = null;
         }
     }
 

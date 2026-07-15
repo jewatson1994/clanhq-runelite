@@ -39,8 +39,10 @@ the current build never submits evidence.
 
 ### Gear
 
-- Start capture, then open Equipment, Inventory, and Bank during the 15-second
-  window.
+- Open the bank, then click Capture Bank & Gear.
+- Expected: bank, inventory, and equipped gear are captured immediately.
+- Close the bank and try again. Capture must reject the attempt rather than use
+  stale bank data.
 - Expected: only rank-relevant items appear. Unrelated bank contents such as
   coins, food, and supplies must not appear.
 - Confirm complete Ancestral, fortified Masori, Oathplate/Torva, and Avernic
@@ -55,13 +57,12 @@ the current build never submits evidence.
 
 ### Collection Log
 
-- Use the specific Overview, COX, TOB, TOA, or Doom button shown for the
+- Use the specific COX, TOB, TOA, or Doom button shown for the
   selected rank. Open that exact page before capture.
 - Expected: the page name appears and only acquired visible items are retained.
 - Capture multiple pages and confirm earlier pages remain in the same session.
-- Open the Collection Log overview and capture it. Confirm the displayed
-  Bronze-through-Dragon rank and obtained-slot count accumulate alongside
-  previously captured pages.
+- Confirm each page capture records the global `obtained/total` count shown at
+  the top of the Collection Log window.
 - Confirm raid unique counts combine bank ownership and matching log entries
   without counting the same unique twice.
 - Verify Doom only passes after cloth, boots, and eye are all present.
@@ -92,7 +93,7 @@ the current build never submits evidence.
 
 ## Completionism
 
-- Confirm Completionism requests Overview, COX, TOB, and TOA Collection Log
+- Confirm Completionism requests COX, TOB, and TOA Collection Log
   captures.
 - Metamorphic dust should pass from COX; Sanguine dust and both ornament kits
   should pass from TOB even when their physical items are not in the bank.
@@ -100,8 +101,8 @@ the current build never submits evidence.
   Sanguine dust, both ornament kits, Saturated heart, Amulet of rancour, three
   Twisted ancestral colour kits, Champion's cape, and the Expert dragon archer
   hat.
-- Dragon Collection Log rank should pass only after the overview reports
-  Dragon. The 750-slot check uses the same overview capture. The TOA set passes
+- Dragon Collection Log rank should pass at 1,200 obtained slots. The 750-slot
+  check uses the same window-header count. The TOA set passes
   only when all eight configured cosmetic/transmog entries are acquired.
 
 ## Known boundary

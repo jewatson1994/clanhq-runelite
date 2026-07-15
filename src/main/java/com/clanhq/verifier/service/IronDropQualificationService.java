@@ -73,10 +73,6 @@ public final class IronDropQualificationService
         {
             stages.add(EvidenceStage.RAID_KC);
         }
-        if (Arrays.asList("Kitten", "Completionism").contains(rankName))
-        {
-            stages.add(EvidenceStage.COLLECTION_OVERVIEW);
-        }
         if (Arrays.asList("Diamond", "Kitten", "Completionism", "Zenyte")
             .contains(rankName))
         {
@@ -365,15 +361,15 @@ public final class IronDropQualificationService
     }
     private RequirementResult collectionLogRank(VerificationSnapshot snapshot)
     {
-        String rank = snapshot.getCollectionLogEvidence().getCollectionRank();
-        if (rank == null)
+        Integer obtained = snapshot.getCollectionLogEvidence()
+            .getObtainedSlotCount();
+        if (obtained == null)
         {
             return manual("Dragon Collection Log rank",
-                "Capture the Collection Log overview");
+                "Capture any required Collection Log page");
         }
-        return state("Dragon Collection Log rank",
-            snapshot.getCollectionLogEvidence().hasCollectionRank("Dragon"),
-            "Current rank: " + rank);
+        return state("Dragon Collection Log rank", obtained >= 1200,
+            obtained + " / 1200 slots");
     }
     private RequirementResult collectionLogSlots(VerificationSnapshot snapshot,
         int required)
@@ -383,7 +379,7 @@ public final class IronDropQualificationService
         if (obtained == null)
         {
             return manual(required + " collection-log slots",
-                "Capture the Collection Log overview");
+                "Capture any required Collection Log page");
         }
         return state(required + " collection-log slots", obtained >= required,
             obtained + " / " + required);

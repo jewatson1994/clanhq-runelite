@@ -42,33 +42,31 @@ public class CollectorEvidenceTest
     }
 
     @Test
-    public void mergesCollectionRankWithCapturedPages()
+    public void mergesHeaderSlotCountWithCapturedPages()
     {
-        CollectionLogEvidence rank = new CollectionLogEvidence(
-            Collections.emptyMap(), "Dragon");
+        CollectionLogEvidence count = CollectionLogEvidence.slotCount(1200);
         Map<String, Integer> items = new LinkedHashMap<>();
         items.put("Twisted bow", 1);
         CollectionLogEvidence page = new CollectionLogEvidence(
             Collections.singletonMap("Chambers of Xeric", items));
 
-        CollectionLogEvidence combined = rank.merge(page);
+        CollectionLogEvidence combined = count.merge(page);
 
-        assertTrue(combined.hasCollectionRank("Dragon"));
+        assertEquals(Integer.valueOf(1200), combined.getObtainedSlotCount());
         assertTrue(combined.hasPage("Chambers"));
-        assertTrue(combined.toSummary().contains("Rank Dragon"));
+        assertTrue(combined.toSummary().contains("1200 slots"));
     }
 
     @Test
-    public void retainsOverviewSlotsAndPageCompletion()
+    public void retainsHeaderSlotsAndPageCompletion()
     {
-        CollectionLogEvidence overview = CollectionLogEvidence.overview(
-            "Dragon", 812);
+        CollectionLogEvidence count = CollectionLogEvidence.slotCount(812);
         Map<String, Integer> acquired = new LinkedHashMap<>();
         acquired.put("Twisted bow", 1);
         CollectionLogEvidence greenPage = CollectionLogEvidence.page(
             "Chambers of Xeric", acquired, 12, 12);
 
-        CollectionLogEvidence combined = overview.merge(greenPage);
+        CollectionLogEvidence combined = count.merge(greenPage);
 
         assertEquals(Integer.valueOf(812), combined.getObtainedSlotCount());
         assertTrue(combined.isPageGreenLogged("chambers"));

@@ -17,8 +17,8 @@ import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Player;
 import net.runelite.api.Skill;
-import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.gameval.InventoryID;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.api.gameval.VarPlayerID;
 
@@ -26,15 +26,6 @@ public final class LocalPlayerSnapshotService
 {
     private final Client client;
     private final RankItemCatalog rankItemCatalog;
-    private final Map<String, ObservedItem> observedItems =
-        new LinkedHashMap<>();
-    private boolean captureActive;
-    private boolean bankEvidenceCaptured;
-    private boolean pietyObserved;
-    private boolean rigourObserved;
-    private boolean deadeyeObserved;
-    private boolean mysticVigourObserved;
-    private String sessionRsn;
 
     @Inject
     public LocalPlayerSnapshotService(
@@ -45,38 +36,43 @@ public final class LocalPlayerSnapshotService
         this.rankItemCatalog = rankItemCatalog;
     }
 
-    public void startCaptureSession()
+    public VerificationSnapshot captureItemsEvidence()
     {
         Player player = requireLoggedInPlayer();
-
-        observedItems.clear();
-        captureActive = true;
-        bankEvidenceCaptured = false;
-        pietyObserved = false;
-        rigourObserved = false;
-        deadeyeObserved = false;
-        mysticVigourObserved = false;
-        sessionRsn = player.getName();
-
-        observeCurrentState();
-
+        net.runelite.api.widgets.Widget bankFrame = client.getWidget(
+            InterfaceID.Bankmain.FRAME);
         ItemContainer bank = client.getItemContainer(InventoryID.BANK);
-        if (bank != null)
+        if (bankFrame == null || bankFrame.isHidden() || bank == null)
         {
-            addItems(bank, EvidenceSource.BANK);
-            bankEvidenceCaptured = true;
+            throw new IllegalStateException(
+                "Open your bank before capturing bank and gear evidence.");
         }
+
+        Map<String, ObservedItem> items = new LinkedHashMap<>();
+        addItems(client.getItemContainer(InventoryID.WORN),
+            EvidenceSource.EQUIPMENT, items);
+        addItems(client.getItemContainer(InventoryID.INV),
+            EvidenceSource.INVENTORY, items);
+        addItems(bank, EvidenceSource.BANK, items);
+
+        return snapshot(player, new ArrayList<>(items.values()), true);
     }
 
     public VerificationSnapshot captureAccountEvidence()
     {
         Player player = requireLoggedInPlayer();
+        return snapshot(player, Collections.emptyList(), false);
+    }
+
+    private VerificationSnapshot snapshot(Player player,
+        List<ObservedItem> items, boolean bankCaptured)
+    {
         return new VerificationSnapshot(
             player.getName(),
             client.getTotalLevel(),
             player.getCombatLevel(),
-            Collections.emptyList(),
-            false,
+            items,
+            bankCaptured,
             client.getVarbitValue(VarbitID.PRAYER_PIETY) == 1,
             client.getVarbitValue(VarbitID.PRAYER_RIGOUR_UNLOCKED) == 1,
             client.getVarbitValue(VarbitID.PRAYER_DEADEYE_UNLOCKED) == 1,
@@ -85,77 +81,6 @@ public final class LocalPlayerSnapshotService
             captureDiaryProgress(),
             com.clanhq.verifier.model.RaidKillCounts.unavailable("Not fetched"),
             client.getVarpValue(VarPlayerID.COLLECTION_COUNT));
-    }
-
-    public void observeCurrentState()
-    {
-        if (!captureActive)
-        {
-            return;
-        }
-
-        Player player = requireLoggedInPlayer();
-        ensureSamePlayer(player);
-
-        addItems(
-            client.getItemContainer(InventoryID.WORN),
-            EvidenceSource.EQUIPMENT);
-        addItems(
-            client.getItemContainer(InventoryID.INV),
-            EvidenceSource.INVENTORY);
-
-        pietyObserved = pietyObserved
-            || client.getVarbitValue(VarbitID.PRAYER_PIETY) == 1;
-        rigourObserved = rigourObserved
-            || client.getVarbitValue(VarbitID.PRAYER_RIGOUR_UNLOCKED) == 1;
-        deadeyeObserved = deadeyeObserved
-            || client.getVarbitValue(VarbitID.PRAYER_DEADEYE_UNLOCKED) == 1;
-        mysticVigourObserved = mysticVigourObserved
-            || client.getVarbitValue(VarbitID.PRAYER_MYSTIC_VIGOUR_UNLOCKED) == 1;
-    }
-
-    public VerificationSnapshot finishCaptureSession()
-    {
-        if (!captureActive)
-        {
-            throw new IllegalStateException("No capture session is active.");
-        }
-
-        observeCurrentState();
-        Player player = requireLoggedInPlayer();
-        captureActive = false;
-
-        return new VerificationSnapshot(
-            sessionRsn,
-            client.getTotalLevel(),
-            player.getCombatLevel(),
-            new ArrayList<>(observedItems.values()),
-            bankEvidenceCaptured,
-            pietyObserved,
-            rigourObserved,
-            deadeyeObserved,
-            mysticVigourObserved,
-            client.getRealSkillLevel(Skill.HERBLORE),
-            captureDiaryProgress(),
-            com.clanhq.verifier.model.RaidKillCounts.unavailable("Not fetched"),
-            client.getVarpValue(VarPlayerID.COLLECTION_COUNT));
-    }
-
-    public boolean isCaptureActive()
-    {
-        return captureActive;
-    }
-
-    public void cancelCaptureSession()
-    {
-        observedItems.clear();
-        captureActive = false;
-        bankEvidenceCaptured = false;
-        pietyObserved = false;
-        rigourObserved = false;
-        deadeyeObserved = false;
-        mysticVigourObserved = false;
-        sessionRsn = null;
     }
 
     private Player requireLoggedInPlayer()
@@ -171,25 +96,10 @@ public final class LocalPlayerSnapshotService
         return player;
     }
 
-    public void observeItemContainer(ItemContainerChanged event)
-    {
-        if (!captureActive || event.getContainerId() != InventoryID.BANK)
-        {
-            return;
-        }
-
-        Player player = requireLoggedInPlayer();
-        ensureSamePlayer(player);
-
-        addItems(
-            event.getItemContainer(),
-            EvidenceSource.BANK);
-        bankEvidenceCaptured = true;
-    }
-
     private void addItems(
         ItemContainer container,
-        EvidenceSource source)
+        EvidenceSource source,
+        Map<String, ObservedItem> observedItems)
     {
         if (container == null)
         {
@@ -266,13 +176,4 @@ public final class LocalPlayerSnapshotService
         return client.getVarbitValue(varbitId) > 0 ? 1 : 0;
     }
 
-    private void ensureSamePlayer(Player player)
-    {
-        if (!player.getName().equals(sessionRsn))
-        {
-            cancelCaptureSession();
-            throw new IllegalStateException(
-                "The logged-in character changed during capture.");
-        }
-    }
 }
