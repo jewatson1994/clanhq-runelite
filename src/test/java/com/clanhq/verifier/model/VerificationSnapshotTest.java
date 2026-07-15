@@ -47,4 +47,23 @@ public class VerificationSnapshotTest
         assertEquals(180, updated.getRaidKillCounts().getCombined());
         assertEquals(2325, updated.getTotalLevel());
     }
+
+    @Test
+    public void updatesPrayerEvidenceWithoutDiscardingOtherEvidence()
+    {
+        VerificationSnapshot original = new VerificationSnapshot(
+            "Mr Dimples", 2325, 126, Collections.emptyList(), true,
+            false, false, false, false, 99, new DiaryProgress(12, 12, 12));
+        VerificationSnapshot prayerEvidence = new VerificationSnapshot(
+            "Mr Dimples", 2325, 126, Collections.emptyList(), false,
+            true, true, true, true, 99, new DiaryProgress(12, 12, 12));
+
+        VerificationSnapshot updated = original.withPrayerEvidenceFrom(prayerEvidence);
+
+        assertTrue(updated.isPietyActive());
+        assertTrue(updated.isRigourActive());
+        assertTrue(updated.isDeadeyeActive());
+        assertTrue(updated.isMysticVigourActive());
+        assertTrue(updated.isBankEvidenceCaptured());
+    }
 }

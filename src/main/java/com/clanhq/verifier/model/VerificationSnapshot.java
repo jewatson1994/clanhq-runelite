@@ -172,6 +172,22 @@ public final class VerificationSnapshot
         return copy;
     }
 
+    public VerificationSnapshot withPrayerEvidenceFrom(VerificationSnapshot evidence)
+    {
+        if (!rsn.equals(evidence.rsn))
+        {
+            throw new IllegalArgumentException("Prayer evidence belongs to another character.");
+        }
+        VerificationSnapshot copy = new VerificationSnapshot(rsn, totalLevel,
+            combatLevel, items, bankEvidenceCaptured, evidence.pietyActive,
+            evidence.rigourActive, evidence.deadeyeActive,
+            evidence.mysticVigourActive, herbloreLevel, diaryProgress,
+            raidKillCounts, collectionLogSlots);
+        copy.collectionLogEvidence = collectionLogEvidence;
+        copy.pohEvidence = pohEvidence;
+        return copy;
+    }
+
     public Optional<ObservedItem> findItem(Set<Integer> acceptedItemIds)
     {
         return items.stream()

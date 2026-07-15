@@ -12,8 +12,8 @@ not send captured evidence to ClanHQ, Discord, or any other service.
 
 The checklist covers every Iron Drop progression rank from Opal through
 Zenyte. The player selects the requested rank before capture, and the panel
-shows only that rank's evidence. Account, gear, raid KC, Collection Log, and
-owner-POH are independent evidence stages with their own capture status.
+shows only that rank's evidence. Character, prayers, gear, raid KC, Collection
+Log, boat, and owner-POH are independent evidence stages with their own capture status.
 Collection Log capture reads the visible Doom or raid page and can accumulate
 multiple pages. POH capture requires the player's house in build mode and
 scans the loaded scene for all five configured facilities. ClanHQ
@@ -84,6 +84,7 @@ use **End sessions** in the RuneScape account settings.
 - The captured RSN is sent to RuneScape's public hiscore service for raid KC.
 - Capture happens only after an explicit button click.
 - Changing the selected rank starts a fresh evidence session.
+- Reset Session clears all locally accumulated evidence for the selected rank.
 - Evidence from different RSNs cannot be combined in one session.
 - The ClanHQ API destination is configured by each member in RuneLite settings.
 - HTTPS is required except for localhost development; changing settings never submits evidence automatically.

@@ -2,10 +2,12 @@ package com.clanhq.verifier.model;
 
 public enum EvidenceStage
 {
-    ACCOUNT("Account"),
+    CHARACTER("Character"),
+    PRAYERS("Prayers"),
     GEAR("Gear"),
     RAID_KC("Raid KC"),
     COLLECTION_LOG("Collection Log"),
+    BOAT("Boat"),
     POH("POH");
 
     private final String displayName;

@@ -61,6 +61,8 @@ public class IronDropQualificationServiceTest
         assertTrue(service.getRankNames().contains("Zenyte"));
         assertTrue(service.getRequiredStages("Dragon").contains(EvidenceStage.POH));
         assertTrue(service.getRequiredStages("Maxed").contains(EvidenceStage.RAID_KC));
+        assertTrue(service.getRequiredStages("Topaz").contains(EvidenceStage.PRAYERS));
+        assertTrue(service.getRequiredStages("Completionism").contains(EvidenceStage.BOAT));
     }
 
     @Test

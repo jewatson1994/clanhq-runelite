@@ -64,7 +64,11 @@ public final class IronDropQualificationService
             throw new IllegalArgumentException("Unknown Iron Drop rank: " + rankName);
         }
         EnumSet<EvidenceStage> stages = EnumSet.of(
-            EvidenceStage.ACCOUNT, EvidenceStage.GEAR);
+            EvidenceStage.CHARACTER, EvidenceStage.GEAR);
+        if (Arrays.asList("Opal", "Topaz", "Ruby").contains(rankName))
+        {
+            stages.add(EvidenceStage.PRAYERS);
+        }
         if ("Maxed".equals(rankName))
         {
             stages.add(EvidenceStage.RAID_KC);
@@ -77,6 +81,10 @@ public final class IronDropQualificationService
         if ("Dragon".equals(rankName))
         {
             stages.add(EvidenceStage.POH);
+        }
+        if ("Completionism".equals(rankName))
+        {
+            stages.add(EvidenceStage.BOAT);
         }
         return Collections.unmodifiableSet(stages);
     }

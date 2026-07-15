@@ -11,9 +11,9 @@ public class VerificationSessionTest
     public void becomesReadyWhenEveryRequiredSourceIsCapturedOrReviewable()
     {
         VerificationSession session = new VerificationSession("Dragon",
-            EnumSet.of(EvidenceStage.ACCOUNT, EvidenceStage.GEAR, EvidenceStage.POH));
+            EnumSet.of(EvidenceStage.CHARACTER, EvidenceStage.GEAR, EvidenceStage.POH));
         session.bindRsn("Mr Dimples");
-        session.setStatus(EvidenceStage.ACCOUNT, EvidenceStageStatus.CAPTURED);
+        session.setStatus(EvidenceStage.CHARACTER, EvidenceStageStatus.CAPTURED);
         session.setStatus(EvidenceStage.GEAR, EvidenceStageStatus.CAPTURED);
 
         assertFalse(session.isReadyForSubmission());
@@ -26,7 +26,7 @@ public class VerificationSessionTest
     public void rejectsEvidenceFromAnotherCharacter()
     {
         VerificationSession session = new VerificationSession("Jade",
-            EnumSet.of(EvidenceStage.ACCOUNT));
+            EnumSet.of(EvidenceStage.CHARACTER));
         session.bindRsn("Mr Dimples");
         session.bindRsn("Not Mr Dimples");
     }

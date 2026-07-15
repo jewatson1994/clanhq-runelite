@@ -3,6 +3,7 @@ package com.clanhq.verifier;
 import com.clanhq.verifier.model.EvidenceStage;
 import com.clanhq.verifier.model.EvidenceStageStatus;
 import com.clanhq.verifier.model.RankQualificationResult;
+import com.clanhq.verifier.model.RequirementStatus;
 import com.clanhq.verifier.model.VerificationSnapshot;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -10,6 +11,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.EnumSet;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import javax.swing.BorderFactory;
@@ -34,10 +36,19 @@ final class ClanHQVerifierPanel extends PluginPanel
         new EnumMap<>(EvidenceStage.class);
     private final Map<EvidenceStage, JLabel> stageStatuses =
         new EnumMap<>(EvidenceStage.class);
+    private final Map<EvidenceStage, EvidenceStageStatus> currentStatuses =
+        new EnumMap<>(EvidenceStage.class);
+    private Set<EvidenceStage> requiredStages = EnumSet.noneOf(EvidenceStage.class);
     private final JButton submitButton = new JButton("Submit Review Ticket");
+    private final JButton resetButton = new JButton("Reset Session");
     private final JLabel apiDestinationLabel = new JLabel("API: Not configured");
     private final JLabel statusLabel = new JLabel("Start a verification session.");
     private final JTextArea previewArea = new JTextArea();
+    private final JLabel evidenceSummary = new JLabel("Evidence: 0/0 sources captured");
+    private final JLabel requirementSummary = new JLabel("Requirements: not evaluated");
+    private final JLabel readinessSummary = new JLabel("Capture evidence to continue");
+    private int missingRequirements;
+    private int reviewRequirements;
 
     ClanHQVerifierPanel(List<String> rankNames,
         BiConsumer<String, EvidenceStage> captureAction,
@@ -69,6 +80,15 @@ final class ClanHQVerifierPanel extends PluginPanel
         }
         header.add(stagePanel);
         header.add(Box.createRigidArea(new Dimension(0, 8)));
+        header.add(evidenceSummary);
+        header.add(requirementSummary);
+        header.add(readinessSummary);
+        header.add(Box.createRigidArea(new Dimension(0, 8)));
+
+        resetButton.addActionListener(event -> rankChangedAction.accept(
+            (String) rankSelector.getSelectedItem()));
+        header.add(resetButton);
+        header.add(Box.createRigidArea(new Dimension(0, 6)));
 
         submitButton.setEnabled(false);
         submitButton.setToolTipText("ClanHQ submission API is not connected yet");
@@ -92,6 +112,12 @@ final class ClanHQVerifierPanel extends PluginPanel
 
     void setRequiredStages(Set<EvidenceStage> requiredStages)
     {
+        this.requiredStages = requiredStages.isEmpty()
+            ? EnumSet.noneOf(EvidenceStage.class)
+            : EnumSet.copyOf(requiredStages);
+        missingRequirements = 0;
+        reviewRequirements = 0;
+        requirementSummary.setText("Requirements: not evaluated");
         for (EvidenceStage stage : EvidenceStage.values())
         {
             boolean required = requiredStages.contains(stage);
@@ -100,6 +126,7 @@ final class ClanHQVerifierPanel extends PluginPanel
         }
         previewArea.setText("Capture each required evidence source for the selected rank.");
         statusLabel.setText("New verification session.");
+        updateProgressSummary();
         revalidate();
         repaint();
     }
@@ -111,7 +138,9 @@ final class ClanHQVerifierPanel extends PluginPanel
 
     void showStageStatus(EvidenceStage stage, EvidenceStageStatus status)
     {
+        currentStatuses.put(stage, status);
         stageStatuses.get(stage).setText(status.getDisplayText());
+        updateProgressSummary();
     }
 
     void setGearBusy(int secondsRemaining)
@@ -136,6 +165,16 @@ final class ClanHQVerifierPanel extends PluginPanel
         previewArea.setText(qualification.toChecklistText()
             + "\n\nCaptured evidence\n" + snapshot.toPreviewText());
         previewArea.setCaretPosition(0);
+        long passed = qualification.getRequirements().stream()
+            .filter(item -> item.getStatus() == RequirementStatus.PASSED).count();
+        missingRequirements = (int) qualification.getRequirements().stream()
+            .filter(item -> item.getStatus() == RequirementStatus.MISSING).count();
+        reviewRequirements = (int) qualification.getRequirements().stream()
+            .filter(item -> item.getStatus() == RequirementStatus.UNVERIFIED).count();
+        requirementSummary.setText("Requirements: " + passed + " passed • "
+            + missingRequirements + " missing • " + reviewRequirements
+            + " staff review");
+        updateProgressSummary();
     }
 
     void showMessage(String message)
@@ -165,12 +204,14 @@ final class ClanHQVerifierPanel extends PluginPanel
         stageRows.put(stage, row);
         stageButtons.put(stage, button);
         stageStatuses.put(stage, status);
+        currentStatuses.put(stage, EvidenceStageStatus.NOT_CAPTURED);
         stagePanel.add(row);
     }
 
     private void setControlsEnabled(boolean enabled)
     {
         rankSelector.setEnabled(enabled);
+        resetButton.setEnabled(enabled);
         stageButtons.values().forEach(button -> button.setEnabled(enabled));
     }
 
@@ -186,12 +227,41 @@ final class ClanHQVerifierPanel extends PluginPanel
     {
         switch (stage)
         {
-            case ACCOUNT: return "Capture Account";
+            case CHARACTER: return "Verify Character";
+            case PRAYERS: return "Capture Prayers";
             case GEAR: return "Capture Gear";
             case RAID_KC: return "Fetch Raid KC";
             case COLLECTION_LOG: return "Capture Collection Log";
             case POH: return "Capture POH Instance";
+            case BOAT: return "Capture Boat";
             default: throw new IllegalArgumentException("Unknown evidence stage");
+        }
+    }
+
+    private void updateProgressSummary()
+    {
+        long ready = requiredStages.stream()
+            .filter(stage -> currentStatuses.getOrDefault(stage,
+                EvidenceStageStatus.NOT_CAPTURED).isSubmissionReady())
+            .count();
+        evidenceSummary.setText("Evidence: " + ready + "/"
+            + requiredStages.size() + " sources captured");
+        if (ready < requiredStages.size())
+        {
+            readinessSummary.setText("Capture " + (requiredStages.size() - ready)
+                + " remaining source(s)");
+        }
+        else if (missingRequirements > 0)
+        {
+            readinessSummary.setText("Missing requirements");
+        }
+        else if (reviewRequirements > 0)
+        {
+            readinessSummary.setText("Ready for staff review");
+        }
+        else
+        {
+            readinessSummary.setText("Automated evidence complete");
         }
     }
 }

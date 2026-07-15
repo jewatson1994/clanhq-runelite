@@ -162,8 +162,11 @@ public final class ClanHQVerifierPlugin extends Plugin
         ensureSession(rankName);
         switch (stage)
         {
-            case ACCOUNT:
+            case CHARACTER:
                 captureAccount();
+                break;
+            case PRAYERS:
+                capturePrayers();
                 break;
             case GEAR:
                 captureGear();
@@ -177,6 +180,12 @@ public final class ClanHQVerifierPlugin extends Plugin
             case POH:
                 capturePoh();
                 break;
+            case BOAT:
+                verificationSession.setStatus(stage,
+                    EvidenceStageStatus.MANUAL_REVIEW);
+                panel.showStageStatus(stage, EvidenceStageStatus.MANUAL_REVIEW);
+                panel.showMessage("Boat collector is not connected yet.");
+                break;
             default:
                 throw new IllegalArgumentException("Unsupported evidence stage");
         }
@@ -184,9 +193,9 @@ public final class ClanHQVerifierPlugin extends Plugin
 
     private void captureAccount()
     {
-        verificationSession.setStatus(EvidenceStage.ACCOUNT,
+        verificationSession.setStatus(EvidenceStage.CHARACTER,
             EvidenceStageStatus.CAPTURING);
-        panel.showStageStatus(EvidenceStage.ACCOUNT,
+        panel.showStageStatus(EvidenceStage.CHARACTER,
             EvidenceStageStatus.CAPTURING);
         clientThread.invokeLater(() ->
         {
@@ -198,7 +207,39 @@ public final class ClanHQVerifierPlugin extends Plugin
             catch (RuntimeException exception)
             {
                 SwingUtilities.invokeLater(() -> failStage(
-                    EvidenceStage.ACCOUNT, exception));
+                    EvidenceStage.CHARACTER, exception));
+            }
+        });
+    }
+
+    private void capturePrayers()
+    {
+        beginStage(EvidenceStage.PRAYERS);
+        clientThread.invokeLater(() ->
+        {
+            try
+            {
+                VerificationSnapshot evidence =
+                    snapshotService.captureAccountEvidence();
+                SwingUtilities.invokeLater(() ->
+                {
+                    if (capturedSnapshot == null)
+                    {
+                        acceptAccountSnapshot(evidence);
+                    }
+                    else
+                    {
+                        capturedSnapshot = capturedSnapshot
+                            .withPrayerEvidenceFrom(evidence);
+                    }
+                    completeStage(EvidenceStage.PRAYERS,
+                        "Prayer evidence captured.");
+                });
+            }
+            catch (RuntimeException exception)
+            {
+                SwingUtilities.invokeLater(() -> failStage(
+                    EvidenceStage.PRAYERS, exception));
             }
         });
     }
@@ -365,11 +406,11 @@ public final class ClanHQVerifierPlugin extends Plugin
             capturedSnapshot = raidKillCounts == null
                 ? snapshot : snapshot.withRaidKillCounts(raidKillCounts);
             verificationSession.bindRsn(snapshot.getRsn());
-            verificationSession.setStatus(EvidenceStage.ACCOUNT,
+            verificationSession.setStatus(EvidenceStage.CHARACTER,
                 EvidenceStageStatus.CAPTURED);
             verificationSession.setStatus(EvidenceStage.GEAR,
                 EvidenceStageStatus.CAPTURED);
-            panel.showStageStatus(EvidenceStage.ACCOUNT,
+            panel.showStageStatus(EvidenceStage.CHARACTER,
                 EvidenceStageStatus.CAPTURED);
             panel.showStageStatus(EvidenceStage.GEAR,
                 EvidenceStageStatus.CAPTURED);
@@ -382,9 +423,9 @@ public final class ClanHQVerifierPlugin extends Plugin
         capturedSnapshot = raidKillCounts == null
             ? snapshot : snapshot.withRaidKillCounts(raidKillCounts);
         verificationSession.bindRsn(snapshot.getRsn());
-        verificationSession.setStatus(EvidenceStage.ACCOUNT,
+        verificationSession.setStatus(EvidenceStage.CHARACTER,
             EvidenceStageStatus.CAPTURED);
-        panel.showStageStatus(EvidenceStage.ACCOUNT,
+        panel.showStageStatus(EvidenceStage.CHARACTER,
             EvidenceStageStatus.CAPTURED);
         renderSnapshot("Account evidence captured.");
     }
