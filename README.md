@@ -14,6 +14,9 @@ Zenyte and enforces cumulative progression: a rank cannot qualify until every
 preceding rank is fully met. Colonel is intentionally excluded because it is
 a retired-staff designation rather than a progression rank.
 
+The plugin reports evidence status, not an official qualification decision.
+Only ClanHQ and the eventual staff ticket approval can verify or award a rank.
+
 Requirements RuneLite cannot yet prove reliably (for example collection-log
 counts, raid KC, POH layout, and some compound gear sets) are shown as
 `[CHECK]`. They are never treated as passed or guessed from skill levels.

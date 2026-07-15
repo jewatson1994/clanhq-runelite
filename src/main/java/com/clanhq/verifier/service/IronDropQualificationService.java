@@ -175,9 +175,25 @@ public final class IronDropQualificationService
 
     private RankQualificationResult rank(String name, List<RankQualificationResult> prior, List<RequirementResult> own)
     {
-        boolean passed = prior.stream().allMatch(RankQualificationResult::isQualified);
-        own.add(0, state("All previous ranks fully met", passed,
-            passed ? "Complete" : "A preceding rank is not fully verified"));
+        boolean missing = prior.stream().anyMatch(RankQualificationResult::hasMissingEvidence);
+        boolean manualReview = prior.stream().anyMatch(RankQualificationResult::requiresManualReview);
+        RequirementResult previousRanks;
+        if (missing)
+        {
+            previousRanks = new RequirementResult("Previous-rank evidence",
+                RequirementStatus.MISSING, "A preceding rank has missing automated evidence");
+        }
+        else if (manualReview)
+        {
+            previousRanks = manual("Previous-rank evidence",
+                "A preceding rank includes staff-review requirements");
+        }
+        else
+        {
+            previousRanks = state("Previous-rank evidence", true,
+                "Automated evidence is complete");
+        }
+        own.add(0, previousRanks);
         return new RankQualificationResult(name, own);
     }
 

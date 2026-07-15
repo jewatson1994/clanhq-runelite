@@ -25,6 +25,18 @@ public final class RankQualificationResult
             .allMatch(result -> result.getStatus() == RequirementStatus.PASSED);
     }
 
+    public boolean hasMissingEvidence()
+    {
+        return requirements.stream()
+            .anyMatch(result -> result.getStatus() == RequirementStatus.MISSING);
+    }
+
+    public boolean requiresManualReview()
+    {
+        return requirements.stream()
+            .anyMatch(result -> result.getStatus() == RequirementStatus.UNVERIFIED);
+    }
+
     public List<RequirementResult> getRequirements()
     {
         return requirements;
@@ -38,8 +50,8 @@ public final class RankQualificationResult
     public String toChecklistText()
     {
         StringBuilder checklist = new StringBuilder();
-        checklist.append(rankName).append(" qualification: ")
-            .append(isQualified() ? "QUALIFIED" : "NOT YET VERIFIED")
+        checklist.append(rankName).append(" evidence: ")
+            .append(evidenceSummary())
             .append('\n');
 
         for (RequirementResult requirement : requirements)
@@ -53,5 +65,18 @@ public final class RankQualificationResult
         }
 
         return checklist.toString().trim();
+    }
+
+    private String evidenceSummary()
+    {
+        if (hasMissingEvidence())
+        {
+            return "MISSING AUTOMATED EVIDENCE";
+        }
+        if (requiresManualReview())
+        {
+            return "MANUAL REVIEW REQUIRED";
+        }
+        return "AUTOMATED CHECKS PASSED";
     }
 }
