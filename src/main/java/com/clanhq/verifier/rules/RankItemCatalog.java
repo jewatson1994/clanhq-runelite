@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import javax.inject.Inject;
 
 public final class RankItemCatalog
@@ -30,7 +31,10 @@ public final class RankItemCatalog
         "oathplate", "twisted bow", "zaryte crossbow", "kodai", "nightmare staff",
         "inquisitor", "justiciar", "dinh's bulwark", "dragon hunter crossbow",
         "hill giant club", "prayer scroll", "twisted buckler", "lightbearer",
-        "elidinis' ward", "zaryte vambraces", "nihil horn");
+        "elidinis' ward", "zaryte vambraces", "nihil horn",
+        "metamorphic dust", "sanguine dust", "sanguine ornament kit",
+        "holy ornament kit", "saturated heart", "twisted ancestral colour kit",
+        "champion's cape", "expert dragon archer");
 
     @Inject
     public RankItemCatalog()
@@ -49,7 +53,7 @@ public final class RankItemCatalog
         {
             return true;
         }
-        String normalized = itemName.toLowerCase();
+        String normalized = itemName.toLowerCase(Locale.ENGLISH);
         return relevantNameFragments.stream().anyMatch(normalized::contains);
     }
 }

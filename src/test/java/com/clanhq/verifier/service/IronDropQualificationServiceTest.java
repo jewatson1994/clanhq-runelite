@@ -217,6 +217,32 @@ public class IronDropQualificationServiceTest
             .contains("Skiff, Sloop"));
     }
 
+    @Test
+    public void verifiesAutomatableCompletionismItems()
+    {
+        List<ObservedItem> items = Arrays.asList(
+            bankItem(301, "Metamorphic dust"),
+            bankItem(302, "Sanguine dust"),
+            bankItem(303, "Sanguine ornament kit"),
+            bankItem(304, "Holy ornament kit"),
+            bankItem(305, "Saturated heart"),
+            bankItem(306, "Amulet of rancour"),
+            new ObservedItem(307, "Twisted ancestral colour kit", 3,
+                EvidenceSource.BANK),
+            bankItem(308, "Champion's cape"),
+            bankItem(309, "Expert dragon archer hat"));
+        VerificationSnapshot snapshot = new VerificationSnapshot(
+            "Mr Dimples", 2350, 126, items, true, false);
+
+        RankQualificationResult result = service.evaluateTarget(
+            snapshot, "Completionism");
+
+        assertPassed(result, "Metamorphic dust");
+        assertPassed(result, "Sanguine dust");
+        assertPassed(result, "3 Twisted ancestral colour kits");
+        assertPassed(result, "Expert dragon archer hat");
+    }
+
     private static ObservedItem bankItem(int id, String name)
     {
         return new ObservedItem(id, name, 1, EvidenceSource.BANK);

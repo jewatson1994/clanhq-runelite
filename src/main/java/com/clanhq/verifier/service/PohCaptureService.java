@@ -12,6 +12,7 @@ import net.runelite.api.GroundObject;
 import net.runelite.api.Scene;
 import net.runelite.api.Tile;
 import net.runelite.api.WallObject;
+import net.runelite.api.WorldView;
 import net.runelite.api.gameval.VarbitID;
 
 public final class PohCaptureService
@@ -31,11 +32,12 @@ public final class PohCaptureService
             throw new IllegalStateException(
                 "Enter your own POH in build mode before capturing.");
         }
-        Scene scene = client.getScene();
-        if (scene == null)
+        WorldView worldView = client.getTopLevelWorldView();
+        if (worldView == null)
         {
             throw new IllegalStateException("The POH scene is not loaded.");
         }
+        Scene scene = worldView.getScene();
 
         Set<String> facilities = new LinkedHashSet<>();
         for (Tile[][] plane : scene.getTiles())

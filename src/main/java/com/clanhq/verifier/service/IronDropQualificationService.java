@@ -261,7 +261,21 @@ public final class IronDropQualificationService
 
     private List<RequirementResult> completionism(VerificationSnapshot snapshot)
     {
-        return list(manual("Completionism collection log and cosmetics", "Collection-log/cosmetic evidence required"),
+        return list(
+            manual("Dragon Collection Log rank",
+                "ClanHQ staff confirms the Collection Log rank"),
+            item(snapshot, "Metamorphic dust", "metamorphic dust"),
+            item(snapshot, "Sanguine dust", "sanguine dust"),
+            item(snapshot, "Sanguine ornament kit", "sanguine ornament kit"),
+            item(snapshot, "Holy ornament kit", "holy ornament kit"),
+            manual("All Tombs of Amascut cosmetics and transmogs",
+                "Capture the Tombs of Amascut Collection Log page for staff review"),
+            item(snapshot, "Saturated heart", "saturated heart"),
+            item(snapshot, "Amulet of rancour", "amulet of rancour"),
+            quantity(snapshot, "3 Twisted ancestral colour kits", 3,
+                "twisted ancestral colour kit"),
+            item(snapshot, "Champion's cape", "champion's cape"),
+            item(snapshot, "Expert dragon archer hat", "expert dragon archer"),
             boatRequirement(snapshot));
     }
 

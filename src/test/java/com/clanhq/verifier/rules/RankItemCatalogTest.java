@@ -31,6 +31,8 @@ public class RankItemCatalogTest
     {
         assertTrue(catalog.isRelevant(999_001, "Tormented synapse"));
         assertTrue(catalog.isRelevant(999_002, "Blessed Dizana's quiver"));
+        assertTrue(catalog.isRelevant(999_004, "Twisted ancestral colour kit"));
+        assertTrue(catalog.isRelevant(999_005, "Expert dragon archer hat"));
         assertFalse(catalog.isRelevant(999_003, "Raw lobster"));
     }
 }

@@ -26,6 +26,10 @@ rank and ensure the request is the next valid progression step when ticket
 submission is connected. Colonel is intentionally excluded because it is a
 retired-staff designation rather than a progression rank.
 
+Completionism bank items are reported individually. Dragon Collection Log
+rank, the complete Tombs of Amascut cosmetic/transmog set, and Sailing upgrade
+state remain staff-review requirements instead of being inferred.
+
 The plugin reports evidence status, not an official qualification decision.
 Only ClanHQ and the eventual staff ticket approval can verify or award a rank.
 
