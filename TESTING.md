@@ -59,6 +59,8 @@ the current build never submits evidence.
   Blood, Tombs of Amascut, or Doom of Mokhaiotl.
 - Expected: the page name appears and only acquired visible items are retained.
 - Capture multiple pages and confirm earlier pages remain in the same session.
+- Open the Collection Log overview and capture it. Confirm the displayed
+  Bronze-through-Dragon rank accumulates alongside previously captured pages.
 - Confirm raid unique counts combine bank ownership and matching log entries
   without counting the same unique twice.
 - Verify Doom only passes after cloth, boots, and eye are all present.
@@ -88,8 +90,9 @@ the current build never submits evidence.
   Sanguine dust, both ornament kits, Saturated heart, Amulet of rancour, three
   Twisted ancestral colour kits, Champion's cape, and the Expert dragon archer
   hat.
-- Dragon Collection Log rank and the complete Tombs of Amascut
-  cosmetic/transmog set must remain staff review.
+- Dragon Collection Log rank should pass only after the overview reports
+  Dragon. The complete Tombs of Amascut cosmetic/transmog set remains staff
+  review.
 
 ## Known boundary
 

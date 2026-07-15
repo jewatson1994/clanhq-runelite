@@ -16,7 +16,9 @@ shows only that rank's evidence. Character, prayers, gear, raid KC, Collection
 Log, boat, and owner-POH are independent evidence stages with their own capture status.
 Collection Log capture reads the visible Doom or raid page and can accumulate
 multiple pages. Captured raid pages are combined with current item evidence
-for unique-count requirements without double-counting the same unique. Boat
+for unique-count requirements without double-counting the same unique. The
+Collection Log overview can also capture the current Bronze-through-Dragon
+rank. Boat
 capture reads only visible text from RuneLite's Sailing
 boat-selection or customisation interface and can accumulate Skiff and Sloop
 panels; staff still confirms that each vessel is maxed. POH capture requires
@@ -27,8 +29,9 @@ submission is connected. Colonel is intentionally excluded because it is a
 retired-staff designation rather than a progression rank.
 
 Completionism bank items are reported individually. Dragon Collection Log
-rank, the complete Tombs of Amascut cosmetic/transmog set, and Sailing upgrade
-state remain staff-review requirements instead of being inferred.
+rank can be read from the overview; the complete Tombs of Amascut
+cosmetic/transmog set and Sailing upgrade state remain staff-review
+requirements instead of being inferred.
 
 The plugin reports evidence status, not an official qualification decision.
 Only ClanHQ and the eventual staff ticket approval can verify or award a rank.

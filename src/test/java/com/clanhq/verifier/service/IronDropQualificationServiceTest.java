@@ -243,6 +243,18 @@ public class IronDropQualificationServiceTest
         assertPassed(result, "Expert dragon archer hat");
     }
 
+    @Test
+    public void verifiesDragonCollectionLogRankFromOverview()
+    {
+        VerificationSnapshot snapshot = new VerificationSnapshot(
+            "Mr Dimples", 2350, 126, Collections.emptyList(), false, false)
+            .withCollectionLogEvidence(new CollectionLogEvidence(
+                Collections.emptyMap(), "Dragon"));
+
+        assertPassed(service.evaluateTarget(snapshot, "Completionism"),
+            "Dragon Collection Log rank");
+    }
+
     private static ObservedItem bankItem(int id, String name)
     {
         return new ObservedItem(id, name, 1, EvidenceSource.BANK);

@@ -4,6 +4,7 @@ import com.clanhq.verifier.model.CollectionLogEvidence;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import javax.inject.Inject;
@@ -23,6 +24,11 @@ public final class CollectionLogCaptureService
 
     public CollectionLogEvidence captureVisiblePage()
     {
+        Widget overview = client.getWidget(InterfaceID.CollectionOverview.FRAME);
+        if (overview != null && !overview.isHidden())
+        {
+            return captureOverviewRank();
+        }
         Widget frame = client.getWidget(InterfaceID.Collection.FRAME);
         Widget header = client.getWidget(InterfaceID.Collection.HEADER_TEXT);
         Widget items = client.getWidget(InterfaceID.Collection.ITEMS);
@@ -48,6 +54,59 @@ public final class CollectionLogCaptureService
         }
         return new CollectionLogEvidence(Collections.singletonMap(
             pageTitle, scan.items));
+    }
+
+    private CollectionLogEvidence captureOverviewRank()
+    {
+        Widget rank = client.getWidget(InterfaceID.CollectionOverview.CURRENT_RANK);
+        if (rank == null || rank.isHidden())
+        {
+            throw new IllegalStateException(
+                "The Collection Log overview has not finished loading.");
+        }
+        String rankName = knownCollectionRank(readVisibleText(rank));
+        if (rankName == null)
+        {
+            throw new IllegalStateException(
+                "Unable to read the current Collection Log rank.");
+        }
+        return new CollectionLogEvidence(Collections.emptyMap(), rankName);
+    }
+
+    private String readVisibleText(Widget root)
+    {
+        StringBuilder text = new StringBuilder();
+        Set<Widget> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+        appendVisibleText(root, visited, text);
+        return text.toString();
+    }
+
+    private void appendVisibleText(Widget widget, Set<Widget> visited,
+        StringBuilder text)
+    {
+        if (widget == null || widget.isHidden() || !visited.add(widget))
+        {
+            return;
+        }
+        text.append(' ').append(clean(widget.getText()));
+        text.append(' ').append(clean(widget.getName()));
+        appendChildrenText(widget.getChildren(), visited, text);
+        appendChildrenText(widget.getDynamicChildren(), visited, text);
+        appendChildrenText(widget.getStaticChildren(), visited, text);
+        appendChildrenText(widget.getNestedChildren(), visited, text);
+    }
+
+    private void appendChildrenText(Widget[] children, Set<Widget> visited,
+        StringBuilder text)
+    {
+        if (children == null)
+        {
+            return;
+        }
+        for (Widget child : children)
+        {
+            appendVisibleText(child, visited, text);
+        }
     }
 
     private void scan(Widget widget, Set<Widget> visited, PageScan scan)
@@ -80,11 +139,26 @@ public final class CollectionLogCaptureService
 
     private static boolean isKnownPageTitle(String text)
     {
-        String normalized = text.toLowerCase();
+        String normalized = text.toLowerCase(Locale.ENGLISH);
         return normalized.contains("doom")
             || normalized.equals("chambers of xeric")
             || normalized.equals("theatre of blood")
             || normalized.equals("tombs of amascut");
+    }
+
+    private static String knownCollectionRank(String text)
+    {
+        String normalized = text.toLowerCase();
+        String[] ranks = {"Dragon", "Rune", "Adamant", "Mithril", "Black",
+            "Steel", "Iron", "Bronze"};
+        for (String rank : ranks)
+        {
+            if (normalized.contains(rank.toLowerCase(Locale.ENGLISH)))
+            {
+                return rank;
+            }
+        }
+        return null;
     }
 
     private static String clean(String text)

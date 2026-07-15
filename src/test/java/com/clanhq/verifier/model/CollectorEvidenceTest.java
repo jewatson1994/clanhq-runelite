@@ -42,6 +42,23 @@ public class CollectorEvidenceTest
     }
 
     @Test
+    public void mergesCollectionRankWithCapturedPages()
+    {
+        CollectionLogEvidence rank = new CollectionLogEvidence(
+            Collections.emptyMap(), "Dragon");
+        Map<String, Integer> items = new LinkedHashMap<>();
+        items.put("Twisted bow", 1);
+        CollectionLogEvidence page = new CollectionLogEvidence(
+            Collections.singletonMap("Chambers of Xeric", items));
+
+        CollectionLogEvidence combined = rank.merge(page);
+
+        assertTrue(combined.hasCollectionRank("Dragon"));
+        assertTrue(combined.hasPage("Chambers"));
+        assertTrue(combined.toSummary().contains("Rank Dragon"));
+    }
+
+    @Test
     public void requiresAllFiveFacilitiesAndOwnerBuildMode()
     {
         PohEvidence evidence = new PohEvidence(true, new LinkedHashSet<>(Arrays.asList(

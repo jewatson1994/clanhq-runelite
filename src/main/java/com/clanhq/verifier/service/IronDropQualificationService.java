@@ -262,8 +262,7 @@ public final class IronDropQualificationService
     private List<RequirementResult> completionism(VerificationSnapshot snapshot)
     {
         return list(
-            manual("Dragon Collection Log rank",
-                "ClanHQ staff confirms the Collection Log rank"),
+            collectionLogRank(snapshot),
             item(snapshot, "Metamorphic dust", "metamorphic dust"),
             item(snapshot, "Sanguine dust", "sanguine dust"),
             item(snapshot, "Sanguine ornament kit", "sanguine ornament kit"),
@@ -348,9 +347,21 @@ public final class IronDropQualificationService
         return manual("Maxed skiff and sloop", detail
             + "; staff confirms the upgrade state");
     }
+    private RequirementResult collectionLogRank(VerificationSnapshot snapshot)
+    {
+        String rank = snapshot.getCollectionLogEvidence().getCollectionRank();
+        if (rank == null)
+        {
+            return manual("Dragon Collection Log rank",
+                "Capture the Collection Log overview");
+        }
+        return state("Dragon Collection Log rank",
+            snapshot.getCollectionLogEvidence().hasCollectionRank("Dragon"),
+            "Current rank: " + rank);
+    }
     private RequirementResult doomUniques(VerificationSnapshot snapshot)
     {
-        if (!snapshot.getCollectionLogEvidence().isCaptured())
+        if (!snapshot.getCollectionLogEvidence().hasPage("doom"))
         {
             return manual("All Doom uniques",
                 "Capture the Doom collection-log page");

@@ -8,13 +8,21 @@ import java.util.Map;
 public final class CollectionLogEvidence
 {
     private final Map<String, Map<String, Integer>> pages;
+    private final String collectionRank;
 
     public CollectionLogEvidence(Map<String, Map<String, Integer>> pages)
+    {
+        this(pages, null);
+    }
+
+    public CollectionLogEvidence(Map<String, Map<String, Integer>> pages,
+        String collectionRank)
     {
         Map<String, Map<String, Integer>> copy = new LinkedHashMap<>();
         pages.forEach((page, items) -> copy.put(page,
             Collections.unmodifiableMap(new LinkedHashMap<>(items))));
         this.pages = Collections.unmodifiableMap(copy);
+        this.collectionRank = collectionRank;
     }
 
     public static CollectionLogEvidence empty()
@@ -26,11 +34,19 @@ public final class CollectionLogEvidence
     {
         Map<String, Map<String, Integer>> merged = new LinkedHashMap<>(pages);
         merged.putAll(other.pages);
-        return new CollectionLogEvidence(merged);
+        return new CollectionLogEvidence(merged,
+            other.collectionRank == null ? collectionRank : other.collectionRank);
     }
 
     public Map<String, Map<String, Integer>> getPages() { return pages; }
-    public boolean isCaptured() { return !pages.isEmpty(); }
+    public String getCollectionRank() { return collectionRank; }
+    public boolean isCaptured() { return !pages.isEmpty() || collectionRank != null; }
+
+    public boolean hasCollectionRank(String expectedRank)
+    {
+        return collectionRank != null
+            && normalize(collectionRank).equals(normalize(expectedRank));
+    }
 
     public boolean hasPage(String pageFragment)
     {
@@ -58,8 +74,10 @@ public final class CollectionLogEvidence
 
     public String toSummary()
     {
-        return pages.isEmpty() ? "No pages captured"
+        String pageSummary = pages.isEmpty() ? "No pages captured"
             : String.join(", ", pages.keySet());
+        return collectionRank == null ? pageSummary
+            : "Rank " + collectionRank + "; " + pageSummary;
     }
 
     private static boolean hasName(Map<String, Integer> items, String fragment)
