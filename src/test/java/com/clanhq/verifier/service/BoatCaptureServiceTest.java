@@ -44,19 +44,19 @@ public class BoatCaptureServiceTest
     public void capturesAuthoritativeOwnedBoatConfigurations()
     {
         Map<Integer, Integer> varbits = new HashMap<>();
-        addBoat(varbits, 1, 1, 201, 301, 401, 501);
-        addBoat(varbits, 2, 2, 202, 302, 402, 502);
+        addBoat(varbits, 1, 1, 0, 0, 0, 0);
+        addBoat(varbits, 2, 2, 6, 6, 6, 6);
         Map<Integer, String> rows = new HashMap<>();
         rows.put(101, "Skiff");
         rows.put(102, "Sloop");
-        for (int row : Arrays.asList(201, 202, 301, 302))
-        {
-            rows.put(row, "Rosewood component");
-        }
-        for (int row : Arrays.asList(401, 402, 501, 502))
-        {
-            rows.put(row, "Dragon component");
-        }
+        rows.put(200, "Wooden hull");
+        rows.put(206, "Rosewood hull");
+        rows.put(300, "Wooden mast and linen sails");
+        rows.put(306, "Rosewood mast and cotton sails");
+        rows.put(400, "Bronze helm");
+        rows.put(406, "Dragon helm");
+        rows.put(500, "Bronze keel");
+        rows.put(506, "Dragon keel");
         Client client = (Client) Proxy.newProxyInstance(
             Client.class.getClassLoader(), new Class<?>[] {Client.class},
             (proxy, method, arguments) ->
@@ -77,6 +77,22 @@ public class BoatCaptureServiceTest
                         : type == 2 ? Arrays.asList(102)
                         : java.util.Collections.emptyList();
                 }
+                if (method.getName().equals("getDBTableRows"))
+                {
+                    int table = (Integer) arguments[0];
+                    int start = table == net.runelite.api.gameval.DBTableID.SailingBoatHull.ID
+                        ? 200
+                        : table == net.runelite.api.gameval.DBTableID.SailingBoatSail.ID
+                            ? 300
+                            : table == net.runelite.api.gameval.DBTableID.SailingBoatSteering.ID
+                                ? 400 : 500;
+                    java.util.List<Integer> tableRows = new java.util.ArrayList<>();
+                    for (int index = 0; index < 7; index++)
+                    {
+                        tableRows.add(start + index);
+                    }
+                    return tableRows;
+                }
                 if (method.getReturnType().equals(boolean.class)) return false;
                 if (method.getReturnType().equals(int.class)) return 0;
                 return null;
@@ -86,8 +102,10 @@ public class BoatCaptureServiceTest
             .captureVisiblePanel();
 
         assertEquals(2, evidence.getConfigurations().size());
-        assertTrue(evidence.hasMaxedBoat("Skiff"));
+        assertFalse(evidence.hasMaxedBoat("Skiff"));
         assertTrue(evidence.hasMaxedBoat("Sloop"));
+        assertEquals("Wooden hull",
+            evidence.getConfigurations().get(0).getHull());
     }
 
     private static void addBoat(Map<Integer, Integer> values, int slot,

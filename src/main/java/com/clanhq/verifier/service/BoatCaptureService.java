@@ -78,12 +78,16 @@ public final class BoatCaptureService
             boats.add(new BoatConfiguration(index + 1,
                 readBoatType(client.getVarbitValue(TYPES[index])),
                 readComponent(client.getVarbitValue(HULLS[index]),
+                    DBTableID.SailingBoatHull.ID,
                     DBTableID.SailingBoatHull.COL_NAME, "hull"),
                 readComponent(client.getVarbitValue(SAILS[index]),
+                    DBTableID.SailingBoatSail.ID,
                     DBTableID.SailingBoatSail.COL_NAME, "mast and sails"),
                 readComponent(client.getVarbitValue(STEERING[index]),
+                    DBTableID.SailingBoatSteering.ID,
                     DBTableID.SailingBoatSteering.COL_NAME, "helm"),
                 readComponent(client.getVarbitValue(KEELS[index]),
+                    DBTableID.SailingBoatKeel.ID,
                     DBTableID.SailingBoatKeel.COL_NAME, "keel")));
         }
         return boats;
@@ -112,10 +116,29 @@ public final class BoatCaptureService
         return name == null ? "Unknown boat row " + rowId : name;
     }
 
-    private String readComponent(int rowId, int nameColumn, String label)
+    private String readComponent(int encodedValue, int tableId,
+        int nameColumn, String label)
     {
-        String name = readDatabaseName(rowId, nameColumn);
-        return name == null ? "Unknown " + label + " row " + rowId : name;
+        String name = null;
+        List<Integer> rows;
+        try
+        {
+            rows = client.getDBTableRows(tableId);
+        }
+        catch (RuntimeException exception)
+        {
+            rows = Collections.emptyList();
+        }
+        if (rows != null && encodedValue >= 0 && encodedValue < rows.size())
+        {
+            name = readDatabaseName(rows.get(encodedValue), nameColumn);
+        }
+        if (name == null)
+        {
+            name = readDatabaseName(encodedValue, nameColumn);
+        }
+        return name == null ? "Unknown " + label + " value " + encodedValue
+            : name;
     }
 
     private String readDatabaseName(int rowId, int nameColumn)
