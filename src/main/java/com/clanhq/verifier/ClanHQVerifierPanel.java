@@ -35,6 +35,7 @@ final class ClanHQVerifierPanel extends PluginPanel
     private final Map<EvidenceStage, JLabel> stageStatuses =
         new EnumMap<>(EvidenceStage.class);
     private final JButton submitButton = new JButton("Submit Review Ticket");
+    private final JLabel apiDestinationLabel = new JLabel("API: Not configured");
     private final JLabel statusLabel = new JLabel("Start a verification session.");
     private final JTextArea previewArea = new JTextArea();
 
@@ -52,6 +53,8 @@ final class ClanHQVerifierPanel extends PluginPanel
         header.add(Box.createRigidArea(new Dimension(0, 6)));
         header.add(new JLabel("<html>Evidence remains local until submitted.<br>"
             + "Submission is not connected yet.</html>"));
+        header.add(Box.createRigidArea(new Dimension(0, 4)));
+        header.add(apiDestinationLabel);
         header.add(Box.createRigidArea(new Dimension(0, 10)));
         header.add(new JLabel("Requested rank:"));
         header.add(Box.createRigidArea(new Dimension(0, 4)));
@@ -99,6 +102,11 @@ final class ClanHQVerifierPanel extends PluginPanel
         statusLabel.setText("New verification session.");
         revalidate();
         repaint();
+    }
+
+    void showApiDestination(String description)
+    {
+        apiDestinationLabel.setText(description);
     }
 
     void showStageStatus(EvidenceStage stage, EvidenceStageStatus status)

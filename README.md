@@ -83,6 +83,8 @@ use **End sessions** in the RuneScape account settings.
 - Capture happens only after an explicit button click.
 - Changing the selected rank starts a fresh evidence session.
 - Evidence from different RSNs cannot be combined in one session.
+- The ClanHQ API destination is configured by each member in RuneLite settings.
+- HTTPS is required except for localhost development; changing settings never submits evidence automatically.
 - Each development capture session lasts 15 seconds and discards its evidence afterward.
 - Bank capture retains and displays only items used by configured rank rules;
   unrelated bank contents are discarded immediately.

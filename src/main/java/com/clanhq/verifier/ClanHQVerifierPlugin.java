@@ -9,6 +9,7 @@ import com.clanhq.verifier.model.VerificationSession;
 import com.clanhq.verifier.service.LocalPlayerSnapshotService;
 import com.clanhq.verifier.service.IronDropQualificationService;
 import com.clanhq.verifier.service.RaidKillCountService;
+import com.clanhq.verifier.service.ApiDestinationService;
 import com.clanhq.verifier.transport.PreviewOnlyVerificationTransport;
 import com.clanhq.verifier.transport.VerificationTransport;
 import com.clanhq.verifier.transport.VerificationTransportResult;
@@ -29,6 +30,7 @@ import net.runelite.client.ui.NavigationButton;
 import net.runelite.api.GameState;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.ItemContainerChanged;
+import net.runelite.client.events.ConfigChanged;
 
 @PluginDescriptor(
     name = "ClanHQ Verifier",
@@ -55,6 +57,12 @@ public final class ClanHQVerifierPlugin extends Plugin
 
     @Inject
     private RaidKillCountService raidKillCountService;
+
+    @Inject
+    private ApiDestinationService apiDestinationService;
+
+    @Inject
+    private ClanHQVerifierConfig config;
 
     private ClanHQVerifierPanel panel;
     private NavigationButton navigationButton;
@@ -84,6 +92,7 @@ public final class ClanHQVerifierPlugin extends Plugin
             qualificationService.getRankNames(),
             this::captureEvidence,
             this::startSession);
+        refreshApiDestination();
         startSession(qualificationService.getRankNames().get(0));
         navigationButton = NavigationButton.builder()
             .tooltip("ClanHQ Verifier")
@@ -108,6 +117,15 @@ public final class ClanHQVerifierPlugin extends Plugin
     public void onItemContainerChanged(ItemContainerChanged event)
     {
         snapshotService.observeItemContainer(event);
+    }
+
+    @Subscribe
+    public void onConfigChanged(ConfigChanged event)
+    {
+        if (ClanHQVerifierConfig.GROUP.equals(event.getGroup()))
+        {
+            SwingUtilities.invokeLater(this::refreshApiDestination);
+        }
     }
 
     @Subscribe
@@ -352,6 +370,15 @@ public final class ClanHQVerifierPlugin extends Plugin
             || !verificationSession.getRequestedRank().equals(rankName))
         {
             startSession(rankName);
+        }
+    }
+
+    private void refreshApiDestination()
+    {
+        if (panel != null)
+        {
+            panel.showApiDestination(apiDestinationService.describe(
+                config.apiBaseUrl(), config.clanCode()));
         }
     }
 
