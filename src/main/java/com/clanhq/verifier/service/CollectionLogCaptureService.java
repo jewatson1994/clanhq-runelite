@@ -31,14 +31,19 @@ public final class CollectionLogCaptureService
         }
         Widget frame = client.getWidget(InterfaceID.Collection.FRAME);
         Widget header = client.getWidget(InterfaceID.Collection.HEADER_TEXT);
+        Widget headerContainer = client.getWidget(InterfaceID.Collection.HEADER);
+        Widget main = client.getWidget(InterfaceID.Collection.MAIN);
+        Widget itemsContainer = client.getWidget(
+            InterfaceID.Collection.ITEMS_CONTENTS);
         Widget items = client.getWidget(InterfaceID.Collection.ITEMS);
-        if (frame == null || frame.isHidden() || header == null || items == null)
+        if (frame == null || frame.isHidden()
+            || (itemsContainer == null && items == null))
         {
             throw new IllegalStateException(
                 "Open the Collection Log to the required page before capturing.");
         }
-        String pageTitle = clean(header.getText());
-        if (!isKnownPageTitle(pageTitle))
+        String pageTitle = firstKnownPageTitle(header, headerContainer, main);
+        if (pageTitle == null)
         {
             throw new IllegalStateException(
                 "Open a supported Doom or raid Collection Log page.");
@@ -46,6 +51,7 @@ public final class CollectionLogCaptureService
 
         PageScan scan = new PageScan();
         Set<Widget> visited = Collections.newSetFromMap(new IdentityHashMap<>());
+        scan(itemsContainer, visited, scan);
         scan(items, visited, scan);
         if (scan.visibleItemCount == 0)
         {
@@ -54,6 +60,23 @@ public final class CollectionLogCaptureService
         }
         return new CollectionLogEvidence(Collections.singletonMap(
             pageTitle, scan.items));
+    }
+
+    private String firstKnownPageTitle(Widget... candidates)
+    {
+        for (Widget candidate : candidates)
+        {
+            if (candidate == null || candidate.isHidden())
+            {
+                continue;
+            }
+            String title = knownPageTitle(readVisibleText(candidate));
+            if (title != null)
+            {
+                return title;
+            }
+        }
+        return null;
     }
 
     private CollectionLogEvidence captureOverviewRank()
@@ -137,18 +160,31 @@ public final class CollectionLogCaptureService
         for (Widget child : children) scan(child, visited, scan);
     }
 
-    private static boolean isKnownPageTitle(String text)
+    private static String knownPageTitle(String text)
     {
         String normalized = text.toLowerCase(Locale.ENGLISH);
-        return normalized.contains("doom")
-            || normalized.equals("chambers of xeric")
-            || normalized.equals("theatre of blood")
-            || normalized.equals("tombs of amascut");
+        if (normalized.contains("doom of mokhaiotl"))
+        {
+            return "Doom of Mokhaiotl";
+        }
+        if (normalized.contains("chambers of xeric"))
+        {
+            return "Chambers of Xeric";
+        }
+        if (normalized.contains("theatre of blood"))
+        {
+            return "Theatre of Blood";
+        }
+        if (normalized.contains("tombs of amascut"))
+        {
+            return "Tombs of Amascut";
+        }
+        return null;
     }
 
     private static String knownCollectionRank(String text)
     {
-        String normalized = text.toLowerCase();
+        String normalized = text.toLowerCase(Locale.ENGLISH);
         String[] ranks = {"Dragon", "Rune", "Adamant", "Mithril", "Black",
             "Steel", "Iron", "Bronze"};
         for (String rank : ranks)
