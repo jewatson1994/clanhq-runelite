@@ -4,6 +4,7 @@ import com.clanhq.verifier.model.VerificationSnapshot;
 import com.clanhq.verifier.model.RankQualificationResult;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -76,15 +77,23 @@ final class ClanHQVerifierPanel extends PluginPanel
 
     void showSnapshot(
         VerificationSnapshot snapshot,
-        RankQualificationResult qualification,
+        List<RankQualificationResult> qualifications,
         String status)
     {
         captureButton.setEnabled(true);
         statusLabel.setText(status);
-        previewArea.setText(
-            qualification.toChecklistText()
-                + "\n\nCaptured evidence\n"
-                + snapshot.toPreviewText());
+        StringBuilder preview = new StringBuilder();
+        for (RankQualificationResult qualification : qualifications)
+        {
+            if (preview.length() > 0)
+            {
+                preview.append("\n\n");
+            }
+            preview.append(qualification.toChecklistText());
+        }
+        preview.append("\n\nCaptured evidence\n")
+            .append(snapshot.toPreviewText());
+        previewArea.setText(preview.toString());
         previewArea.setCaretPosition(0);
     }
 

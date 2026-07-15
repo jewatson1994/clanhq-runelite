@@ -3,7 +3,7 @@ package com.clanhq.verifier;
 import com.clanhq.verifier.model.VerificationSnapshot;
 import com.clanhq.verifier.model.RankQualificationResult;
 import com.clanhq.verifier.service.LocalPlayerSnapshotService;
-import com.clanhq.verifier.service.OpalQualificationService;
+import com.clanhq.verifier.service.IronDropQualificationService;
 import com.clanhq.verifier.transport.PreviewOnlyVerificationTransport;
 import com.clanhq.verifier.transport.VerificationTransport;
 import com.clanhq.verifier.transport.VerificationTransportResult;
@@ -14,6 +14,7 @@ import java.awt.image.BufferedImage;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import java.util.List;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -46,7 +47,7 @@ public final class ClanHQVerifierPlugin extends Plugin
     private VerificationTransport transport;
 
     @Inject
-    private OpalQualificationService opalQualificationService;
+    private IronDropQualificationService qualificationService;
 
     private ClanHQVerifierPanel panel;
     private NavigationButton navigationButton;
@@ -178,13 +179,13 @@ public final class ClanHQVerifierPlugin extends Plugin
     {
         VerificationSnapshot snapshot =
             snapshotService.finishCaptureSession();
-        RankQualificationResult qualification =
-            opalQualificationService.evaluate(snapshot);
+        List<RankQualificationResult> qualifications =
+            qualificationService.evaluate(snapshot);
         VerificationTransportResult result = transport.submit(snapshot);
 
         SwingUtilities.invokeLater(() -> panel.showSnapshot(
             snapshot,
-            qualification,
+            qualifications,
             result.getMessage()));
     }
 

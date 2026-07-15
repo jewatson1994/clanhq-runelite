@@ -30,6 +30,11 @@ public final class RankQualificationResult
         return requirements;
     }
 
+    public String getRankName()
+    {
+        return rankName;
+    }
+
     public String toChecklistText()
     {
         StringBuilder checklist = new StringBuilder();

@@ -25,4 +25,12 @@ public class RankItemCatalogTest
         assertFalse(catalog.isRelevant(ItemID.LOBSTER));
         assertFalse(catalog.isRelevant(ItemID.COINS_995));
     }
+
+    @Test
+    public void includesLaterRankItemsByNameWithoutRetainingUnrelatedItems()
+    {
+        assertTrue(catalog.isRelevant(999_001, "Tormented synapse"));
+        assertTrue(catalog.isRelevant(999_002, "Blessed Dizana's quiver"));
+        assertFalse(catalog.isRelevant(999_003, "Raw lobster"));
+    }
 }

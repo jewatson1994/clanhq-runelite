@@ -2,20 +2,28 @@
 
 This is the development foundation for ClanHQ rank verification.
 
-The current build is deliberately preview-only. It reads the logged-in
-player's RuneScape name, total level, combat level, and currently equipped
-items after the player clicks **Capture Current Character**. A 30-second
-capture session accumulates equipment and inventory evidence, captures the
-bank when it is opened, and remembers Piety if it is activated. It does not
-send data to ClanHQ, Discord, or any other service.
+The current build is deliberately preview-only. A 30-second capture session
+accumulates equipment and inventory evidence, captures only rank-relevant
+bank items when the bank is opened, and remembers supported prayers activated
+during the session. It also reads levels and authoritative hard/elite
+achievement-diary completion state. It does not send data to ClanHQ, Discord,
+or any other service.
+
+The checklist covers every Iron Drop progression rank from Opal through
+Zenyte and enforces cumulative progression: a rank cannot qualify until every
+preceding rank is fully met. Colonel is intentionally excluded because it is
+a retired-staff designation rather than a progression rank.
+
+Requirements RuneLite cannot yet prove reliably (for example collection-log
+counts, raid KC, POH layout, and some compound gear sets) are shown as
+`[CHECK]`. They are never treated as passed or guessed from skill levels.
 
 ## Why preview-only first?
 
 Iron Drop ranks include evidence that cannot be proven from equipped items
-alone, including banked items, collection-log counts, quests, diaries,
-prayers, combat achievements, raid KC, and cosmetics. ClanHQ will eventually
-own those rules and combine evidence from approved sources. The RuneLite
-plugin should collect evidence, not independently award ranks.
+alone. ClanHQ will eventually own the final rules and combine evidence from
+approved sources. The RuneLite plugin collects transparent evidence; it does
+not independently award ranks.
 
 Rank progression is cumulative. Every requirement for each previous rank must
 pass before a later rank can qualify; a higher-tier item can satisfy an

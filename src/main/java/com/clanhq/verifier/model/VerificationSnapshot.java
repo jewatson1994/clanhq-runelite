@@ -15,6 +15,11 @@ public final class VerificationSnapshot
     private final List<ObservedItem> items;
     private final boolean bankEvidenceCaptured;
     private final boolean pietyActive;
+    private final boolean rigourActive;
+    private final boolean deadeyeActive;
+    private final boolean mysticVigourActive;
+    private final int herbloreLevel;
+    private final DiaryProgress diaryProgress;
 
     public VerificationSnapshot(
         String rsn,
@@ -24,12 +29,35 @@ public final class VerificationSnapshot
         boolean bankEvidenceCaptured,
         boolean pietyActive)
     {
+        this(rsn, totalLevel, combatLevel, items, bankEvidenceCaptured,
+            pietyActive, false, false, false, 1,
+            new DiaryProgress(0, 0, 12));
+    }
+
+    public VerificationSnapshot(
+        String rsn,
+        int totalLevel,
+        int combatLevel,
+        List<ObservedItem> items,
+        boolean bankEvidenceCaptured,
+        boolean pietyActive,
+        boolean rigourActive,
+        boolean deadeyeActive,
+        boolean mysticVigourActive,
+        int herbloreLevel,
+        DiaryProgress diaryProgress)
+    {
         this.rsn = Objects.requireNonNull(rsn);
         this.totalLevel = totalLevel;
         this.combatLevel = combatLevel;
         this.items = Collections.unmodifiableList(new ArrayList<>(items));
         this.bankEvidenceCaptured = bankEvidenceCaptured;
         this.pietyActive = pietyActive;
+        this.rigourActive = rigourActive;
+        this.deadeyeActive = deadeyeActive;
+        this.mysticVigourActive = mysticVigourActive;
+        this.herbloreLevel = herbloreLevel;
+        this.diaryProgress = Objects.requireNonNull(diaryProgress);
     }
 
     public String getRsn()
@@ -62,6 +90,12 @@ public final class VerificationSnapshot
         return pietyActive;
     }
 
+    public boolean isRigourActive() { return rigourActive; }
+    public boolean isDeadeyeActive() { return deadeyeActive; }
+    public boolean isMysticVigourActive() { return mysticVigourActive; }
+    public int getHerbloreLevel() { return herbloreLevel; }
+    public DiaryProgress getDiaryProgress() { return diaryProgress; }
+
     public Optional<ObservedItem> findItem(Set<Integer> acceptedItemIds)
     {
         return items.stream()
@@ -81,6 +115,18 @@ public final class VerificationSnapshot
         preview.append("Piety active: ")
             .append(pietyActive ? "Yes" : "No")
             .append('\n');
+        preview.append("Rigour unlocked: ")
+            .append(rigourActive ? "Yes" : "No").append('\n');
+        preview.append("Deadeye unlocked: ")
+            .append(deadeyeActive ? "Yes" : "No").append('\n');
+        preview.append("Mystic Vigour unlocked: ")
+            .append(mysticVigourActive ? "Yes" : "No").append('\n');
+        preview.append("Hard diaries: ")
+            .append(diaryProgress.getHardCompleted()).append('/')
+            .append(diaryProgress.getRegionCount()).append('\n');
+        preview.append("Elite diaries: ")
+            .append(diaryProgress.getEliteCompleted()).append('/')
+            .append(diaryProgress.getRegionCount()).append('\n');
 
         for (EvidenceSource source : EvidenceSource.values())
         {
