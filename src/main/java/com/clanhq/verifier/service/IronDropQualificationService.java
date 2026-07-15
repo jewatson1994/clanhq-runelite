@@ -73,10 +73,26 @@ public final class IronDropQualificationService
         {
             stages.add(EvidenceStage.RAID_KC);
         }
-        if (Arrays.asList("Diamond", "Onyx", "Kitten", "Completionism", "Zenyte")
-            .contains(rankName))
+        if (Arrays.asList("Kitten", "Completionism").contains(rankName))
         {
-            stages.add(EvidenceStage.COLLECTION_LOG);
+            stages.add(EvidenceStage.COLLECTION_OVERVIEW);
+        }
+        if (Arrays.asList("Diamond", "Kitten", "Zenyte").contains(rankName))
+        {
+            stages.add(EvidenceStage.COX_LOG);
+            stages.add(EvidenceStage.TOA_LOG);
+        }
+        if (Arrays.asList("Onyx", "Kitten", "Zenyte").contains(rankName))
+        {
+            stages.add(EvidenceStage.TOB_LOG);
+        }
+        if ("Completionism".equals(rankName))
+        {
+            stages.add(EvidenceStage.TOA_LOG);
+        }
+        if ("Onyx".equals(rankName))
+        {
+            stages.add(EvidenceStage.DOOM_LOG);
         }
         if ("Dragon".equals(rankName))
         {
@@ -237,8 +253,7 @@ public final class IronDropQualificationService
             raidUniques(s, "Tombs of Amascut", 5, toaUniques()),
             raidUniques(s, "Theatre of Blood", 3, tobUniques()),
             count(s, "3 Ancient rings", 3, "ultor ring", "bellator ring", "magus ring", "venator ring"),
-            state("750 collection-log slots", s.getCollectionLogSlots() >= 750,
-                s.getCollectionLogSlots() + " / 750"),
+            collectionLogSlots(s, 750),
             item(s, "Ghommal's hilt 5+", "ghommal's hilt 5", "ghommal's hilt 6"));
     }
 
@@ -267,8 +282,7 @@ public final class IronDropQualificationService
             item(snapshot, "Sanguine dust", "sanguine dust"),
             item(snapshot, "Sanguine ornament kit", "sanguine ornament kit"),
             item(snapshot, "Holy ornament kit", "holy ornament kit"),
-            manual("All Tombs of Amascut cosmetics and transmogs",
-                "Capture the Tombs of Amascut Collection Log page for staff review"),
+            toaCosmetics(snapshot),
             item(snapshot, "Saturated heart", "saturated heart"),
             item(snapshot, "Amulet of rancour", "amulet of rancour"),
             quantity(snapshot, "3 Twisted ancestral colour kits", 3,
@@ -281,7 +295,7 @@ public final class IronDropQualificationService
     private List<RequirementResult> zenyte(VerificationSnapshot s)
     {
         return list(manualPassItem(s, "Grandmaster Combat Achievements", "ghommal's hilt 6"),
-            manual("All raids green logged", "Collection-log evidence required"),
+            allRaidsGreenLogged(s),
             item(s, "Hill giant club", "hill giant club"));
     }
 
@@ -359,6 +373,62 @@ public final class IronDropQualificationService
             snapshot.getCollectionLogEvidence().hasCollectionRank("Dragon"),
             "Current rank: " + rank);
     }
+    private RequirementResult collectionLogSlots(VerificationSnapshot snapshot,
+        int required)
+    {
+        Integer obtained = snapshot.getCollectionLogEvidence()
+            .getObtainedSlotCount();
+        if (obtained == null)
+        {
+            return manual(required + " collection-log slots",
+                "Capture the Collection Log overview");
+        }
+        return state(required + " collection-log slots", obtained >= required,
+            obtained + " / " + required);
+    }
+    private RequirementResult allRaidsGreenLogged(VerificationSnapshot snapshot)
+    {
+        String[] raids = {"chambers of xeric", "theatre of blood",
+            "tombs of amascut"};
+        List<String> missingPages = Arrays.stream(raids)
+            .filter(raid -> !snapshot.getCollectionLogEvidence().hasPage(raid))
+            .collect(java.util.stream.Collectors.toList());
+        if (!missingPages.isEmpty())
+        {
+            return manual("All raids green logged",
+                "Capture COX, TOB, and TOA Collection Log pages");
+        }
+        boolean green = Arrays.stream(raids).allMatch(raid ->
+            snapshot.getCollectionLogEvidence().isPageGreenLogged(raid));
+        String detail = Arrays.stream(raids).map(raid ->
+            snapshot.getCollectionLogEvidence().getPage(raid).toSummary())
+            .collect(java.util.stream.Collectors.joining("; "));
+        return state("All raids green logged", green, detail);
+    }
+    private RequirementResult toaCosmetics(VerificationSnapshot snapshot)
+    {
+        String[] required = {"remnant of kephri", "remnant of ba-ba",
+            "remnant of akkha", "remnant of zebak",
+            "menaphite ornament kit", "cursed phalanx", "ancient remnant",
+            "masori crafting kit"};
+        if (!snapshot.getCollectionLogEvidence().hasPage("tombs of amascut"))
+        {
+            return manual("All TOA cosmetics and transmogs",
+                "Capture the TOA Collection Log page");
+        }
+        List<String> missing = Arrays.stream(required)
+            .filter(item -> !snapshot.getCollectionLogEvidence()
+                .hasAcquiredItem("tombs of amascut", item))
+            .collect(java.util.stream.Collectors.toList());
+        int found = required.length - missing.size();
+        String detail = found + " / " + required.length;
+        if (!missing.isEmpty())
+        {
+            detail += "; missing " + String.join(", ", missing);
+        }
+        return state("All TOA cosmetics and transmogs",
+            missing.isEmpty(), detail);
+    }
     private RequirementResult doomUniques(VerificationSnapshot snapshot)
     {
         if (!snapshot.getCollectionLogEvidence().hasPage("doom"))
@@ -412,16 +482,29 @@ public final class IronDropQualificationService
         VerificationSnapshot snapshot, int required)
     {
         boolean avernic = snapshot.getItems().stream()
-            .anyMatch(item -> matches(item, "avernic defender"));
+            .anyMatch(item -> matches(item, "avernic defender"))
+            || snapshot.getCollectionLogEvidence().hasAcquiredItem(
+                "theatre of blood", "avernic defender");
         long found = Arrays.stream(tobUniques()).filter(fragment ->
-            snapshot.getItems().stream().anyMatch(item -> matches(item, fragment))).count();
+            snapshot.getItems().stream().anyMatch(item -> matches(item, fragment))
+                || snapshot.getCollectionLogEvidence().hasAcquiredItem(
+                    "theatre of blood", fragment)).count();
         if (avernic && found >= required)
         {
             return state(required + " Theatre of Blood uniques (including Avernic)",
-                true, found + " / " + required + " currently owned");
+                true, found + " / " + required + " owned or logged");
+        }
+        if (snapshot.isBankEvidenceCaptured()
+            && snapshot.getCollectionLogEvidence().hasPage("theatre of blood"))
+        {
+            return new RequirementResult(
+                required + " Theatre of Blood uniques (including Avernic)",
+                RequirementStatus.MISSING,
+                found + " / " + required + "; Avernic "
+                    + (avernic ? "found" : "not found"));
         }
         return manual(required + " Theatre of Blood uniques (including Avernic)",
-            found + " / " + required + "; Avernic " + (avernic ? "found" : "not found"));
+            found + " / " + required + "; capture bank and TOB Collection Log");
     }
     private RequirementResult manualPassItem(VerificationSnapshot snapshot,
         String name, String... fragments)

@@ -7,6 +7,8 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.inject.Inject;
 import net.runelite.api.Client;
 import net.runelite.api.gameval.InterfaceID;
@@ -14,6 +16,9 @@ import net.runelite.api.widgets.Widget;
 
 public final class CollectionLogCaptureService
 {
+    private static final Pattern SLOT_FRACTION = Pattern.compile(
+        "([0-9][0-9,]*)\\s*(?:/|of)\\s*[0-9][0-9,]*",
+        Pattern.CASE_INSENSITIVE);
     private final Client client;
 
     @Inject
@@ -22,13 +27,19 @@ public final class CollectionLogCaptureService
         this.client = client;
     }
 
-    public CollectionLogEvidence captureVisiblePage()
+    public CollectionLogEvidence captureOverview()
     {
         Widget overview = client.getWidget(InterfaceID.CollectionOverview.FRAME);
-        if (overview != null && !overview.isHidden())
+        if (overview == null || overview.isHidden())
         {
-            return captureOverviewRank();
+            throw new IllegalStateException(
+                "Open the Collection Log overview before capturing.");
         }
+        return captureOverviewEvidence(overview);
+    }
+
+    public CollectionLogEvidence capturePage(String expectedPageTitle)
+    {
         Widget frame = client.getWidget(InterfaceID.Collection.FRAME);
         Widget header = client.getWidget(InterfaceID.Collection.HEADER_TEXT);
         Widget headerContainer = client.getWidget(InterfaceID.Collection.HEADER);
@@ -48,6 +59,11 @@ public final class CollectionLogCaptureService
             throw new IllegalStateException(
                 "Open a supported Doom or raid Collection Log page.");
         }
+        if (!pageTitle.equals(expectedPageTitle))
+        {
+            throw new IllegalStateException("Open the " + expectedPageTitle
+                + " Collection Log page before capturing.");
+        }
 
         PageScan scan = new PageScan();
         Set<Widget> visited = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -58,8 +74,8 @@ public final class CollectionLogCaptureService
             throw new IllegalStateException(
                 "The Collection Log page has not finished loading.");
         }
-        return new CollectionLogEvidence(Collections.singletonMap(
-            pageTitle, scan.items));
+        return CollectionLogEvidence.page(pageTitle, scan.items,
+            scan.acquiredSlotCount, scan.visibleItemCount);
     }
 
     private String firstKnownPageTitle(Widget... candidates)
@@ -79,21 +95,18 @@ public final class CollectionLogCaptureService
         return null;
     }
 
-    private CollectionLogEvidence captureOverviewRank()
+    private CollectionLogEvidence captureOverviewEvidence(Widget overview)
     {
         Widget rank = client.getWidget(InterfaceID.CollectionOverview.CURRENT_RANK);
-        if (rank == null || rank.isHidden())
+        String rankName = rank == null || rank.isHidden()
+            ? null : knownCollectionRank(readVisibleText(rank));
+        Integer obtainedSlots = parseObtainedSlots(readVisibleText(overview));
+        if (rankName == null && obtainedSlots == null)
         {
             throw new IllegalStateException(
-                "The Collection Log overview has not finished loading.");
+                "Unable to read Collection Log rank or slot progress.");
         }
-        String rankName = knownCollectionRank(readVisibleText(rank));
-        if (rankName == null)
-        {
-            throw new IllegalStateException(
-                "Unable to read the current Collection Log rank.");
-        }
-        return new CollectionLogEvidence(Collections.emptyMap(), rankName);
+        return CollectionLogEvidence.overview(rankName, obtainedSlots);
     }
 
     private String readVisibleText(Widget root)
@@ -140,12 +153,16 @@ public final class CollectionLogCaptureService
         }
         if (widget.getItemId() > 0)
         {
-            scan.visibleItemCount++;
             String name = client.getItemDefinition(widget.getItemId()).getName();
-            int quantity = Math.max(widget.getItemQuantity(), 0);
-            if (quantity > 0 && widget.getOpacity() < 100)
+            if (!isExcludedGreenLogSlot(name))
             {
-                scan.items.merge(name, quantity, Math::max);
+                scan.visibleItemCount++;
+                int quantity = Math.max(widget.getItemQuantity(), 0);
+                if (quantity > 0 && widget.getOpacity() < 100)
+                {
+                    scan.acquiredSlotCount++;
+                    scan.items.merge(name, quantity, Math::max);
+                }
             }
         }
         scanChildren(widget.getChildren(), visited, scan);
@@ -197,6 +214,26 @@ public final class CollectionLogCaptureService
         return null;
     }
 
+    static Integer parseObtainedSlots(String text)
+    {
+        Matcher matcher = SLOT_FRACTION.matcher(text);
+        Integer largest = null;
+        while (matcher.find())
+        {
+            int value = Integer.parseInt(matcher.group(1).replace(",", ""));
+            if (largest == null || value > largest)
+            {
+                largest = value;
+            }
+        }
+        return largest;
+    }
+
+    static boolean isExcludedGreenLogSlot(String itemName)
+    {
+        return itemName.toLowerCase(Locale.ENGLISH).contains("shroud");
+    }
+
     private static String clean(String text)
     {
         return text == null ? "" : text.replaceAll("<[^>]*>", "").trim();
@@ -205,6 +242,7 @@ public final class CollectionLogCaptureService
     private static final class PageScan
     {
         private int visibleItemCount;
+        private int acquiredSlotCount;
         private final Map<String, Integer> items = new LinkedHashMap<>();
     }
 }

@@ -55,15 +55,21 @@ the current build never submits evidence.
 
 ### Collection Log
 
-- Open one supported page before each capture: Chambers of Xeric, Theatre of
-  Blood, Tombs of Amascut, or Doom of Mokhaiotl.
+- Use the specific Overview, COX, TOB, TOA, or Doom button shown for the
+  selected rank. Open that exact page before capture.
 - Expected: the page name appears and only acquired visible items are retained.
 - Capture multiple pages and confirm earlier pages remain in the same session.
 - Open the Collection Log overview and capture it. Confirm the displayed
-  Bronze-through-Dragon rank accumulates alongside previously captured pages.
+  Bronze-through-Dragon rank and obtained-slot count accumulate alongside
+  previously captured pages.
 - Confirm raid unique counts combine bank ownership and matching log entries
   without counting the same unique twice.
 - Verify Doom only passes after cloth, boots, and eye are all present.
+- Verify TOA cosmetics report all eight required entries and identify any that
+  are missing.
+- For Zenyte, capture COX, TOB, and TOA. Each page should show acquired/total
+  slots and green log should pass only when all three counts are complete.
+  Sinhaza and Icthlarin KC shrouds must not affect those counts.
 - This collector uses RuneLite's active Collection Log header and item
   container directly. Confirm unacquired slots are not mistaken for acquired
   items and the selected page title is detected correctly.
@@ -91,8 +97,8 @@ the current build never submits evidence.
   Twisted ancestral colour kits, Champion's cape, and the Expert dragon archer
   hat.
 - Dragon Collection Log rank should pass only after the overview reports
-  Dragon. The complete Tombs of Amascut cosmetic/transmog set remains staff
-  review.
+  Dragon. The 750-slot check uses the same overview capture. The TOA set passes
+  only when all eight configured cosmetic/transmog entries are acquired.
 
 ## Known boundary
 

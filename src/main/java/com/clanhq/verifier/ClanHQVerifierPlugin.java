@@ -178,8 +178,12 @@ public final class ClanHQVerifierPlugin extends Plugin
             case RAID_KC:
                 fetchRaidKillCounts();
                 break;
-            case COLLECTION_LOG:
-                captureCollectionLog();
+            case COLLECTION_OVERVIEW:
+            case COX_LOG:
+            case TOB_LOG:
+            case TOA_LOG:
+            case DOOM_LOG:
+                captureCollectionLog(stage);
                 break;
             case POH:
                 capturePoh();
@@ -319,18 +323,17 @@ public final class ClanHQVerifierPlugin extends Plugin
         });
     }
 
-    private void captureCollectionLog()
+    private void captureCollectionLog(EvidenceStage stage)
     {
         VerificationSession session = verificationSession;
-        beginStage(EvidenceStage.COLLECTION_LOG);
+        beginStage(stage);
         clientThread.invokeLater(() ->
         {
             try
             {
                 VerificationSnapshot account = capturedSnapshot == null
                     ? snapshotService.captureAccountEvidence() : capturedSnapshot;
-                CollectionLogEvidence evidence =
-                    collectionLogCaptureService.captureVisiblePage();
+                CollectionLogEvidence evidence = captureCollectionLogEvidence(stage);
                 SwingUtilities.invokeLater(() ->
                 {
                     if (!isCurrentSession(session))
@@ -339,8 +342,7 @@ public final class ClanHQVerifierPlugin extends Plugin
                     }
                     acceptAccountSnapshot(account);
                     capturedSnapshot = capturedSnapshot.withCollectionLogEvidence(evidence);
-                    completeStage(EvidenceStage.COLLECTION_LOG,
-                        "Collection Log page captured.");
+                    completeStage(stage, stage.getDisplayName() + " captured.");
                 });
             }
             catch (RuntimeException exception)
@@ -349,11 +351,30 @@ public final class ClanHQVerifierPlugin extends Plugin
                 {
                     if (isCurrentSession(session))
                     {
-                        failStage(EvidenceStage.COLLECTION_LOG, exception);
+                        failStage(stage, exception);
                     }
                 });
             }
         });
+    }
+
+    private CollectionLogEvidence captureCollectionLogEvidence(EvidenceStage stage)
+    {
+        switch (stage)
+        {
+            case COLLECTION_OVERVIEW:
+                return collectionLogCaptureService.captureOverview();
+            case COX_LOG:
+                return collectionLogCaptureService.capturePage("Chambers of Xeric");
+            case TOB_LOG:
+                return collectionLogCaptureService.capturePage("Theatre of Blood");
+            case TOA_LOG:
+                return collectionLogCaptureService.capturePage("Tombs of Amascut");
+            case DOOM_LOG:
+                return collectionLogCaptureService.capturePage("Doom of Mokhaiotl");
+            default:
+                throw new IllegalArgumentException("Not a Collection Log stage: " + stage);
+        }
     }
 
     private void capturePoh()

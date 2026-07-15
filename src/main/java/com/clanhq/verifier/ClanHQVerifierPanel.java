@@ -244,7 +244,11 @@ final class ClanHQVerifierPanel extends PluginPanel
             case PRAYERS: return "Capture Prayers";
             case GEAR: return "Capture Gear";
             case RAID_KC: return "Fetch Raid KC";
-            case COLLECTION_LOG: return "Capture Collection Log";
+            case COLLECTION_OVERVIEW: return "Capture Collection Overview";
+            case COX_LOG: return "Capture COX Log";
+            case TOB_LOG: return "Capture TOB Log";
+            case TOA_LOG: return "Capture TOA Log";
+            case DOOM_LOG: return "Capture Doom Log";
             case POH: return "Capture POH Instance";
             case BOAT: return "Capture Boat";
             default: throw new IllegalArgumentException("Unknown evidence stage");

@@ -59,6 +59,23 @@ public class CollectorEvidenceTest
     }
 
     @Test
+    public void retainsOverviewSlotsAndPageCompletion()
+    {
+        CollectionLogEvidence overview = CollectionLogEvidence.overview(
+            "Dragon", 812);
+        Map<String, Integer> acquired = new LinkedHashMap<>();
+        acquired.put("Twisted bow", 1);
+        CollectionLogEvidence greenPage = CollectionLogEvidence.page(
+            "Chambers of Xeric", acquired, 12, 12);
+
+        CollectionLogEvidence combined = overview.merge(greenPage);
+
+        assertEquals(Integer.valueOf(812), combined.getObtainedSlotCount());
+        assertTrue(combined.isPageGreenLogged("chambers"));
+        assertTrue(combined.toSummary().contains("12/12"));
+    }
+
+    @Test
     public void requiresAllFiveFacilitiesAndOwnerBuildMode()
     {
         PohEvidence evidence = new PohEvidence(true, new LinkedHashSet<>(Arrays.asList(

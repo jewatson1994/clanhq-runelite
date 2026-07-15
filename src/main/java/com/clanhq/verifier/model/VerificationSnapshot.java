@@ -232,8 +232,6 @@ public final class VerificationSnapshot
             .append(diaryProgress.getRegionCount()).append('\n');
         preview.append("Raid KC: ")
             .append(raidKillCounts.toSummary()).append('\n');
-        preview.append("Collection log slots: ")
-            .append(collectionLogSlots).append('\n');
         preview.append("Collection log pages: ")
             .append(collectionLogEvidence.toSummary()).append('\n');
         preview.append("POH: ")

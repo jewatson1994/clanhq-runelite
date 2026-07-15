@@ -12,10 +12,11 @@ not send captured evidence to ClanHQ, Discord, or any other service.
 
 The checklist covers every Iron Drop progression rank from Opal through
 Zenyte. The player selects the requested rank before capture, and the panel
-shows only that rank's evidence. Character, prayers, gear, raid KC, Collection
-Log, boat, and owner-POH are independent evidence stages with their own capture status.
-Collection Log capture reads the visible Doom or raid page and can accumulate
-multiple pages. Captured raid pages are combined with current item evidence
+shows only that rank's evidence. Character, prayers, gear, raid KC, individual
+Collection Log sources, boat, and owner-POH are independent evidence stages.
+Collection Log buttons are split into Overview, COX, TOB, TOA, and Doom and
+only appear when the selected rank needs them. Captured raid pages retain
+acquired and total visible slot counts and are combined with current item evidence
 for unique-count requirements without double-counting the same unique. The
 Collection Log overview can also capture the current Bronze-through-Dragon
 rank. Boat
@@ -28,18 +29,20 @@ rank and ensure the request is the next valid progression step when ticket
 submission is connected. Colonel is intentionally excluded because it is a
 retired-staff designation rather than a progression rank.
 
-Completionism bank items are reported individually. Dragon Collection Log
-rank can be read from the overview; the complete Tombs of Amascut
-cosmetic/transmog set and Sailing upgrade state remain staff-review
-requirements instead of being inferred.
+Completionism bank items are reported individually. Overview capture verifies
+Dragon Collection Log rank and the 750-slot requirement. TOA capture checks
+the four boss remnants, Menaphite ornament kit, Cursed phalanx, Ancient
+remnant, and Masori crafting kit. COX, TOB, and TOA captures can verify raid
+green logs from acquired-versus-total visible slots. Sailing upgrade state
+remains a staff-review requirement instead of being inferred.
+Raid KC shrouds are excluded from green-log totals.
 
 The plugin reports evidence status, not an official qualification decision.
 Only ClanHQ and the eventual staff ticket approval can verify or award a rank.
 
-Requirements RuneLite cannot yet prove reliably (for example complete
-green-log state, Rite of Vile Transference, maxed Sailing upgrades, and some
-cosmetic sets) are shown as `[CHECK]`. They are never treated as passed or
-guessed from unrelated evidence.
+Requirements RuneLite cannot yet prove reliably (for example Rite of Vile
+Transference and maxed Sailing upgrades) are shown as `[CHECK]`. They are never
+treated as passed or guessed from unrelated evidence.
 
 ## Why preview-only first?
 

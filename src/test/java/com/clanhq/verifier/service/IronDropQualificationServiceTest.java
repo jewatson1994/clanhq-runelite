@@ -64,6 +64,11 @@ public class IronDropQualificationServiceTest
         assertTrue(service.getRequiredStages("Maxed").contains(EvidenceStage.RAID_KC));
         assertTrue(service.getRequiredStages("Topaz").contains(EvidenceStage.PRAYERS));
         assertTrue(service.getRequiredStages("Completionism").contains(EvidenceStage.BOAT));
+        assertTrue(service.getRequiredStages("Kitten")
+            .contains(EvidenceStage.COLLECTION_OVERVIEW));
+        assertTrue(service.getRequiredStages("Zenyte")
+            .containsAll(Arrays.asList(EvidenceStage.COX_LOG,
+                EvidenceStage.TOB_LOG, EvidenceStage.TOA_LOG)));
     }
 
     @Test
@@ -118,7 +123,9 @@ public class IronDropQualificationServiceTest
         VerificationSnapshot snapshot = new VerificationSnapshot(
             "Mr Dimples", 2350, 126, items, true,
             false, false, false, false, 99, new DiaryProgress(12, 12, 12),
-            RaidKillCounts.unavailable("Not requested"), 800);
+            RaidKillCounts.unavailable("Not requested"), 0)
+            .withCollectionLogEvidence(CollectionLogEvidence.overview(
+                "Dragon", 800));
 
         assertPassed(service.evaluateTarget(snapshot, "Dragon"),
             "All Cerberus boots or 2-upgrade Avernic treads");
@@ -253,6 +260,50 @@ public class IronDropQualificationServiceTest
 
         assertPassed(service.evaluateTarget(snapshot, "Completionism"),
             "Dragon Collection Log rank");
+    }
+
+    @Test
+    public void verifiesCollectionSlotsAndRaidGreenLogs()
+    {
+        Map<String, Integer> item = Collections.singletonMap("Unique", 1);
+        CollectionLogEvidence evidence = CollectionLogEvidence.overview(
+            "Dragon", 800)
+            .merge(CollectionLogEvidence.page(
+                "Chambers of Xeric", item, 12, 12))
+            .merge(CollectionLogEvidence.page(
+                "Theatre of Blood", item, 17, 17))
+            .merge(CollectionLogEvidence.page(
+                "Tombs of Amascut", item, 27, 27));
+        VerificationSnapshot snapshot = new VerificationSnapshot(
+            "Mr Dimples", 2350, 126, Collections.emptyList(), false, false)
+            .withCollectionLogEvidence(evidence);
+
+        assertPassed(service.evaluateTarget(snapshot, "Kitten"),
+            "750 collection-log slots");
+        assertPassed(service.evaluateTarget(snapshot, "Zenyte"),
+            "All raids green logged");
+    }
+
+    @Test
+    public void verifiesAllEightToaCosmeticsFromCollectionLog()
+    {
+        Map<String, Integer> cosmetics = new LinkedHashMap<>();
+        cosmetics.put("Remnant of kephri", 1);
+        cosmetics.put("Remnant of ba-ba", 1);
+        cosmetics.put("Remnant of akkha", 1);
+        cosmetics.put("Remnant of zebak", 1);
+        cosmetics.put("Menaphite ornament kit", 1);
+        cosmetics.put("Cursed phalanx", 1);
+        cosmetics.put("Ancient remnant", 1);
+        cosmetics.put("Masori crafting kit", 1);
+        CollectionLogEvidence evidence = CollectionLogEvidence.page(
+            "Tombs of Amascut", cosmetics, 8, 27);
+        VerificationSnapshot snapshot = new VerificationSnapshot(
+            "Mr Dimples", 2350, 126, Collections.emptyList(), false, false)
+            .withCollectionLogEvidence(evidence);
+
+        assertPassed(service.evaluateTarget(snapshot, "Completionism"),
+            "All TOA cosmetics and transmogs");
     }
 
     private static ObservedItem bankItem(int id, String name)
