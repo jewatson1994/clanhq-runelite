@@ -66,6 +66,14 @@ the current build never submits evidence.
 - Confirm raid unique counts combine bank ownership and matching log entries
   without counting the same unique twice.
 - Verify Doom only passes after cloth, boots, and eye are all present.
+
+### Boat
+
+- Open the Boat Customisation list shown at a Shipyard and click Capture Boat.
+- Expected: a `Boat Size: Small (2x5)` panel is retained as Skiff evidence.
+- Select a medium boat and capture again. Expected: the session accumulates
+  Sloop evidence without discarding the earlier Skiff capture.
+- Staff review still confirms that both vessels have the required upgrades.
 - Verify TOA cosmetics report all eight required entries and identify any that
   are missing.
 - For Zenyte, capture COX, TOB, and TOA. Each page should show acquired/total

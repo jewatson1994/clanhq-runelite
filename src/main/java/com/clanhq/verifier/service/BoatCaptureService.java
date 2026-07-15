@@ -15,7 +15,6 @@ import net.runelite.api.widgets.Widget;
 
 public final class BoatCaptureService
 {
-    private static final int GROUP_SHIFT = 16;
     private final Client client;
 
     @Inject
@@ -28,44 +27,49 @@ public final class BoatCaptureService
     {
         Set<String> text = new LinkedHashSet<>();
         Set<Widget> visited = Collections.newSetFromMap(new IdentityHashMap<>());
-        for (Widget root : client.getWidgetRoots())
-        {
-            if (isSailingBoatInterface(root))
-            {
-                collectText(root, visited, text);
-            }
-        }
+        collectVisibleInterface(
+            client.getWidget(InterfaceID.SailingBoatSelection.FRAME),
+            visited, text);
+        collectVisibleInterface(
+            client.getWidget(InterfaceID.SailingCustomisation.FRAME),
+            visited, text);
         if (text.isEmpty())
         {
             throw new IllegalStateException(
                 "Open Sailing boat selection or customisation before capturing.");
         }
 
+        return new BoatEvidence(inferBoatTypes(text), new ArrayList<>(text));
+    }
+
+    static Set<String> inferBoatTypes(Iterable<String> text)
+    {
         Set<String> types = new LinkedHashSet<>();
         for (String line : text)
         {
             String normalized = line.toLowerCase(Locale.ENGLISH);
-            if (normalized.contains("skiff"))
+            if (normalized.contains("skiff")
+                || normalized.matches(".*boat size:\\s*small(?:\\s|\\().*"))
             {
                 types.add("Skiff");
             }
-            if (normalized.contains("sloop"))
+            if (normalized.contains("sloop")
+                || normalized.matches(".*boat size:\\s*medium(?:\\s|\\().*"))
             {
                 types.add("Sloop");
             }
         }
-        return new BoatEvidence(types, new ArrayList<>(text));
+        return types;
     }
 
-    private static boolean isSailingBoatInterface(Widget root)
+    private void collectVisibleInterface(Widget root, Set<Widget> visited,
+        Set<String> text)
     {
         if (root == null || root.isHidden())
         {
-            return false;
+            return;
         }
-        int groupId = root.getId() >>> GROUP_SHIFT;
-        return groupId == InterfaceID.SAILING_BOAT_SELECTION
-            || groupId == InterfaceID.SAILING_CUSTOMISATION;
+        collectText(root, visited, text);
     }
 
     private void collectText(Widget widget, Set<Widget> visited, Set<String> text)
