@@ -11,6 +11,7 @@ import com.clanhq.verifier.model.VerificationSnapshot;
 import com.clanhq.verifier.model.PohEvidence;
 import com.clanhq.verifier.model.CollectionLogEvidence;
 import com.clanhq.verifier.model.BoatEvidence;
+import com.clanhq.verifier.model.BoatConfiguration;
 import java.util.Collections;
 import java.util.Arrays;
 import java.util.List;
@@ -203,25 +204,53 @@ public class IronDropQualificationServiceTest
     }
 
     @Test
-    public void includesCapturedBoatPanelsForStaffReview()
+    public void verifiesMaxedSkiffAndSloopFromStructuredBoatEvidence()
     {
         VerificationSnapshot base = new VerificationSnapshot(
             "Mr Dimples", 2350, 126, Collections.emptyList(), false, false);
         VerificationSnapshot snapshot = base.withBoatEvidence(new BoatEvidence(
-            new LinkedHashSet<>(Arrays.asList("Skiff", "Sloop")),
-            Arrays.asList("Skiff", "Sloop", "Hull level 3")));
+            Collections.emptySet(), Arrays.asList(
+                new BoatConfiguration(1, "Skiff", "Rosewood hull",
+                    "Rosewood mast and cotton sails", "Dragon helm",
+                    "Dragon keel"),
+                new BoatConfiguration(2, "Sloop", "Rosewood hull",
+                    "Rosewood mast and cotton sails", "Dragon helm",
+                    "Dragon keel")), Collections.emptyList()));
 
         RankQualificationResult result = service.evaluateTarget(
             snapshot, "Completionism");
 
-        assertEquals(RequirementStatus.UNVERIFIED,
+        assertEquals(RequirementStatus.PASSED,
             result.getRequirements().stream()
                 .filter(item -> item.getName().equals("Maxed skiff and sloop"))
                 .findFirst().orElseThrow(AssertionError::new).getStatus());
         assertTrue(result.getRequirements().stream()
             .filter(item -> item.getName().equals("Maxed skiff and sloop"))
             .findFirst().orElseThrow(AssertionError::new).getDetail()
-            .contains("Skiff, Sloop"));
+            .contains("Rosewood hull"));
+    }
+
+    @Test
+    public void rejectsBoatsWithIncompleteCoreUpgrades()
+    {
+        VerificationSnapshot base = new VerificationSnapshot(
+            "Mr Dimples", 2350, 126, Collections.emptyList(), false, false);
+        VerificationSnapshot snapshot = base.withBoatEvidence(new BoatEvidence(
+            Collections.emptySet(), Arrays.asList(
+                new BoatConfiguration(1, "Skiff", "Wooden hull",
+                    "Wooden mast and linen sails", "Bronze helm",
+                    "Bronze keel"),
+                new BoatConfiguration(2, "Sloop", "Rosewood hull",
+                    "Rosewood mast and cotton sails", "Dragon helm",
+                    "Dragon keel")), Collections.emptyList()));
+
+        RankQualificationResult result = service.evaluateTarget(
+            snapshot, "Completionism");
+
+        assertEquals(RequirementStatus.MISSING,
+            result.getRequirements().stream()
+                .filter(item -> item.getName().equals("Maxed skiff and sloop"))
+                .findFirst().orElseThrow(AssertionError::new).getStatus());
     }
 
     @Test

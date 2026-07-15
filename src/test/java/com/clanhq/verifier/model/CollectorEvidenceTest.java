@@ -27,6 +27,24 @@ public class CollectorEvidenceTest
     }
 
     @Test
+    public void identifiesMaxedCoreBoatComponents()
+    {
+        BoatConfiguration maxedSkiff = new BoatConfiguration(1, "Skiff",
+            "Rosewood hull", "Rosewood mast and cotton sails",
+            "Dragon helm", "Dragon keel");
+        BoatConfiguration woodenSloop = new BoatConfiguration(2, "Sloop",
+            "Wooden hull", "Wooden mast and linen sails",
+            "Bronze helm", "Bronze keel");
+        BoatEvidence evidence = new BoatEvidence(Collections.emptySet(),
+            Arrays.asList(maxedSkiff, woodenSloop), Collections.emptyList());
+
+        assertTrue(evidence.hasMaxedBoat("Skiff"));
+        assertTrue(!evidence.hasMaxedBoat("Sloop"));
+        assertTrue(woodenSloop.getMissingMaxedComponents().contains(
+            "hull=Wooden hull"));
+    }
+
+    @Test
     public void recognizesDoomUniquesAcrossCapturedPageEvidence()
     {
         Map<String, Integer> items = new LinkedHashMap<>();

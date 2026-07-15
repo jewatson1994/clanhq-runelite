@@ -69,11 +69,14 @@ the current build never submits evidence.
 
 ### Boat
 
-- Open the Boat Customisation list shown at a Shipyard and click Capture Boat.
-- Expected: a `Boat Size: Small (2x5)` panel is retained as Skiff evidence.
-- Select a medium boat and capture again. Expected: the session accumulates
-  Sloop evidence without discarding the earlier Skiff capture.
-- Staff review still confirms that both vessels have the required upgrades.
+- Click Capture Boat while logged in. The selection window may be open, or the
+  player may already be inside Customise mode.
+- Expected: every owned boat slot lists its boat type, hull, mast and sails,
+  helm, and keel using the names from RuneLite's Sailing DB tables.
+- A Skiff or Sloop passes its maxed-core check only with Rosewood hull and
+  mast/sails plus Dragon helm and keel.
+- Confirm a wooden Skiff is reported missing, not passed. No screenshot or
+  image data should be captured.
 - Verify TOA cosmetics report all eight required entries and identify any that
   are missing.
 - For Zenyte, capture COX, TOB, and TOA. Each page should show acquired/total
@@ -82,15 +85,6 @@ the current build never submits evidence.
 - This collector uses RuneLite's active Collection Log header and item
   container directly. Confirm unacquired slots are not mistaken for acquired
   items and the selected page title is detected correctly.
-
-### Boat
-
-- Open Sailing boat selection or customisation for a Skiff and capture it.
-- Open the equivalent Sloop panel and capture again.
-- Expected: both vessel types and visible panel details accumulate. Cargo item
-  contents must not appear.
-- The requirement remains staff review even when both are captured; the plugin
-  must not claim that an upgrade state is maxed.
 
 ### POH
 

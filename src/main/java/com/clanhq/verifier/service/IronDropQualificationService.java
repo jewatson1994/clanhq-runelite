@@ -351,13 +351,16 @@ public final class IronDropQualificationService
             return manual("Maxed skiff and sloop",
                 "Capture each vessel's Sailing panel for staff review");
         }
-        String detail = snapshot.getBoatEvidence().toSummary();
-        if (!snapshot.getBoatEvidence().hasSkiffAndSloop())
+        if (!snapshot.getBoatEvidence().hasStructuredConfigurations())
         {
-            detail += "; capture both vessel types";
+            return manual("Maxed skiff and sloop",
+                snapshot.getBoatEvidence().toSummary()
+                    + "; recapture to read authoritative boat components");
         }
-        return manual("Maxed skiff and sloop", detail
-            + "; staff confirms the upgrade state");
+        boolean maxedSkiff = snapshot.getBoatEvidence().hasMaxedBoat("Skiff");
+        boolean maxedSloop = snapshot.getBoatEvidence().hasMaxedBoat("Sloop");
+        return state("Maxed skiff and sloop", maxedSkiff && maxedSloop,
+            snapshot.getBoatEvidence().toSummary());
     }
     private RequirementResult collectionLogRank(VerificationSnapshot snapshot)
     {

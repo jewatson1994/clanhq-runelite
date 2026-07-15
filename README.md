@@ -16,12 +16,13 @@ Collection Log sources, boat, and owner-POH are independent evidence stages.
 Collection Log buttons are split into COX, TOB, TOA, and Doom and
 only appear when the selected rank needs them. Captured raid pages retain
 acquired and total visible slot counts and are combined with current item evidence
-for unique-count requirements without double-counting the same unique. The
-Every Collection Log page capture also records the global obtained/total count
+for unique-count requirements without double-counting the same unique. Every
+Collection Log page capture also records the global obtained/total count
 shown in the window header. Boat
-capture reads only visible text from RuneLite's Sailing
-boat-selection or customisation interface and can accumulate Skiff and Sloop
-panels; staff still confirms that each vessel is maxed. POH capture requires
+capture reads RuneLite's authoritative owned-boat variables and Sailing DB
+tables for all five slots. A maxed Skiff or Sloop requires a Rosewood hull,
+Rosewood mast and sails, Dragon helm, and Dragon keel. Visible Sailing panel
+text is retained only as a diagnostic fallback. POH capture requires
 the player's house in build mode and scans the loaded scene for all five configured facilities. ClanHQ
 will validate the member's existing
 rank and ensure the request is the next valid progression step when ticket
@@ -33,15 +34,15 @@ count verifies Dragon rank (1,200 slots) and the 750-slot requirement. TOA captu
 the four boss remnants, Menaphite ornament kit, Cursed phalanx, Ancient
 remnant, and Masori crafting kit. COX capture can prove Metamorphic dust; TOB
 capture can prove Sanguine dust and both ornament kits. COX, TOB, and TOA captures can verify raid
-green logs from acquired-versus-total visible slots. Sailing upgrade state
-remains a staff-review requirement instead of being inferred.
+green logs from acquired-versus-total visible slots. Sailing core upgrade state
+is verified directly from the player's owned-boat records.
 Raid KC shrouds are excluded from green-log totals.
 
 The plugin reports evidence status, not an official qualification decision.
 Only ClanHQ and the eventual staff ticket approval can verify or award a rank.
 
 Requirements RuneLite cannot yet prove reliably (for example Rite of Vile
-Transference and maxed Sailing upgrades) are shown as `[CHECK]`. They are never
+Transference) are shown as `[CHECK]`. They are never
 treated as passed or guessed from unrelated evidence.
 
 ## Why preview-only first?
