@@ -24,6 +24,7 @@ public final class LocalPlayerSnapshotService
 {
     private final Client client;
     private final RankItemCatalog rankItemCatalog;
+    private final RaidKillCountService raidKillCountService;
     private final Map<String, ObservedItem> observedItems =
         new LinkedHashMap<>();
     private boolean captureActive;
@@ -37,10 +38,12 @@ public final class LocalPlayerSnapshotService
     @Inject
     public LocalPlayerSnapshotService(
         Client client,
-        RankItemCatalog rankItemCatalog)
+        RankItemCatalog rankItemCatalog,
+        RaidKillCountService raidKillCountService)
     {
         this.client = client;
         this.rankItemCatalog = rankItemCatalog;
+        this.raidKillCountService = raidKillCountService;
     }
 
     public void startCaptureSession()
@@ -55,6 +58,7 @@ public final class LocalPlayerSnapshotService
         deadeyeObserved = false;
         mysticVigourObserved = false;
         sessionRsn = player.getName();
+        raidKillCountService.startLookup(sessionRsn);
 
         observeCurrentState();
 
@@ -115,7 +119,8 @@ public final class LocalPlayerSnapshotService
             deadeyeObserved,
             mysticVigourObserved,
             client.getRealSkillLevel(Skill.HERBLORE),
-            captureDiaryProgress());
+            captureDiaryProgress(),
+            raidKillCountService.finishLookup());
     }
 
     public boolean isCaptureActive()
@@ -133,6 +138,7 @@ public final class LocalPlayerSnapshotService
         deadeyeObserved = false;
         mysticVigourObserved = false;
         sessionRsn = null;
+        raidKillCountService.cancelLookup();
     }
 
     private Player requireLoggedInPlayer()

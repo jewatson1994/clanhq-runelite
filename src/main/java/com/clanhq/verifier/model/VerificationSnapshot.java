@@ -20,6 +20,7 @@ public final class VerificationSnapshot
     private final boolean mysticVigourActive;
     private final int herbloreLevel;
     private final DiaryProgress diaryProgress;
+    private final RaidKillCounts raidKillCounts;
 
     public VerificationSnapshot(
         String rsn,
@@ -31,7 +32,8 @@ public final class VerificationSnapshot
     {
         this(rsn, totalLevel, combatLevel, items, bankEvidenceCaptured,
             pietyActive, false, false, false, 1,
-            new DiaryProgress(0, 0, 12));
+            new DiaryProgress(0, 0, 12),
+            RaidKillCounts.unavailable("Not captured"));
     }
 
     public VerificationSnapshot(
@@ -47,6 +49,26 @@ public final class VerificationSnapshot
         int herbloreLevel,
         DiaryProgress diaryProgress)
     {
+        this(rsn, totalLevel, combatLevel, items, bankEvidenceCaptured,
+            pietyActive, rigourActive, deadeyeActive, mysticVigourActive,
+            herbloreLevel, diaryProgress,
+            RaidKillCounts.unavailable("Not captured"));
+    }
+
+    public VerificationSnapshot(
+        String rsn,
+        int totalLevel,
+        int combatLevel,
+        List<ObservedItem> items,
+        boolean bankEvidenceCaptured,
+        boolean pietyActive,
+        boolean rigourActive,
+        boolean deadeyeActive,
+        boolean mysticVigourActive,
+        int herbloreLevel,
+        DiaryProgress diaryProgress,
+        RaidKillCounts raidKillCounts)
+    {
         this.rsn = Objects.requireNonNull(rsn);
         this.totalLevel = totalLevel;
         this.combatLevel = combatLevel;
@@ -58,6 +80,7 @@ public final class VerificationSnapshot
         this.mysticVigourActive = mysticVigourActive;
         this.herbloreLevel = herbloreLevel;
         this.diaryProgress = Objects.requireNonNull(diaryProgress);
+        this.raidKillCounts = Objects.requireNonNull(raidKillCounts);
     }
 
     public String getRsn()
@@ -95,6 +118,7 @@ public final class VerificationSnapshot
     public boolean isMysticVigourActive() { return mysticVigourActive; }
     public int getHerbloreLevel() { return herbloreLevel; }
     public DiaryProgress getDiaryProgress() { return diaryProgress; }
+    public RaidKillCounts getRaidKillCounts() { return raidKillCounts; }
 
     public Optional<ObservedItem> findItem(Set<Integer> acceptedItemIds)
     {
@@ -127,6 +151,8 @@ public final class VerificationSnapshot
         preview.append("Elite diaries: ")
             .append(diaryProgress.getEliteCompleted()).append('/')
             .append(diaryProgress.getRegionCount()).append('\n');
+        preview.append("Raid KC: ")
+            .append(raidKillCounts.toSummary()).append('\n');
 
         for (EvidenceSource source : EvidenceSource.values())
         {

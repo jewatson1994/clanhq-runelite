@@ -2,6 +2,7 @@ package com.clanhq.verifier.service;
 
 import com.clanhq.verifier.model.DiaryProgress;
 import com.clanhq.verifier.model.RankQualificationResult;
+import com.clanhq.verifier.model.RaidKillCounts;
 import com.clanhq.verifier.model.RequirementStatus;
 import com.clanhq.verifier.model.VerificationSnapshot;
 import java.util.Collections;
@@ -48,5 +49,21 @@ public class IronDropQualificationServiceTest
         assertEquals(RequirementStatus.UNVERIFIED,
             result.getRequirements().get(0).getStatus());
         assertTrue(service.getRankNames().contains("Zenyte"));
+    }
+
+    @Test
+    public void passesCombinedRaidKcFromAllHiscoreCategories()
+    {
+        VerificationSnapshot snapshot = new VerificationSnapshot(
+            "Mr Dimples", 2350, 126, Collections.emptyList(), false,
+            false, false, false, false, 99, new DiaryProgress(12, 12, 12),
+            RaidKillCounts.available(420, 35, 180, 20, 310, 95));
+
+        RankQualificationResult result = service.evaluateTarget(snapshot, "Maxed");
+
+        assertEquals(RequirementStatus.PASSED,
+            result.getRequirements().stream()
+                .filter(item -> item.getName().equals("1000 combined raids KC"))
+                .findFirst().orElseThrow(AssertionError::new).getStatus());
     }
 }

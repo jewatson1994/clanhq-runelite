@@ -204,7 +204,7 @@ public final class IronDropQualificationService
 
     private List<RequirementResult> maxed(VerificationSnapshot s)
     {
-        return list(item(s, "Max cape", "max cape"), manual("1000 combined raids KC", "KC evidence required"),
+        return list(item(s, "Max cape", "max cape"), raidKillCount(s, 1000),
             count(s, "2 mega weapons", 2, "twisted bow", "scythe of vitur", "tumeken's shadow"),
             item(s, "Soulreaper axe", "soulreaper axe"),
             manual("Full Ancestral, fortified Masori, and Oathplate/Torva", "Exact set verification pending"),
@@ -251,6 +251,17 @@ public final class IronDropQualificationService
     private RequirementResult level(VerificationSnapshot s, int required) { return skill(required + " total level", s.getTotalLevel(), required); }
     private RequirementResult skill(String name, int actual, int required) { return state(name, actual >= required, actual + " / " + required); }
     private RequirementResult prayer(String name, boolean unlocked) { return unlocked ? state(name, true, "Unlock detected") : new RequirementResult(name, RequirementStatus.MISSING, "Not unlocked"); }
+    private RequirementResult raidKillCount(VerificationSnapshot snapshot, int required)
+    {
+        if (!snapshot.getRaidKillCounts().isAvailable())
+        {
+            return manual(required + " combined raids KC",
+                snapshot.getRaidKillCounts().getDetail());
+        }
+        int combined = snapshot.getRaidKillCounts().getCombined();
+        return state(required + " combined raids KC", combined >= required,
+            snapshot.getRaidKillCounts().toSummary());
+    }
     private RequirementResult item(VerificationSnapshot s, String name, String... fragments) { return matched(s, name, 1, false, fragments); }
     private RequirementResult count(VerificationSnapshot s, String name, int required, String... fragments) { return matched(s, name, required, true, fragments); }
     private RequirementResult quantity(VerificationSnapshot s, String name, int required, String... fragments)

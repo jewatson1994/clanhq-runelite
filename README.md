@@ -6,8 +6,9 @@ The current build is deliberately preview-only. A 15-second development capture 
 accumulates equipment and inventory evidence, captures only rank-relevant
 bank items when the bank is opened, and remembers supported prayers activated
 during the session. It also reads levels and authoritative hard/elite
-achievement-diary completion state. It does not send data to ClanHQ, Discord,
-or any other service.
+achievement-diary completion state. Capture also performs a public RuneScape
+hiscore lookup for the selected character's raid completion counts. It does
+not send captured evidence to ClanHQ, Discord, or any other service.
 
 The checklist covers every Iron Drop progression rank from Opal through
 Zenyte. The player selects the requested rank before capture, and the panel
@@ -75,6 +76,7 @@ use **End sessions** in the RuneScape account settings.
 ## Privacy boundary
 
 - Only the local logged-in player is inspected.
+- The captured RSN is sent to RuneScape's public hiscore service for raid KC.
 - Capture happens only after an explicit button click.
 - Each development capture session lasts 15 seconds and discards its evidence afterward.
 - Bank capture retains and displays only items used by configured rank rules;
