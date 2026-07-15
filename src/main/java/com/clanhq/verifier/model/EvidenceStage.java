@@ -9,6 +9,7 @@ public enum EvidenceStage
     COX_LOG("COX Collection Log"),
     TOB_LOG("TOB Collection Log"),
     TOA_LOG("TOA Collection Log"),
+    YAMA_LOG("Yama Collection Log"),
     DOOM_LOG("Doom Collection Log"),
     BOAT("Boat"),
     POH("POH");

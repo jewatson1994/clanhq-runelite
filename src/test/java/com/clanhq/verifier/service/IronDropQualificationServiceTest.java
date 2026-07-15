@@ -64,6 +64,7 @@ public class IronDropQualificationServiceTest
         assertTrue(service.getRequiredStages("Dragon").contains(EvidenceStage.POH));
         assertTrue(service.getRequiredStages("Maxed").contains(EvidenceStage.RAID_KC));
         assertTrue(service.getRequiredStages("Topaz").contains(EvidenceStage.PRAYERS));
+        assertTrue(service.getRequiredStages("Diamond").contains(EvidenceStage.YAMA_LOG));
         assertTrue(service.getRequiredStages("Completionism").contains(EvidenceStage.BOAT));
         assertTrue(service.getRequiredStages("Completionism")
             .containsAll(Arrays.asList(EvidenceStage.COX_LOG,
@@ -137,7 +138,7 @@ public class IronDropQualificationServiceTest
     }
 
     @Test
-    public void verifiesOwnedRaidUniquesAndGrandmasterReward()
+    public void verifiesOwnedRaidUniquesAndGrandmasterCombatAchievements()
     {
         List<ObservedItem> items = Arrays.asList(
             bankItem(101, "Dexterous prayer scroll"),
@@ -148,11 +149,11 @@ public class IronDropQualificationServiceTest
             bankItem(106, "Lightbearer"),
             bankItem(107, "Masori body (f)"),
             bankItem(108, "Avernic defender"),
-            bankItem(109, "Scythe of vitur"),
-            bankItem(110, "Ghommal's hilt 6"));
+            bankItem(109, "Scythe of vitur"));
         VerificationSnapshot snapshot = new VerificationSnapshot(
             "Mr Dimples", 2350, 126, items, true,
-            false, false, false, false, 99, new DiaryProgress(12, 12, 12));
+            false, false, false, false, 99, new DiaryProgress(12, 12, 12))
+            .withGrandmasterCombatAchievements(true);
 
         RankQualificationResult diamond = service.evaluateTarget(snapshot, "Diamond");
         assertPassed(diamond, "4 Chambers of Xeric uniques");
@@ -161,6 +162,20 @@ public class IronDropQualificationServiceTest
             "2 Theatre of Blood uniques (including Avernic)");
         assertPassed(service.evaluateTarget(snapshot, "Zenyte"),
             "Grandmaster Combat Achievements");
+    }
+
+    @Test
+    public void verifiesRiteOfVileTransferenceFromTheYamaLog()
+    {
+        Map<String, Integer> logged = new LinkedHashMap<>();
+        logged.put("Rite of Vile Transference", 1);
+        VerificationSnapshot snapshot = new VerificationSnapshot(
+            "Mr Dimples", 2175, 126, Collections.emptyList(), false, false)
+            .withCollectionLogEvidence(new CollectionLogEvidence(
+                Collections.singletonMap("Yama", logged)));
+
+        assertPassed(service.evaluateTarget(snapshot, "Diamond"),
+            "Rite of Vile Transference");
     }
 
     @Test

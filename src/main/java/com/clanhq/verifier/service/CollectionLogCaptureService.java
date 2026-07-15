@@ -155,12 +155,16 @@ public final class CollectionLogCaptureService
         for (Widget child : children) scan(child, visited, scan);
     }
 
-    private static String knownPageTitle(String text)
+    static String knownPageTitle(String text)
     {
         String normalized = text.toLowerCase(Locale.ENGLISH);
         if (normalized.contains("doom of mokhaiotl"))
         {
             return "Doom of Mokhaiotl";
+        }
+        if (normalized.contains("yama"))
+        {
+            return "Yama";
         }
         if (normalized.contains("chambers of xeric"))
         {

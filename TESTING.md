@@ -28,14 +28,19 @@ the current build never submits evidence.
 
 - Expected: the logged-in RSN, levels, supported prayer unlocks, and diary
   completion totals appear.
+- Expected: any saved owned boats are also captured without opening a Sailing
+  interface. The separate Boat button remains available as a refresh and
+  diagnostic capture.
+- Expected: Grandmaster Combat Achievements reflects the account's completed
+  CA tier state.
 - Confirm no other RuneLite account or character can be selected.
 
 ### Prayers
 
 - Capture after the account is fully logged in.
-- Expected: Piety, Rigour, Deadeye, and Mystic Vigour reflect their unlock
-  varbits. Rite of Vile Transference remains staff review because RuneLite does
-  not currently expose a stable unlock signal.
+- Expected: Piety passes only when King's Ransom and Knight Waves Training
+  Grounds are complete; the prayer does not need to be active. Rigour, Deadeye,
+  and Mystic Vigour reflect their unlock varbits.
 
 ### Gear
 
@@ -57,7 +62,7 @@ the current build never submits evidence.
 
 ### Collection Log
 
-- Use the specific COX, TOB, TOA, or Doom button shown for the
+- Use the specific COX, TOB, TOA, Yama, or Doom button shown for the
   selected rank. Open that exact page before capture.
 - Expected: the page name appears and only acquired visible items are retained.
 - Capture multiple pages and confirm earlier pages remain in the same session.
@@ -66,6 +71,8 @@ the current build never submits evidence.
 - Confirm raid unique counts combine bank ownership and matching log entries
   without counting the same unique twice.
 - Verify Doom only passes after cloth, boots, and eye are all present.
+- Verify Rite of Vile Transference passes only after it appears as acquired on
+  the captured Yama page.
 
 ### Boat
 

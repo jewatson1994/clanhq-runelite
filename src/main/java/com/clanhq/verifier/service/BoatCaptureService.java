@@ -66,6 +66,15 @@ public final class BoatCaptureService
             new ArrayList<>(text));
     }
 
+    public BoatEvidence captureStoredEvidence()
+    {
+        List<BoatConfiguration> configurations = captureOwnedBoats();
+        return configurations.isEmpty()
+            ? BoatEvidence.notCaptured()
+            : new BoatEvidence(Collections.emptySet(), configurations,
+                Collections.emptyList());
+    }
+
     private List<BoatConfiguration> captureOwnedBoats()
     {
         List<BoatConfiguration> boats = new ArrayList<>();

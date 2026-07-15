@@ -146,6 +146,7 @@ public final class ClanHQVerifierPlugin extends Plugin
             case COX_LOG:
             case TOB_LOG:
             case TOA_LOG:
+            case YAMA_LOG:
             case DOOM_LOG:
                 captureCollectionLog(stage);
                 break;
@@ -168,7 +169,9 @@ public final class ClanHQVerifierPlugin extends Plugin
         {
             try
             {
-                VerificationSnapshot snapshot = snapshotService.captureAccountEvidence();
+                VerificationSnapshot snapshot = snapshotService
+                    .captureAccountEvidence()
+                    .withBoatEvidence(boatCaptureService.captureStoredEvidence());
                 SwingUtilities.invokeLater(() ->
                 {
                     if (isCurrentSession(session))
@@ -343,6 +346,8 @@ public final class ClanHQVerifierPlugin extends Plugin
                 return collectionLogCaptureService.capturePage("Theatre of Blood");
             case TOA_LOG:
                 return collectionLogCaptureService.capturePage("Tombs of Amascut");
+            case YAMA_LOG:
+                return collectionLogCaptureService.capturePage("Yama");
             case DOOM_LOG:
                 return collectionLogCaptureService.capturePage("Doom of Mokhaiotl");
             default:
@@ -457,13 +462,22 @@ public final class ClanHQVerifierPlugin extends Plugin
 
     private void acceptAccountSnapshot(VerificationSnapshot snapshot)
     {
+        VerificationSnapshot merged = capturedSnapshot == null
+            ? snapshot : capturedSnapshot.withAccountEvidenceFrom(snapshot);
         capturedSnapshot = raidKillCounts == null
-            ? snapshot : snapshot.withRaidKillCounts(raidKillCounts);
+            ? merged : merged.withRaidKillCounts(raidKillCounts);
         verificationSession.bindRsn(snapshot.getRsn());
         verificationSession.setStatus(EvidenceStage.CHARACTER,
             EvidenceStageStatus.CAPTURED);
         panel.showStageStatus(EvidenceStage.CHARACTER,
             EvidenceStageStatus.CAPTURED);
+        if (capturedSnapshot.getBoatEvidence().isCaptured())
+        {
+            verificationSession.setStatus(EvidenceStage.BOAT,
+                EvidenceStageStatus.CAPTURED);
+            panel.showStageStatus(EvidenceStage.BOAT,
+                EvidenceStageStatus.CAPTURED);
+        }
         renderSnapshot("Account evidence captured.");
     }
 

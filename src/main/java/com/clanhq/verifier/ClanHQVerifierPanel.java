@@ -236,6 +236,7 @@ final class ClanHQVerifierPanel extends PluginPanel
             case COX_LOG: return "Capture COX Log";
             case TOB_LOG: return "Capture TOB Log";
             case TOA_LOG: return "Capture TOA Log";
+            case YAMA_LOG: return "Capture Yama Log";
             case DOOM_LOG: return "Capture Doom Log";
             case POH: return "Capture POH Instance";
             case BOAT: return "Capture Boat";

@@ -60,7 +60,7 @@ public class VerificationSnapshotTest
 
         VerificationSnapshot updated = original.withPrayerEvidenceFrom(prayerEvidence);
 
-        assertTrue(updated.isPietyActive());
+        assertTrue(updated.isPietyUnlocked());
         assertTrue(updated.isRigourActive());
         assertTrue(updated.isDeadeyeActive());
         assertTrue(updated.isMysticVigourActive());
@@ -93,11 +93,45 @@ public class VerificationSnapshotTest
 
         assertTrue(updated.isBankEvidenceCaptured());
         assertEquals(1, updated.getItems().size());
-        assertTrue(updated.isPietyActive());
+        assertTrue(updated.isPietyUnlocked());
         assertTrue(updated.isRigourActive());
         assertEquals(Integer.valueOf(1200),
             updated.getCollectionLogEvidence().getObtainedSlotCount());
         assertTrue(updated.getPohEvidence().isMaxed());
+        assertTrue(updated.getBoatEvidence().isCaptured());
+    }
+
+    @Test
+    public void refreshesAccountFactsWithoutDiscardingCapturedStages()
+    {
+        VerificationSnapshot original = new VerificationSnapshot(
+            "Mr Dimples", 2300, 120,
+            Collections.singletonList(new ObservedItem(
+                22322, "Avernic defender", 1, EvidenceSource.BANK)),
+            true, false,
+            false, false, false, 80, new DiaryProgress(10, 8, 12),
+            RaidKillCounts.available(100, 10, 20, 5, 30, 15))
+            .withCollectionLogEvidence(CollectionLogEvidence.slotCount(900))
+            .withPohEvidence(new PohEvidence(true, Collections.emptySet()))
+            .withBoatEvidence(new BoatEvidence(
+                Collections.singleton("Skiff"),
+                Collections.singletonList("Captured")));
+        VerificationSnapshot refreshed = new VerificationSnapshot(
+            "Mr Dimples", 2350, 126, Collections.emptyList(), false,
+            true, true, true, true, 99, new DiaryProgress(12, 12, 12))
+            .withGrandmasterCombatAchievements(true);
+
+        VerificationSnapshot updated = original.withAccountEvidenceFrom(refreshed);
+
+        assertEquals(2350, updated.getTotalLevel());
+        assertEquals(126, updated.getCombatLevel());
+        assertTrue(updated.isPietyUnlocked());
+        assertTrue(updated.hasGrandmasterCombatAchievements());
+        assertEquals(1, updated.getItems().size());
+        assertEquals(180, updated.getRaidKillCounts().getCombined());
+        assertEquals(Integer.valueOf(900),
+            updated.getCollectionLogEvidence().getObtainedSlotCount());
+        assertTrue(updated.getPohEvidence().isOwnerBuildMode());
         assertTrue(updated.getBoatEvidence().isCaptured());
     }
 }

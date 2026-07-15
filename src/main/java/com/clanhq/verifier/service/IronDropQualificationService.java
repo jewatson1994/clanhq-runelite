@@ -88,6 +88,10 @@ public final class IronDropQualificationService
         {
             stages.add(EvidenceStage.DOOM_LOG);
         }
+        if ("Diamond".equals(rankName))
+        {
+            stages.add(EvidenceStage.YAMA_LOG);
+        }
         if ("Dragon".equals(rankName))
         {
             stages.add(EvidenceStage.POH);
@@ -203,7 +207,8 @@ public final class IronDropQualificationService
             raidUniques(s, "Tombs of Amascut", 3, toaUniques()),
             item(s, "Assembler kit", "masori assembler", "max cape"),
             item(s, "Voidwaker", "voidwaker"),
-            manual("Rite of Vile Transference", "Prayer unlock detection pending"));
+            collectionLogItem(s, "Rite of Vile Transference", "yama",
+                "rite of vile transference"));
     }
 
     private List<RequirementResult> dragon(VerificationSnapshot s)
@@ -292,7 +297,10 @@ public final class IronDropQualificationService
 
     private List<RequirementResult> zenyte(VerificationSnapshot s)
     {
-        return list(manualPassItem(s, "Grandmaster Combat Achievements", "ghommal's hilt 6"),
+        return list(state("Grandmaster Combat Achievements",
+                s.hasGrandmasterCombatAchievements(),
+                s.hasGrandmasterCombatAchievements()
+                    ? "Grandmaster tier complete" : "Grandmaster tier incomplete"),
             allRaidsGreenLogged(s),
             item(s, "Hill giant club", "hill giant club"));
     }
@@ -450,6 +458,20 @@ public final class IronDropQualificationService
         }
         return manual(requirementName,
             "Capture bank and the matching raid Collection Log page");
+    }
+    private RequirementResult collectionLogItem(VerificationSnapshot snapshot,
+        String requirementName, String page, String item)
+    {
+        if (!snapshot.getCollectionLogEvidence().hasPage(page))
+        {
+            return manual(requirementName,
+                "Capture the " + page + " Collection Log page");
+        }
+        return state(requirementName,
+            snapshot.getCollectionLogEvidence().hasAcquiredItem(page, item),
+            snapshot.getCollectionLogEvidence().hasAcquiredItem(page, item)
+                ? "Collection Log entry acquired"
+                : "Collection Log entry not acquired");
     }
     private RequirementResult doomUniques(VerificationSnapshot snapshot)
     {

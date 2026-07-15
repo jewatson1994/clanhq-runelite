@@ -104,17 +104,17 @@ public final class OpalQualificationService
     private static RequirementResult pietyRequirement(
         VerificationSnapshot snapshot)
     {
-        if (snapshot.isPietyActive())
+        if (snapshot.isPietyUnlocked())
         {
             return new RequirementResult(
                 "Piety unlocked",
                 RequirementStatus.PASSED,
-                "Piety is active");
+                "King's Ransom and Knight Waves completion detected");
         }
 
         return new RequirementResult(
             "Piety unlocked",
-            RequirementStatus.UNVERIFIED,
-            "Activate Piety, then capture again");
+            RequirementStatus.MISSING,
+            "King's Ransom or Knight Waves is incomplete");
     }
 }

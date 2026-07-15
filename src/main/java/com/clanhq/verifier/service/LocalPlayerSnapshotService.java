@@ -16,6 +16,8 @@ import net.runelite.api.GameState;
 import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Player;
+import net.runelite.api.Quest;
+import net.runelite.api.QuestState;
 import net.runelite.api.Skill;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.gameval.InterfaceID;
@@ -73,14 +75,27 @@ public final class LocalPlayerSnapshotService
             player.getCombatLevel(),
             items,
             bankCaptured,
-            client.getVarbitValue(VarbitID.PRAYER_PIETY) == 1,
+            isPietyUnlocked(),
             client.getVarbitValue(VarbitID.PRAYER_RIGOUR_UNLOCKED) == 1,
             client.getVarbitValue(VarbitID.PRAYER_DEADEYE_UNLOCKED) == 1,
             client.getVarbitValue(VarbitID.PRAYER_MYSTIC_VIGOUR_UNLOCKED) == 1,
             client.getRealSkillLevel(Skill.HERBLORE),
             captureDiaryProgress(),
             com.clanhq.verifier.model.RaidKillCounts.unavailable("Not fetched"),
-            client.getVarpValue(VarPlayerID.COLLECTION_COUNT));
+            client.getVarpValue(VarPlayerID.COLLECTION_COUNT))
+            .withGrandmasterCombatAchievements(client.getVarbitValue(
+                VarbitID.CA_TIER_STATUS_GRANDMASTER) > 0);
+    }
+
+    private boolean isPietyUnlocked()
+    {
+        return hasPietyUnlock(Quest.KINGS_RANSOM.getState(client),
+            client.getVarbitValue(VarbitID.KR_KNIGHTWAVES_STATE));
+    }
+
+    static boolean hasPietyUnlock(QuestState kingsRansom, int knightWavesState)
+    {
+        return kingsRansom == QuestState.FINISHED && knightWavesState >= 8;
     }
 
     private Player requireLoggedInPlayer()

@@ -37,4 +37,11 @@ public class CollectionLogCaptureServiceTest
         assertFalse(CollectionLogCaptureService.isExcludedGreenLogSlot(
             "Masori crafting kit"));
     }
+
+    @Test
+    public void recognizesTheYamaCollectionLogPage()
+    {
+        assertEquals("Yama", CollectionLogCaptureService.knownPageTitle(
+            "Collection Log - Yama 3/5"));
+    }
 }

@@ -13,13 +13,13 @@ The checklist covers every Iron Drop progression rank from Opal through
 Zenyte. The player selects the requested rank before capture, and the panel
 shows only that rank's evidence. Character, prayers, gear, raid KC, individual
 Collection Log sources, boat, and owner-POH are independent evidence stages.
-Collection Log buttons are split into COX, TOB, TOA, and Doom and
+Collection Log buttons are split into COX, TOB, TOA, Yama, and Doom and
 only appear when the selected rank needs them. Captured raid pages retain
 acquired and total visible slot counts and are combined with current item evidence
 for unique-count requirements without double-counting the same unique. Every
 Collection Log page capture also records the global obtained/total count
 shown in the window header. Boat
-capture reads RuneLite's authoritative owned-boat variables and Sailing DB
+Verify Character also reads RuneLite's authoritative owned-boat variables and Sailing DB
 tables for all five slots. A maxed Skiff or Sloop requires a Rosewood hull,
 Rosewood mast and sails, Dragon helm, and Dragon keel. Visible Sailing panel
 text is retained only as a diagnostic fallback. POH capture requires
@@ -37,12 +37,15 @@ capture can prove Sanguine dust and both ornament kits. COX, TOB, and TOA captur
 green logs from acquired-versus-total visible slots. Sailing core upgrade state
 is verified directly from the player's owned-boat records.
 Raid KC shrouds are excluded from green-log totals.
+The Yama page verifies Rite of Vile Transference. Piety is verified from
+completed King's Ransom and Knight Waves Training Grounds progression, so the
+prayer does not need to be activated. Grandmaster Combat Achievements are read
+from RuneLite's authoritative tier-completion state.
 
 The plugin reports evidence status, not an official qualification decision.
 Only ClanHQ and the eventual staff ticket approval can verify or award a rank.
 
-Requirements RuneLite cannot yet prove reliably (for example Rite of Vile
-Transference) are shown as `[CHECK]`. They are never
+Requirements RuneLite cannot yet prove reliably are shown as `[CHECK]`. They are never
 treated as passed or guessed from unrelated evidence.
 
 ## Why preview-only first?
@@ -105,7 +108,8 @@ use **End sessions** in the RuneScape account settings.
 - The ClanHQ API destination is configured by each member in RuneLite settings.
 - HTTPS is required except for localhost development; changing settings never submits evidence automatically.
 - Collection Log capture stores only visible acquired item names and quantities.
-- Boat capture stores visible Sailing panel text, not cargo item contents.
+- Boat capture stores owned boat configurations and optional visible Sailing
+  panel text, not cargo item contents.
 - POH capture stores only the five configured facility results and requires owner build mode.
 - Bank, inventory, and equipped gear are captured once while the bank is open.
   Evidence remains only in the local panel until the rank changes, the session

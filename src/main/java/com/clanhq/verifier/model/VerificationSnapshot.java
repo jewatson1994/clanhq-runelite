@@ -25,6 +25,7 @@ public final class VerificationSnapshot
     private CollectionLogEvidence collectionLogEvidence = CollectionLogEvidence.empty();
     private PohEvidence pohEvidence = PohEvidence.notCaptured();
     private BoatEvidence boatEvidence = BoatEvidence.notCaptured();
+    private boolean grandmasterCombatAchievements;
 
     public VerificationSnapshot(
         String rsn,
@@ -138,6 +139,8 @@ public final class VerificationSnapshot
         return pietyActive;
     }
 
+    public boolean isPietyUnlocked() { return pietyActive; }
+
     public boolean isRigourActive() { return rigourActive; }
     public boolean isDeadeyeActive() { return deadeyeActive; }
     public boolean isMysticVigourActive() { return mysticVigourActive; }
@@ -148,6 +151,10 @@ public final class VerificationSnapshot
     public CollectionLogEvidence getCollectionLogEvidence() { return collectionLogEvidence; }
     public PohEvidence getPohEvidence() { return pohEvidence; }
     public BoatEvidence getBoatEvidence() { return boatEvidence; }
+    public boolean hasGrandmasterCombatAchievements()
+    {
+        return grandmasterCombatAchievements;
+    }
 
     public VerificationSnapshot withRaidKillCounts(RaidKillCounts counts)
     {
@@ -158,6 +165,15 @@ public final class VerificationSnapshot
         copy.collectionLogEvidence = collectionLogEvidence;
         copy.pohEvidence = pohEvidence;
         copy.boatEvidence = boatEvidence;
+        copy.grandmasterCombatAchievements = grandmasterCombatAchievements;
+        return copy;
+    }
+
+    public VerificationSnapshot withGrandmasterCombatAchievements(
+        boolean completed)
+    {
+        VerificationSnapshot copy = withRaidKillCounts(raidKillCounts);
+        copy.grandmasterCombatAchievements = completed;
         return copy;
     }
 
@@ -195,7 +211,31 @@ public final class VerificationSnapshot
             raidKillCounts, collectionLogSlots);
         copy.collectionLogEvidence = collectionLogEvidence;
         copy.pohEvidence = pohEvidence;
-        copy.boatEvidence = boatEvidence;
+        copy.boatEvidence = boatEvidence.merge(evidence.boatEvidence);
+        copy.grandmasterCombatAchievements =
+            evidence.grandmasterCombatAchievements;
+        return copy;
+    }
+
+    public VerificationSnapshot withAccountEvidenceFrom(
+        VerificationSnapshot evidence)
+    {
+        if (!rsn.equals(evidence.rsn))
+        {
+            throw new IllegalArgumentException(
+                "Account evidence belongs to another character.");
+        }
+        VerificationSnapshot copy = new VerificationSnapshot(rsn,
+            evidence.totalLevel, evidence.combatLevel, items,
+            bankEvidenceCaptured, evidence.pietyActive,
+            evidence.rigourActive, evidence.deadeyeActive,
+            evidence.mysticVigourActive, evidence.herbloreLevel,
+            evidence.diaryProgress, raidKillCounts, collectionLogSlots);
+        copy.collectionLogEvidence = collectionLogEvidence;
+        copy.pohEvidence = pohEvidence;
+        copy.boatEvidence = boatEvidence.merge(evidence.boatEvidence);
+        copy.grandmasterCombatAchievements =
+            evidence.grandmasterCombatAchievements;
         return copy;
     }
 
@@ -215,6 +255,7 @@ public final class VerificationSnapshot
         copy.collectionLogEvidence = collectionLogEvidence;
         copy.pohEvidence = pohEvidence;
         copy.boatEvidence = boatEvidence;
+        copy.grandmasterCombatAchievements = grandmasterCombatAchievements;
         return copy;
     }
 
@@ -234,7 +275,7 @@ public final class VerificationSnapshot
         preview.append("Bank evidence: ")
             .append(bankEvidenceCaptured ? "Captured" : "Not captured")
             .append('\n');
-        preview.append("Piety active: ")
+        preview.append("Piety unlocked: ")
             .append(pietyActive ? "Yes" : "No")
             .append('\n');
         preview.append("Rigour unlocked: ")
@@ -243,6 +284,9 @@ public final class VerificationSnapshot
             .append(deadeyeActive ? "Yes" : "No").append('\n');
         preview.append("Mystic Vigour unlocked: ")
             .append(mysticVigourActive ? "Yes" : "No").append('\n');
+        preview.append("Grandmaster CA complete: ")
+            .append(grandmasterCombatAchievements ? "Yes" : "No")
+            .append('\n');
         preview.append("Hard diaries: ")
             .append(diaryProgress.getHardCompleted()).append('/')
             .append(diaryProgress.getRegionCount()).append('\n');
