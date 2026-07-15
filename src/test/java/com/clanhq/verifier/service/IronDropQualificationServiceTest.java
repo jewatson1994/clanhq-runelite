@@ -10,6 +10,7 @@ import com.clanhq.verifier.model.RequirementStatus;
 import com.clanhq.verifier.model.VerificationSnapshot;
 import com.clanhq.verifier.model.PohEvidence;
 import com.clanhq.verifier.model.CollectionLogEvidence;
+import com.clanhq.verifier.model.BoatEvidence;
 import java.util.Collections;
 import java.util.Arrays;
 import java.util.List;
@@ -174,6 +175,28 @@ public class IronDropQualificationServiceTest
 
         assertPassed(service.evaluateTarget(snapshot, "Dragon"), "Maxed POH");
         assertPassed(service.evaluateTarget(snapshot, "Onyx"), "All Doom uniques");
+    }
+
+    @Test
+    public void includesCapturedBoatPanelsForStaffReview()
+    {
+        VerificationSnapshot base = new VerificationSnapshot(
+            "Mr Dimples", 2350, 126, Collections.emptyList(), false, false);
+        VerificationSnapshot snapshot = base.withBoatEvidence(new BoatEvidence(
+            new LinkedHashSet<>(Arrays.asList("Skiff", "Sloop")),
+            Arrays.asList("Skiff", "Sloop", "Hull level 3")));
+
+        RankQualificationResult result = service.evaluateTarget(
+            snapshot, "Completionism");
+
+        assertEquals(RequirementStatus.UNVERIFIED,
+            result.getRequirements().stream()
+                .filter(item -> item.getName().equals("Maxed skiff and sloop"))
+                .findFirst().orElseThrow(AssertionError::new).getStatus());
+        assertTrue(result.getRequirements().stream()
+            .filter(item -> item.getName().equals("Maxed skiff and sloop"))
+            .findFirst().orElseThrow(AssertionError::new).getDetail()
+            .contains("Skiff, Sloop"));
     }
 
     private static ObservedItem bankItem(int id, String name)

@@ -12,6 +12,21 @@ import static org.junit.Assert.assertTrue;
 public class CollectorEvidenceTest
 {
     @Test
+    public void mergesBoatPanelsWithoutClaimingUpgradeVerification()
+    {
+        BoatEvidence skiff = new BoatEvidence(
+            Collections.singleton("Skiff"), Arrays.asList("Skiff", "Hull level 3"));
+        BoatEvidence sloop = new BoatEvidence(
+            Collections.singleton("Sloop"), Arrays.asList("Sloop", "Hull level 3"));
+
+        BoatEvidence combined = skiff.merge(sloop);
+
+        assertTrue(combined.hasSkiffAndSloop());
+        assertEquals(3, combined.getVisibleDetails().size());
+        assertTrue(combined.toSummary().contains("Skiff, Sloop"));
+    }
+
+    @Test
     public void recognizesDoomUniquesAcrossCapturedPageEvidence()
     {
         Map<String, Integer> items = new LinkedHashMap<>();

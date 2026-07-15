@@ -24,6 +24,7 @@ public final class VerificationSnapshot
     private final int collectionLogSlots;
     private CollectionLogEvidence collectionLogEvidence = CollectionLogEvidence.empty();
     private PohEvidence pohEvidence = PohEvidence.notCaptured();
+    private BoatEvidence boatEvidence = BoatEvidence.notCaptured();
 
     public VerificationSnapshot(
         String rsn,
@@ -146,6 +147,7 @@ public final class VerificationSnapshot
     public int getCollectionLogSlots() { return collectionLogSlots; }
     public CollectionLogEvidence getCollectionLogEvidence() { return collectionLogEvidence; }
     public PohEvidence getPohEvidence() { return pohEvidence; }
+    public BoatEvidence getBoatEvidence() { return boatEvidence; }
 
     public VerificationSnapshot withRaidKillCounts(RaidKillCounts counts)
     {
@@ -155,6 +157,7 @@ public final class VerificationSnapshot
             collectionLogSlots);
         copy.collectionLogEvidence = collectionLogEvidence;
         copy.pohEvidence = pohEvidence;
+        copy.boatEvidence = boatEvidence;
         return copy;
     }
 
@@ -172,6 +175,13 @@ public final class VerificationSnapshot
         return copy;
     }
 
+    public VerificationSnapshot withBoatEvidence(BoatEvidence evidence)
+    {
+        VerificationSnapshot copy = withRaidKillCounts(raidKillCounts);
+        copy.boatEvidence = boatEvidence.merge(Objects.requireNonNull(evidence));
+        return copy;
+    }
+
     public VerificationSnapshot withPrayerEvidenceFrom(VerificationSnapshot evidence)
     {
         if (!rsn.equals(evidence.rsn))
@@ -185,6 +195,7 @@ public final class VerificationSnapshot
             raidKillCounts, collectionLogSlots);
         copy.collectionLogEvidence = collectionLogEvidence;
         copy.pohEvidence = pohEvidence;
+        copy.boatEvidence = boatEvidence;
         return copy;
     }
 
@@ -227,6 +238,8 @@ public final class VerificationSnapshot
             .append(collectionLogEvidence.toSummary()).append('\n');
         preview.append("POH: ")
             .append(pohEvidence.toSummary()).append('\n');
+        preview.append("Boat: ")
+            .append(boatEvidence.toSummary()).append('\n');
 
         for (EvidenceSource source : EvidenceSource.values())
         {

@@ -47,7 +47,7 @@ public final class IronDropQualificationService
         ranks.add(rank("Onyx", ranks, onyx(snapshot)));
         ranks.add(rank("Kitten", ranks, kitten(snapshot)));
         ranks.add(rank("Maxed", ranks, maxed(snapshot)));
-        ranks.add(rank("Completionism", ranks, completionism()));
+        ranks.add(rank("Completionism", ranks, completionism(snapshot)));
         ranks.add(rank("Zenyte", ranks, zenyte(snapshot)));
         return ranks;
     }
@@ -123,7 +123,7 @@ public final class IronDropQualificationService
             case "Onyx": return onyx(snapshot);
             case "Kitten": return kitten(snapshot);
             case "Maxed": return maxed(snapshot);
-            case "Completionism": return completionism();
+            case "Completionism": return completionism(snapshot);
             case "Zenyte": return zenyte(snapshot);
             default: throw new IllegalArgumentException(
                 "Unknown Iron Drop rank: " + rankName);
@@ -259,10 +259,10 @@ public final class IronDropQualificationService
             item(s, "Maxed Avernic treads", "avernic treads (max)"));
     }
 
-    private List<RequirementResult> completionism()
+    private List<RequirementResult> completionism(VerificationSnapshot snapshot)
     {
         return list(manual("Completionism collection log and cosmetics", "Collection-log/cosmetic evidence required"),
-            manual("Maxed skiff and sloop", "Sailing vessel evidence required"));
+            boatRequirement(snapshot));
     }
 
     private List<RequirementResult> zenyte(VerificationSnapshot s)
@@ -318,6 +318,21 @@ public final class IronDropQualificationService
         }
         return state("Maxed POH", snapshot.getPohEvidence().isMaxed(),
             snapshot.getPohEvidence().toSummary());
+    }
+    private RequirementResult boatRequirement(VerificationSnapshot snapshot)
+    {
+        if (!snapshot.getBoatEvidence().isCaptured())
+        {
+            return manual("Maxed skiff and sloop",
+                "Capture each vessel's Sailing panel for staff review");
+        }
+        String detail = snapshot.getBoatEvidence().toSummary();
+        if (!snapshot.getBoatEvidence().hasSkiffAndSloop())
+        {
+            detail += "; capture both vessel types";
+        }
+        return manual("Maxed skiff and sloop", detail
+            + "; staff confirms the upgrade state");
     }
     private RequirementResult doomUniques(VerificationSnapshot snapshot)
     {

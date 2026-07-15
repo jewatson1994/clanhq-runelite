@@ -14,6 +14,7 @@ import com.clanhq.verifier.service.RaidKillCountService;
 import com.clanhq.verifier.service.ApiDestinationService;
 import com.clanhq.verifier.service.CollectionLogCaptureService;
 import com.clanhq.verifier.service.PohCaptureService;
+import com.clanhq.verifier.service.BoatCaptureService;
 import com.clanhq.verifier.transport.PreviewOnlyVerificationTransport;
 import com.clanhq.verifier.transport.VerificationTransport;
 import com.clanhq.verifier.transport.VerificationTransportResult;
@@ -73,6 +74,9 @@ public final class ClanHQVerifierPlugin extends Plugin
 
     @Inject
     private PohCaptureService pohCaptureService;
+
+    @Inject
+    private BoatCaptureService boatCaptureService;
 
     private ClanHQVerifierPanel panel;
     private NavigationButton navigationButton;
@@ -181,10 +185,7 @@ public final class ClanHQVerifierPlugin extends Plugin
                 capturePoh();
                 break;
             case BOAT:
-                verificationSession.setStatus(stage,
-                    EvidenceStageStatus.MANUAL_REVIEW);
-                panel.showStageStatus(stage, EvidenceStageStatus.MANUAL_REVIEW);
-                panel.showMessage("Boat collector is not connected yet.");
+                captureBoat();
                 break;
             default:
                 throw new IllegalArgumentException("Unsupported evidence stage");
@@ -338,6 +339,33 @@ public final class ClanHQVerifierPlugin extends Plugin
             {
                 SwingUtilities.invokeLater(() -> failStage(
                     EvidenceStage.POH, exception));
+            }
+        });
+    }
+
+    private void captureBoat()
+    {
+        beginStage(EvidenceStage.BOAT);
+        clientThread.invokeLater(() ->
+        {
+            try
+            {
+                VerificationSnapshot account = capturedSnapshot == null
+                    ? snapshotService.captureAccountEvidence() : capturedSnapshot;
+                com.clanhq.verifier.model.BoatEvidence evidence =
+                    boatCaptureService.captureVisiblePanel();
+                SwingUtilities.invokeLater(() ->
+                {
+                    acceptAccountSnapshot(account);
+                    capturedSnapshot = capturedSnapshot.withBoatEvidence(evidence);
+                    completeStage(EvidenceStage.BOAT,
+                        "Sailing boat panel captured.");
+                });
+            }
+            catch (RuntimeException exception)
+            {
+                SwingUtilities.invokeLater(() -> failStage(
+                    EvidenceStage.BOAT, exception));
             }
         });
     }
