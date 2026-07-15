@@ -22,6 +22,8 @@ public final class VerificationSnapshot
     private final DiaryProgress diaryProgress;
     private final RaidKillCounts raidKillCounts;
     private final int collectionLogSlots;
+    private CollectionLogEvidence collectionLogEvidence = CollectionLogEvidence.empty();
+    private PohEvidence pohEvidence = PohEvidence.notCaptured();
 
     public VerificationSnapshot(
         String rsn,
@@ -142,13 +144,32 @@ public final class VerificationSnapshot
     public DiaryProgress getDiaryProgress() { return diaryProgress; }
     public RaidKillCounts getRaidKillCounts() { return raidKillCounts; }
     public int getCollectionLogSlots() { return collectionLogSlots; }
+    public CollectionLogEvidence getCollectionLogEvidence() { return collectionLogEvidence; }
+    public PohEvidence getPohEvidence() { return pohEvidence; }
 
     public VerificationSnapshot withRaidKillCounts(RaidKillCounts counts)
     {
-        return new VerificationSnapshot(rsn, totalLevel, combatLevel, items,
+        VerificationSnapshot copy = new VerificationSnapshot(rsn, totalLevel, combatLevel, items,
             bankEvidenceCaptured, pietyActive, rigourActive, deadeyeActive,
             mysticVigourActive, herbloreLevel, diaryProgress, counts,
             collectionLogSlots);
+        copy.collectionLogEvidence = collectionLogEvidence;
+        copy.pohEvidence = pohEvidence;
+        return copy;
+    }
+
+    public VerificationSnapshot withCollectionLogEvidence(CollectionLogEvidence evidence)
+    {
+        VerificationSnapshot copy = withRaidKillCounts(raidKillCounts);
+        copy.collectionLogEvidence = collectionLogEvidence.merge(evidence);
+        return copy;
+    }
+
+    public VerificationSnapshot withPohEvidence(PohEvidence evidence)
+    {
+        VerificationSnapshot copy = withRaidKillCounts(raidKillCounts);
+        copy.pohEvidence = Objects.requireNonNull(evidence);
+        return copy;
     }
 
     public Optional<ObservedItem> findItem(Set<Integer> acceptedItemIds)
@@ -186,6 +207,10 @@ public final class VerificationSnapshot
             .append(raidKillCounts.toSummary()).append('\n');
         preview.append("Collection log slots: ")
             .append(collectionLogSlots).append('\n');
+        preview.append("Collection log pages: ")
+            .append(collectionLogEvidence.toSummary()).append('\n');
+        preview.append("POH: ")
+            .append(pohEvidence.toSummary()).append('\n');
 
         for (EvidenceSource source : EvidenceSource.values())
         {

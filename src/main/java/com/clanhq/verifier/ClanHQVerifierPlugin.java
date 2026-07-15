@@ -6,10 +6,14 @@ import com.clanhq.verifier.model.EvidenceStage;
 import com.clanhq.verifier.model.EvidenceStageStatus;
 import com.clanhq.verifier.model.RaidKillCounts;
 import com.clanhq.verifier.model.VerificationSession;
+import com.clanhq.verifier.model.CollectionLogEvidence;
+import com.clanhq.verifier.model.PohEvidence;
 import com.clanhq.verifier.service.LocalPlayerSnapshotService;
 import com.clanhq.verifier.service.IronDropQualificationService;
 import com.clanhq.verifier.service.RaidKillCountService;
 import com.clanhq.verifier.service.ApiDestinationService;
+import com.clanhq.verifier.service.CollectionLogCaptureService;
+import com.clanhq.verifier.service.PohCaptureService;
 import com.clanhq.verifier.transport.PreviewOnlyVerificationTransport;
 import com.clanhq.verifier.transport.VerificationTransport;
 import com.clanhq.verifier.transport.VerificationTransportResult;
@@ -63,6 +67,12 @@ public final class ClanHQVerifierPlugin extends Plugin
 
     @Inject
     private ClanHQVerifierConfig config;
+
+    @Inject
+    private CollectionLogCaptureService collectionLogCaptureService;
+
+    @Inject
+    private PohCaptureService pohCaptureService;
 
     private ClanHQVerifierPanel panel;
     private NavigationButton navigationButton;
@@ -162,12 +172,10 @@ public final class ClanHQVerifierPlugin extends Plugin
                 fetchRaidKillCounts();
                 break;
             case COLLECTION_LOG:
+                captureCollectionLog();
+                break;
             case POH:
-                verificationSession.setStatus(stage,
-                    EvidenceStageStatus.MANUAL_REVIEW);
-                panel.showStageStatus(stage, EvidenceStageStatus.MANUAL_REVIEW);
-                panel.showMessage(stage.getDisplayName()
-                    + " collector is the next implementation step.");
+                capturePoh();
                 break;
             default:
                 throw new IllegalArgumentException("Unsupported evidence stage");
@@ -239,6 +247,71 @@ public final class ClanHQVerifierPlugin extends Plugin
                     EvidenceStage.RAID_KC, exception));
             }
         });
+    }
+
+    private void captureCollectionLog()
+    {
+        beginStage(EvidenceStage.COLLECTION_LOG);
+        clientThread.invokeLater(() ->
+        {
+            try
+            {
+                VerificationSnapshot account = capturedSnapshot == null
+                    ? snapshotService.captureAccountEvidence() : capturedSnapshot;
+                CollectionLogEvidence evidence =
+                    collectionLogCaptureService.captureVisiblePage();
+                SwingUtilities.invokeLater(() ->
+                {
+                    acceptAccountSnapshot(account);
+                    capturedSnapshot = capturedSnapshot.withCollectionLogEvidence(evidence);
+                    completeStage(EvidenceStage.COLLECTION_LOG,
+                        "Collection Log page captured.");
+                });
+            }
+            catch (RuntimeException exception)
+            {
+                SwingUtilities.invokeLater(() -> failStage(
+                    EvidenceStage.COLLECTION_LOG, exception));
+            }
+        });
+    }
+
+    private void capturePoh()
+    {
+        beginStage(EvidenceStage.POH);
+        clientThread.invokeLater(() ->
+        {
+            try
+            {
+                VerificationSnapshot account = capturedSnapshot == null
+                    ? snapshotService.captureAccountEvidence() : capturedSnapshot;
+                PohEvidence evidence = pohCaptureService.capture();
+                SwingUtilities.invokeLater(() ->
+                {
+                    acceptAccountSnapshot(account);
+                    capturedSnapshot = capturedSnapshot.withPohEvidence(evidence);
+                    completeStage(EvidenceStage.POH, "Owner POH captured.");
+                });
+            }
+            catch (RuntimeException exception)
+            {
+                SwingUtilities.invokeLater(() -> failStage(
+                    EvidenceStage.POH, exception));
+            }
+        });
+    }
+
+    private void beginStage(EvidenceStage stage)
+    {
+        verificationSession.setStatus(stage, EvidenceStageStatus.CAPTURING);
+        panel.showStageStatus(stage, EvidenceStageStatus.CAPTURING);
+    }
+
+    private void completeStage(EvidenceStage stage, String message)
+    {
+        verificationSession.setStatus(stage, EvidenceStageStatus.CAPTURED);
+        panel.showStageStatus(stage, EvidenceStageStatus.CAPTURED);
+        renderSnapshot(message);
     }
 
     private void startCaptureTimer()

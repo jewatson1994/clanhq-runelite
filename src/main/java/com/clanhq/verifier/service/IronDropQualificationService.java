@@ -190,7 +190,7 @@ public final class IronDropQualificationService
 
     private List<RequirementResult> dragon(VerificationSnapshot s)
     {
-        return list(level(s, 2200), manual("Maxed POH", "House inspection required"),
+        return list(level(s, 2200), pohRequirement(s),
             item(s, "Ghommal's hilt 4+", "ghommal's hilt 4", "ghommal's hilt 5", "ghommal's hilt 6"),
             item(s, "Dragon hunter lance", "dragon hunter lance"), item(s, "Venator bow", "venator bow"),
             cerberusBootsOrTreads(s));
@@ -220,7 +220,7 @@ public final class IronDropQualificationService
             tobUniquesIncludingAvernic(s, 2),
             item(s, "1 Nex unique", "zaryte vambraces", "nihil horn", "zaryte crossbow",
                 "torva full helm", "torva platebody", "torva platelegs"),
-            manual("All Doom uniques", "Collection-log evidence required"));
+            doomUniques(s));
     }
 
     private List<RequirementResult> kitten(VerificationSnapshot s)
@@ -301,6 +301,27 @@ public final class IronDropQualificationService
         int combined = snapshot.getRaidKillCounts().getCombined();
         return state(required + " combined raids KC", combined >= required,
             snapshot.getRaidKillCounts().toSummary());
+    }
+    private RequirementResult pohRequirement(VerificationSnapshot snapshot)
+    {
+        if (!snapshot.getPohEvidence().isOwnerBuildMode())
+        {
+            return manual("Maxed POH", "Capture your own POH in build mode");
+        }
+        return state("Maxed POH", snapshot.getPohEvidence().isMaxed(),
+            snapshot.getPohEvidence().toSummary());
+    }
+    private RequirementResult doomUniques(VerificationSnapshot snapshot)
+    {
+        if (!snapshot.getCollectionLogEvidence().isCaptured())
+        {
+            return manual("All Doom uniques",
+                "Capture the Doom collection-log page");
+        }
+        return state("All Doom uniques",
+            snapshot.getCollectionLogEvidence().hasDoomUniques(),
+            snapshot.getCollectionLogEvidence().hasDoomUniques()
+                ? "Cloth, boots, and eye acquired" : "Required Doom uniques not all acquired");
     }
     private RequirementResult raidUniques(VerificationSnapshot snapshot,
         String raid, int required, String[] uniqueGroups)

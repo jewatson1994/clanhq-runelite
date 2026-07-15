@@ -8,9 +8,14 @@ import com.clanhq.verifier.model.RankQualificationResult;
 import com.clanhq.verifier.model.RaidKillCounts;
 import com.clanhq.verifier.model.RequirementStatus;
 import com.clanhq.verifier.model.VerificationSnapshot;
+import com.clanhq.verifier.model.PohEvidence;
+import com.clanhq.verifier.model.CollectionLogEvidence;
 import java.util.Collections;
 import java.util.Arrays;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
 import org.junit.Test;
 import net.runelite.api.ItemID;
 import static org.junit.Assert.assertEquals;
@@ -145,6 +150,28 @@ public class IronDropQualificationServiceTest
             "2 Theatre of Blood uniques (including Avernic)");
         assertPassed(service.evaluateTarget(snapshot, "Zenyte"),
             "Grandmaster Combat Achievements");
+    }
+
+    @Test
+    public void verifiesCapturedMaxedPohAndDoomCollectionLog()
+    {
+        VerificationSnapshot base = new VerificationSnapshot(
+            "Mr Dimples", 2350, 126, Collections.emptyList(), false, false);
+        PohEvidence poh = new PohEvidence(true, new LinkedHashSet<>(Arrays.asList(
+            PohEvidence.SPIRITUAL_FAIRY, PohEvidence.JEWELLERY_BOX,
+            PohEvidence.OCCULT_ALTAR, PohEvidence.PORTAL_NEXUS,
+            PohEvidence.REJUVENATION_POOL)));
+        Map<String, Integer> doomItems = new LinkedHashMap<>();
+        doomItems.put("Doom cloth", 1);
+        doomItems.put("Doom boots", 1);
+        doomItems.put("Eye of Doom", 1);
+        CollectionLogEvidence doom = new CollectionLogEvidence(
+            Collections.singletonMap("Doom of Mokhaiotl", doomItems));
+        VerificationSnapshot snapshot = base.withPohEvidence(poh)
+            .withCollectionLogEvidence(doom);
+
+        assertPassed(service.evaluateTarget(snapshot, "Dragon"), "Maxed POH");
+        assertPassed(service.evaluateTarget(snapshot, "Onyx"), "All Doom uniques");
     }
 
     private static ObservedItem bankItem(int id, String name)
