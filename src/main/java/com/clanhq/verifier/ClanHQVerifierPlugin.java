@@ -14,7 +14,6 @@ import java.awt.image.BufferedImage;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
-import java.util.List;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -53,6 +52,7 @@ public final class ClanHQVerifierPlugin extends Plugin
     private NavigationButton navigationButton;
     private Timer captureTimer;
     private int secondsRemaining;
+    private String requestedRank;
 
     @Provides
     ClanHQVerifierConfig provideConfig(ConfigManager configManager)
@@ -69,7 +69,9 @@ public final class ClanHQVerifierPlugin extends Plugin
     @Override
     protected void startUp()
     {
-        panel = new ClanHQVerifierPanel(this::captureCurrentCharacter);
+        panel = new ClanHQVerifierPanel(
+            qualificationService.getRankNames(),
+            this::captureCurrentCharacter);
         navigationButton = NavigationButton.builder()
             .tooltip("ClanHQ Verifier")
             .icon(createIcon())
@@ -114,8 +116,9 @@ public final class ClanHQVerifierPlugin extends Plugin
         }
     }
 
-    private void captureCurrentCharacter()
+    private void captureCurrentCharacter(String rankName)
     {
+        requestedRank = rankName;
         panel.setBusy(CAPTURE_DURATION_SECONDS);
 
         clientThread.invokeLater(() ->
@@ -179,13 +182,13 @@ public final class ClanHQVerifierPlugin extends Plugin
     {
         VerificationSnapshot snapshot =
             snapshotService.finishCaptureSession();
-        List<RankQualificationResult> qualifications =
-            qualificationService.evaluate(snapshot);
+        RankQualificationResult qualification =
+            qualificationService.evaluateTarget(snapshot, requestedRank);
         VerificationTransportResult result = transport.submit(snapshot);
 
         SwingUtilities.invokeLater(() -> panel.showSnapshot(
             snapshot,
-            qualifications,
+            java.util.Collections.singletonList(qualification),
             result.getMessage()));
     }
 

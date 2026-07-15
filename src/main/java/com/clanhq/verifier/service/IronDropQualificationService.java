@@ -7,6 +7,7 @@ import com.clanhq.verifier.model.RequirementStatus;
 import com.clanhq.verifier.model.VerificationSnapshot;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import javax.inject.Inject;
@@ -14,6 +15,10 @@ import javax.inject.Inject;
 /** Evaluates Iron Drop's cumulative progression ranks from locally observed evidence. */
 public final class IronDropQualificationService
 {
+    private static final List<String> RANK_NAMES = Collections.unmodifiableList(Arrays.asList(
+        "Opal", "Jade", "Topaz", "Sapphire", "Emerald", "Ruby", "Diamond",
+        "Dragon", "Dragonstone", "TzKal", "Onyx", "Kitten", "Maxed",
+        "Completionism", "Zenyte"));
     private final OpalQualificationService opalService;
 
     @Inject
@@ -41,6 +46,52 @@ public final class IronDropQualificationService
         ranks.add(rank("Completionism", ranks, completionism()));
         ranks.add(rank("Zenyte", ranks, zenyte()));
         return ranks;
+    }
+
+    public List<String> getRankNames()
+    {
+        return RANK_NAMES;
+    }
+
+    public RankQualificationResult evaluateTarget(
+        VerificationSnapshot snapshot,
+        String rankName)
+    {
+        if ("Opal".equals(rankName))
+        {
+            return opalService.evaluate(snapshot);
+        }
+
+        List<RequirementResult> requirements = requirementsFor(snapshot, rankName);
+        requirements.add(0, manual(
+            "Previous rank verified in ClanHQ",
+            "ClanHQ will validate this when the review ticket is created"));
+        return new RankQualificationResult(rankName, requirements);
+    }
+
+    private List<RequirementResult> requirementsFor(
+        VerificationSnapshot snapshot,
+        String rankName)
+    {
+        switch (rankName)
+        {
+            case "Jade": return jade(snapshot);
+            case "Topaz": return topaz(snapshot);
+            case "Sapphire": return sapphire(snapshot);
+            case "Emerald": return emerald(snapshot);
+            case "Ruby": return ruby(snapshot);
+            case "Diamond": return diamond(snapshot);
+            case "Dragon": return dragon(snapshot);
+            case "Dragonstone": return dragonstone(snapshot);
+            case "TzKal": return tzkal(snapshot);
+            case "Onyx": return onyx(snapshot);
+            case "Kitten": return kitten(snapshot);
+            case "Maxed": return maxed(snapshot);
+            case "Completionism": return completionism();
+            case "Zenyte": return zenyte();
+            default: throw new IllegalArgumentException(
+                "Unknown Iron Drop rank: " + rankName);
+        }
     }
 
     private List<RequirementResult> jade(VerificationSnapshot s)

@@ -10,9 +10,11 @@ achievement-diary completion state. It does not send data to ClanHQ, Discord,
 or any other service.
 
 The checklist covers every Iron Drop progression rank from Opal through
-Zenyte and enforces cumulative progression: a rank cannot qualify until every
-preceding rank is fully met. Colonel is intentionally excluded because it is
-a retired-staff designation rather than a progression rank.
+Zenyte. The player selects the requested rank before capture, and the panel
+shows only that rank's evidence. ClanHQ will validate the member's existing
+rank and ensure the request is the next valid progression step when ticket
+submission is connected. Colonel is intentionally excluded because it is a
+retired-staff designation rather than a progression rank.
 
 The plugin reports evidence status, not an official qualification decision.
 Only ClanHQ and the eventual staff ticket approval can verify or award a rank.
@@ -28,9 +30,9 @@ alone. ClanHQ will eventually own the final rules and combine evidence from
 approved sources. The RuneLite plugin collects transparent evidence; it does
 not independently award ranks.
 
-Rank progression is cumulative. Every requirement for each previous rank must
-pass before a later rank can qualify; a higher-tier item can satisfy an
-earlier "or better" item requirement but cannot bypass unrelated requirements.
+Rank progression remains cumulative in ClanHQ. The local plugin evaluates the
+selected target rank; it does not attempt to replace ClanHQ's authoritative
+record of previously awarded ranks.
 
 RuneLite's Plugin Hub also restricts plugins that expose player information
 over HTTP. Keeping submission behind `VerificationTransport` lets us evaluate
