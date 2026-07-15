@@ -31,7 +31,7 @@ import net.runelite.api.events.ItemContainerChanged;
     tags = {"clan", "gear", "rank", "verification"})
 public final class ClanHQVerifierPlugin extends Plugin
 {
-    private static final int CAPTURE_DURATION_SECONDS = 30;
+    private static final int CAPTURE_DURATION_SECONDS = 15;
 
     @Inject
     private ClientThread clientThread;

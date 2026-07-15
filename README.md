@@ -2,7 +2,7 @@
 
 This is the development foundation for ClanHQ rank verification.
 
-The current build is deliberately preview-only. A 30-second capture session
+The current build is deliberately preview-only. A 15-second development capture session
 accumulates equipment and inventory evidence, captures only rank-relevant
 bank items when the bank is opened, and remembers supported prayers activated
 during the session. It also reads levels and authoritative hard/elite
@@ -76,7 +76,7 @@ use **End sessions** in the RuneScape account settings.
 
 - Only the local logged-in player is inspected.
 - Capture happens only after an explicit button click.
-- Each capture session lasts 30 seconds and discards its evidence afterward.
+- Each development capture session lasts 15 seconds and discards its evidence afterward.
 - Bank capture retains and displays only items used by configured rank rules;
   unrelated bank contents are discarded immediately.
 - The preview lists the exact data collected.
