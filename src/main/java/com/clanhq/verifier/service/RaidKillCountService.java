@@ -25,6 +25,20 @@ public final class RaidKillCountService
         lookup = hiscoreClient.lookupAsync(rsn, HiscoreEndpoint.NORMAL);
     }
 
+    public CompletableFuture<RaidKillCounts> lookupAsync(String rsn)
+    {
+        return hiscoreClient.lookupAsync(rsn, HiscoreEndpoint.NORMAL)
+            .handle((result, error) ->
+            {
+                if (error != null || result == null)
+                {
+                    return RaidKillCounts.unavailable(
+                        "RuneScape hiscores were unavailable");
+                }
+                return fromResult(result);
+            });
+    }
+
     public RaidKillCounts finishLookup()
     {
         if (lookup == null)
@@ -45,6 +59,11 @@ public final class RaidKillCountService
         {
             return RaidKillCounts.unavailable("No hiscore result was returned");
         }
+        return fromResult(result);
+    }
+
+    private static RaidKillCounts fromResult(HiscoreResult result)
+    {
         return RaidKillCounts.available(
             count(result, HiscoreSkill.CHAMBERS_OF_XERIC),
             count(result, HiscoreSkill.CHAMBERS_OF_XERIC_CHALLENGE_MODE),

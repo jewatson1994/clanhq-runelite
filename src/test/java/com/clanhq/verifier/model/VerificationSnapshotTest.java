@@ -33,4 +33,18 @@ public class VerificationSnapshotTest
         assertTrue(preview.contains("Bank evidence: Captured"));
         assertEquals(1, snapshot.getItems().size());
     }
+
+    @Test
+    public void addsRaidEvidenceWithoutChangingCharacterEvidence()
+    {
+        VerificationSnapshot original = new VerificationSnapshot(
+            "Mr Dimples", 2325, 126, Collections.emptyList(), false, false);
+
+        VerificationSnapshot updated = original.withRaidKillCounts(
+            RaidKillCounts.available(100, 10, 20, 5, 30, 15));
+
+        assertEquals("Mr Dimples", updated.getRsn());
+        assertEquals(180, updated.getRaidKillCounts().getCombined());
+        assertEquals(2325, updated.getTotalLevel());
+    }
 }

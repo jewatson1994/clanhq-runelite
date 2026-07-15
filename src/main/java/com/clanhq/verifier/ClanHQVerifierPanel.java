@@ -1,10 +1,16 @@
 package com.clanhq.verifier;
 
-import com.clanhq.verifier.model.VerificationSnapshot;
+import com.clanhq.verifier.model.EvidenceStage;
+import com.clanhq.verifier.model.EvidenceStageStatus;
 import com.clanhq.verifier.model.RankQualificationResult;
+import com.clanhq.verifier.model.VerificationSnapshot;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -20,43 +26,55 @@ import net.runelite.client.ui.PluginPanel;
 
 final class ClanHQVerifierPanel extends PluginPanel
 {
-    private final JButton captureButton = new JButton(
-        "Capture for Selected Rank");
     private final JComboBox<String> rankSelector;
-    private final JLabel statusLabel = new JLabel(
-        "Nothing captured yet.");
+    private final JPanel stagePanel = new JPanel();
+    private final Map<EvidenceStage, JPanel> stageRows =
+        new EnumMap<>(EvidenceStage.class);
+    private final Map<EvidenceStage, JButton> stageButtons =
+        new EnumMap<>(EvidenceStage.class);
+    private final Map<EvidenceStage, JLabel> stageStatuses =
+        new EnumMap<>(EvidenceStage.class);
+    private final JButton submitButton = new JButton("Submit Review Ticket");
+    private final JLabel statusLabel = new JLabel("Start a verification session.");
     private final JTextArea previewArea = new JTextArea();
 
-    ClanHQVerifierPanel(List<String> rankNames, Consumer<String> captureAction)
+    ClanHQVerifierPanel(List<String> rankNames,
+        BiConsumer<String, EvidenceStage> captureAction,
+        Consumer<String> rankChangedAction)
     {
         rankSelector = new JComboBox<>(rankNames.toArray(new String[0]));
         setLayout(new BorderLayout(0, 8));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         setBackground(ColorScheme.DARK_GRAY_COLOR);
 
-        JPanel header = new JPanel();
-        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
-        header.setBackground(ColorScheme.DARK_GRAY_COLOR);
-
-        JLabel title = new JLabel("ClanHQ Rank Verifier");
-        JLabel privacy = new JLabel(
-            "<html>Capture is local and preview-only.<br>"
-                + "No data is sent.</html>");
-
-        captureButton.addActionListener(event -> captureAction.accept(
-            (String) rankSelector.getSelectedItem()));
-
-        header.add(title);
+        JPanel header = verticalPanel();
+        header.add(new JLabel("ClanHQ Rank Verifier"));
         header.add(Box.createRigidArea(new Dimension(0, 6)));
-        header.add(privacy);
+        header.add(new JLabel("<html>Evidence remains local until submitted.<br>"
+            + "Submission is not connected yet.</html>"));
         header.add(Box.createRigidArea(new Dimension(0, 10)));
         header.add(new JLabel("Requested rank:"));
         header.add(Box.createRigidArea(new Dimension(0, 4)));
         header.add(rankSelector);
+        header.add(Box.createRigidArea(new Dimension(0, 10)));
+
+        stagePanel.setLayout(new BoxLayout(stagePanel, BoxLayout.Y_AXIS));
+        stagePanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        for (EvidenceStage stage : EvidenceStage.values())
+        {
+            addStage(stage, captureAction);
+        }
+        header.add(stagePanel);
         header.add(Box.createRigidArea(new Dimension(0, 8)));
-        header.add(captureButton);
+
+        submitButton.setEnabled(false);
+        submitButton.setToolTipText("ClanHQ submission API is not connected yet");
+        header.add(submitButton);
         header.add(Box.createRigidArea(new Dimension(0, 8)));
         header.add(statusLabel);
+
+        rankSelector.addActionListener(event -> rankChangedAction.accept(
+            (String) rankSelector.getSelectedItem()));
 
         previewArea.setEditable(false);
         previewArea.setLineWrap(true);
@@ -69,50 +87,103 @@ final class ClanHQVerifierPanel extends PluginPanel
         add(new JScrollPane(previewArea), BorderLayout.CENTER);
     }
 
-    void setBusy(int secondsRemaining)
+    void setRequiredStages(Set<EvidenceStage> requiredStages)
     {
-        captureButton.setEnabled(false);
-        rankSelector.setEnabled(false);
+        for (EvidenceStage stage : EvidenceStage.values())
+        {
+            boolean required = requiredStages.contains(stage);
+            stageRows.get(stage).setVisible(required);
+            showStageStatus(stage, EvidenceStageStatus.NOT_CAPTURED);
+        }
+        previewArea.setText("Capture each required evidence source for the selected rank.");
+        statusLabel.setText("New verification session.");
+        revalidate();
+        repaint();
+    }
+
+    void showStageStatus(EvidenceStage stage, EvidenceStageStatus status)
+    {
+        stageStatuses.get(stage).setText(status.getDisplayText());
+    }
+
+    void setGearBusy(int secondsRemaining)
+    {
+        setControlsEnabled(false);
+        showStageStatus(EvidenceStage.GEAR, EvidenceStageStatus.CAPTURING);
         showCaptureProgress(secondsRemaining);
-        previewArea.setText(
-            "Open your bank and activate Piety at any point during "
-                + "the capture window.");
+        previewArea.setText("Open your bank during the capture window.");
     }
 
     void showCaptureProgress(int secondsRemaining)
     {
-        statusLabel.setText(
-            "Capturing… " + secondsRemaining + " seconds remaining");
+        statusLabel.setText("Capturing gear... " + secondsRemaining
+            + " seconds remaining");
     }
 
-    void showSnapshot(
-        VerificationSnapshot snapshot,
-        List<RankQualificationResult> qualifications,
-        String status)
+    void showSnapshot(VerificationSnapshot snapshot,
+        RankQualificationResult qualification, String status)
     {
-        captureButton.setEnabled(true);
-        rankSelector.setEnabled(true);
+        setControlsEnabled(true);
         statusLabel.setText(status);
-        StringBuilder preview = new StringBuilder();
-        for (RankQualificationResult qualification : qualifications)
-        {
-            if (preview.length() > 0)
-            {
-                preview.append("\n\n");
-            }
-            preview.append(qualification.toChecklistText());
-        }
-        preview.append("\n\nCaptured evidence\n")
-            .append(snapshot.toPreviewText());
-        previewArea.setText(preview.toString());
+        previewArea.setText(qualification.toChecklistText()
+            + "\n\nCaptured evidence\n" + snapshot.toPreviewText());
         previewArea.setCaretPosition(0);
+    }
+
+    void showMessage(String message)
+    {
+        setControlsEnabled(true);
+        statusLabel.setText(message);
     }
 
     void showError(String message)
     {
-        captureButton.setEnabled(true);
-        rankSelector.setEnabled(true);
+        setControlsEnabled(true);
         statusLabel.setText("Capture failed.");
         previewArea.setText(message);
+    }
+
+    private void addStage(EvidenceStage stage,
+        BiConsumer<String, EvidenceStage> captureAction)
+    {
+        JPanel row = verticalPanel();
+        JButton button = new JButton(buttonLabel(stage));
+        JLabel status = new JLabel(EvidenceStageStatus.NOT_CAPTURED.getDisplayText());
+        button.addActionListener(event -> captureAction.accept(
+            (String) rankSelector.getSelectedItem(), stage));
+        row.add(button);
+        row.add(status);
+        row.add(Box.createRigidArea(new Dimension(0, 6)));
+        stageRows.put(stage, row);
+        stageButtons.put(stage, button);
+        stageStatuses.put(stage, status);
+        stagePanel.add(row);
+    }
+
+    private void setControlsEnabled(boolean enabled)
+    {
+        rankSelector.setEnabled(enabled);
+        stageButtons.values().forEach(button -> button.setEnabled(enabled));
+    }
+
+    private static JPanel verticalPanel()
+    {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        return panel;
+    }
+
+    private static String buttonLabel(EvidenceStage stage)
+    {
+        switch (stage)
+        {
+            case ACCOUNT: return "Capture Account";
+            case GEAR: return "Capture Gear";
+            case RAID_KC: return "Fetch Raid KC";
+            case COLLECTION_LOG: return "Capture Collection Log";
+            case POH: return "Capture POH Instance";
+            default: throw new IllegalArgumentException("Unknown evidence stage");
+        }
     }
 }

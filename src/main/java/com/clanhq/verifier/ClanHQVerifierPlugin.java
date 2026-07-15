@@ -2,8 +2,13 @@ package com.clanhq.verifier;
 
 import com.clanhq.verifier.model.VerificationSnapshot;
 import com.clanhq.verifier.model.RankQualificationResult;
+import com.clanhq.verifier.model.EvidenceStage;
+import com.clanhq.verifier.model.EvidenceStageStatus;
+import com.clanhq.verifier.model.RaidKillCounts;
+import com.clanhq.verifier.model.VerificationSession;
 import com.clanhq.verifier.service.LocalPlayerSnapshotService;
 import com.clanhq.verifier.service.IronDropQualificationService;
+import com.clanhq.verifier.service.RaidKillCountService;
 import com.clanhq.verifier.transport.PreviewOnlyVerificationTransport;
 import com.clanhq.verifier.transport.VerificationTransport;
 import com.clanhq.verifier.transport.VerificationTransportResult;
@@ -48,11 +53,17 @@ public final class ClanHQVerifierPlugin extends Plugin
     @Inject
     private IronDropQualificationService qualificationService;
 
+    @Inject
+    private RaidKillCountService raidKillCountService;
+
     private ClanHQVerifierPanel panel;
     private NavigationButton navigationButton;
     private Timer captureTimer;
     private int secondsRemaining;
     private String requestedRank;
+    private VerificationSession verificationSession;
+    private VerificationSnapshot capturedSnapshot;
+    private RaidKillCounts raidKillCounts;
 
     @Provides
     ClanHQVerifierConfig provideConfig(ConfigManager configManager)
@@ -71,7 +82,9 @@ public final class ClanHQVerifierPlugin extends Plugin
     {
         panel = new ClanHQVerifierPanel(
             qualificationService.getRankNames(),
-            this::captureCurrentCharacter);
+            this::captureEvidence,
+            this::startSession);
+        startSession(qualificationService.getRankNames().get(0));
         navigationButton = NavigationButton.builder()
             .tooltip("ClanHQ Verifier")
             .icon(createIcon())
@@ -116,10 +129,59 @@ public final class ClanHQVerifierPlugin extends Plugin
         }
     }
 
-    private void captureCurrentCharacter(String rankName)
+    private void captureEvidence(String rankName, EvidenceStage stage)
     {
-        requestedRank = rankName;
-        panel.setBusy(CAPTURE_DURATION_SECONDS);
+        ensureSession(rankName);
+        switch (stage)
+        {
+            case ACCOUNT:
+                captureAccount();
+                break;
+            case GEAR:
+                captureGear();
+                break;
+            case RAID_KC:
+                fetchRaidKillCounts();
+                break;
+            case COLLECTION_LOG:
+            case POH:
+                verificationSession.setStatus(stage,
+                    EvidenceStageStatus.MANUAL_REVIEW);
+                panel.showStageStatus(stage, EvidenceStageStatus.MANUAL_REVIEW);
+                panel.showMessage(stage.getDisplayName()
+                    + " collector is the next implementation step.");
+                break;
+            default:
+                throw new IllegalArgumentException("Unsupported evidence stage");
+        }
+    }
+
+    private void captureAccount()
+    {
+        verificationSession.setStatus(EvidenceStage.ACCOUNT,
+            EvidenceStageStatus.CAPTURING);
+        panel.showStageStatus(EvidenceStage.ACCOUNT,
+            EvidenceStageStatus.CAPTURING);
+        clientThread.invokeLater(() ->
+        {
+            try
+            {
+                VerificationSnapshot snapshot = snapshotService.captureAccountEvidence();
+                SwingUtilities.invokeLater(() -> acceptAccountSnapshot(snapshot));
+            }
+            catch (RuntimeException exception)
+            {
+                SwingUtilities.invokeLater(() -> failStage(
+                    EvidenceStage.ACCOUNT, exception));
+            }
+        });
+    }
+
+    private void captureGear()
+    {
+        panel.setGearBusy(CAPTURE_DURATION_SECONDS);
+        verificationSession.setStatus(EvidenceStage.GEAR,
+            EvidenceStageStatus.CAPTURING);
 
         clientThread.invokeLater(() ->
         {
@@ -130,8 +192,33 @@ public final class ClanHQVerifierPlugin extends Plugin
             }
             catch (RuntimeException exception)
             {
-                SwingUtilities.invokeLater(() -> panel.showError(
-                    exception.getMessage()));
+                SwingUtilities.invokeLater(() -> failStage(
+                    EvidenceStage.GEAR, exception));
+            }
+        });
+    }
+
+    private void fetchRaidKillCounts()
+    {
+        verificationSession.setStatus(EvidenceStage.RAID_KC,
+            EvidenceStageStatus.CAPTURING);
+        panel.showStageStatus(EvidenceStage.RAID_KC,
+            EvidenceStageStatus.CAPTURING);
+        clientThread.invokeLater(() ->
+        {
+            try
+            {
+                VerificationSnapshot account = capturedSnapshot == null
+                    ? snapshotService.captureAccountEvidence() : capturedSnapshot;
+                String rsn = account.getRsn();
+                SwingUtilities.invokeLater(() -> acceptAccountSnapshot(account));
+                raidKillCountService.lookupAsync(rsn).thenAccept(counts ->
+                    SwingUtilities.invokeLater(() -> acceptRaidKillCounts(counts)));
+            }
+            catch (RuntimeException exception)
+            {
+                SwingUtilities.invokeLater(() -> failStage(
+                    EvidenceStage.RAID_KC, exception));
             }
         });
     }
@@ -172,7 +259,7 @@ public final class ClanHQVerifierPlugin extends Plugin
                 SwingUtilities.invokeLater(() ->
                 {
                     stopCaptureTimer();
-                    panel.showError(exception.getMessage());
+                    failStage(EvidenceStage.GEAR, exception);
                 });
             }
         });
@@ -182,14 +269,90 @@ public final class ClanHQVerifierPlugin extends Plugin
     {
         VerificationSnapshot snapshot =
             snapshotService.finishCaptureSession();
-        RankQualificationResult qualification =
-            qualificationService.evaluateTarget(snapshot, requestedRank);
-        VerificationTransportResult result = transport.submit(snapshot);
+        SwingUtilities.invokeLater(() ->
+        {
+            capturedSnapshot = raidKillCounts == null
+                ? snapshot : snapshot.withRaidKillCounts(raidKillCounts);
+            verificationSession.bindRsn(snapshot.getRsn());
+            verificationSession.setStatus(EvidenceStage.ACCOUNT,
+                EvidenceStageStatus.CAPTURED);
+            verificationSession.setStatus(EvidenceStage.GEAR,
+                EvidenceStageStatus.CAPTURED);
+            panel.showStageStatus(EvidenceStage.ACCOUNT,
+                EvidenceStageStatus.CAPTURED);
+            panel.showStageStatus(EvidenceStage.GEAR,
+                EvidenceStageStatus.CAPTURED);
+            renderSnapshot("Gear captured.");
+        });
+    }
 
-        SwingUtilities.invokeLater(() -> panel.showSnapshot(
-            snapshot,
-            java.util.Collections.singletonList(qualification),
-            result.getMessage()));
+    private void acceptAccountSnapshot(VerificationSnapshot snapshot)
+    {
+        capturedSnapshot = raidKillCounts == null
+            ? snapshot : snapshot.withRaidKillCounts(raidKillCounts);
+        verificationSession.bindRsn(snapshot.getRsn());
+        verificationSession.setStatus(EvidenceStage.ACCOUNT,
+            EvidenceStageStatus.CAPTURED);
+        panel.showStageStatus(EvidenceStage.ACCOUNT,
+            EvidenceStageStatus.CAPTURED);
+        renderSnapshot("Account evidence captured.");
+    }
+
+    private void acceptRaidKillCounts(RaidKillCounts counts)
+    {
+        raidKillCounts = counts;
+        if (capturedSnapshot != null)
+        {
+            capturedSnapshot = capturedSnapshot.withRaidKillCounts(counts);
+        }
+        EvidenceStageStatus status = counts.isAvailable()
+            ? EvidenceStageStatus.CAPTURED
+            : EvidenceStageStatus.MANUAL_REVIEW;
+        verificationSession.setStatus(EvidenceStage.RAID_KC, status);
+        panel.showStageStatus(EvidenceStage.RAID_KC, status);
+        renderSnapshot(counts.isAvailable()
+            ? "Raid KC fetched." : counts.getDetail());
+    }
+
+    private void failStage(EvidenceStage stage, RuntimeException exception)
+    {
+        verificationSession.setStatus(stage, EvidenceStageStatus.FAILED);
+        panel.showStageStatus(stage, EvidenceStageStatus.FAILED);
+        panel.showError(exception.getMessage());
+    }
+
+    private void renderSnapshot(String status)
+    {
+        if (capturedSnapshot == null)
+        {
+            panel.showMessage(status);
+            return;
+        }
+        RankQualificationResult qualification =
+            qualificationService.evaluateTarget(capturedSnapshot, requestedRank);
+        panel.showSnapshot(capturedSnapshot, qualification, status);
+    }
+
+    private void startSession(String rankName)
+    {
+        requestedRank = rankName;
+        capturedSnapshot = null;
+        raidKillCounts = null;
+        verificationSession = new VerificationSession(rankName,
+            qualificationService.getRequiredStages(rankName));
+        if (panel != null)
+        {
+            panel.setRequiredStages(verificationSession.getRequiredStages());
+        }
+    }
+
+    private void ensureSession(String rankName)
+    {
+        if (verificationSession == null
+            || !verificationSession.getRequestedRank().equals(rankName))
+        {
+            startSession(rankName);
+        }
     }
 
     private void stopCaptureTimer()

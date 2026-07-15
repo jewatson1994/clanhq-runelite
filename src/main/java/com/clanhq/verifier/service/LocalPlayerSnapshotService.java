@@ -6,6 +6,7 @@ import com.clanhq.verifier.model.ObservedItem;
 import com.clanhq.verifier.model.VerificationSnapshot;
 import com.clanhq.verifier.rules.RankItemCatalog;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +26,6 @@ public final class LocalPlayerSnapshotService
 {
     private final Client client;
     private final RankItemCatalog rankItemCatalog;
-    private final RaidKillCountService raidKillCountService;
     private final Map<String, ObservedItem> observedItems =
         new LinkedHashMap<>();
     private boolean captureActive;
@@ -39,12 +39,10 @@ public final class LocalPlayerSnapshotService
     @Inject
     public LocalPlayerSnapshotService(
         Client client,
-        RankItemCatalog rankItemCatalog,
-        RaidKillCountService raidKillCountService)
+        RankItemCatalog rankItemCatalog)
     {
         this.client = client;
         this.rankItemCatalog = rankItemCatalog;
-        this.raidKillCountService = raidKillCountService;
     }
 
     public void startCaptureSession()
@@ -59,7 +57,6 @@ public final class LocalPlayerSnapshotService
         deadeyeObserved = false;
         mysticVigourObserved = false;
         sessionRsn = player.getName();
-        raidKillCountService.startLookup(sessionRsn);
 
         observeCurrentState();
 
@@ -69,6 +66,25 @@ public final class LocalPlayerSnapshotService
             addItems(bank, EvidenceSource.BANK);
             bankEvidenceCaptured = true;
         }
+    }
+
+    public VerificationSnapshot captureAccountEvidence()
+    {
+        Player player = requireLoggedInPlayer();
+        return new VerificationSnapshot(
+            player.getName(),
+            client.getTotalLevel(),
+            player.getCombatLevel(),
+            Collections.emptyList(),
+            false,
+            client.getVarbitValue(VarbitID.PRAYER_PIETY) == 1,
+            varbit("PRAYER_RIGOUR_UNLOCKED") == 1,
+            varbit("PRAYER_DEADEYE_UNLOCKED") == 1,
+            varbit("PRAYER_MYSTIC_VIGOUR_UNLOCKED") == 1,
+            client.getRealSkillLevel(Skill.HERBLORE),
+            captureDiaryProgress(),
+            com.clanhq.verifier.model.RaidKillCounts.unavailable("Not fetched"),
+            client.getVarpValue(VarPlayerID.COLLECTION_COUNT));
     }
 
     public void observeCurrentState()
@@ -121,7 +137,7 @@ public final class LocalPlayerSnapshotService
             mysticVigourObserved,
             client.getRealSkillLevel(Skill.HERBLORE),
             captureDiaryProgress(),
-            raidKillCountService.finishLookup(),
+            com.clanhq.verifier.model.RaidKillCounts.unavailable("Not fetched"),
             client.getVarpValue(VarPlayerID.COLLECTION_COUNT));
     }
 
@@ -140,7 +156,6 @@ public final class LocalPlayerSnapshotService
         deadeyeObserved = false;
         mysticVigourObserved = false;
         sessionRsn = null;
-        raidKillCountService.cancelLookup();
     }
 
     private Player requireLoggedInPlayer()

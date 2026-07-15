@@ -12,7 +12,10 @@ not send captured evidence to ClanHQ, Discord, or any other service.
 
 The checklist covers every Iron Drop progression rank from Opal through
 Zenyte. The player selects the requested rank before capture, and the panel
-shows only that rank's evidence. ClanHQ will validate the member's existing
+shows only that rank's evidence. Account, gear, and raid KC are independent
+evidence stages with their own capture status. Collection-log and owner-POH
+collectors are represented in the session but are not connected yet. ClanHQ
+will validate the member's existing
 rank and ensure the request is the next valid progression step when ticket
 submission is connected. Colonel is intentionally excluded because it is a
 retired-staff designation rather than a progression rank.
@@ -78,6 +81,8 @@ use **End sessions** in the RuneScape account settings.
 - Only the local logged-in player is inspected.
 - The captured RSN is sent to RuneScape's public hiscore service for raid KC.
 - Capture happens only after an explicit button click.
+- Changing the selected rank starts a fresh evidence session.
+- Evidence from different RSNs cannot be combined in one session.
 - Each development capture session lasts 15 seconds and discards its evidence afterward.
 - Bank capture retains and displays only items used by configured rank rules;
   unrelated bank contents are discarded immediately.

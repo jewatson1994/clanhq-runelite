@@ -143,6 +143,14 @@ public final class VerificationSnapshot
     public RaidKillCounts getRaidKillCounts() { return raidKillCounts; }
     public int getCollectionLogSlots() { return collectionLogSlots; }
 
+    public VerificationSnapshot withRaidKillCounts(RaidKillCounts counts)
+    {
+        return new VerificationSnapshot(rsn, totalLevel, combatLevel, items,
+            bankEvidenceCaptured, pietyActive, rigourActive, deadeyeActive,
+            mysticVigourActive, herbloreLevel, diaryProgress, counts,
+            collectionLogSlots);
+    }
+
     public Optional<ObservedItem> findItem(Set<Integer> acceptedItemIds)
     {
         return items.stream()
