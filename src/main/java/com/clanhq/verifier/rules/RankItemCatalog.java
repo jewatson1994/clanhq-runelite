@@ -28,7 +28,8 @@ public final class RankItemCatalog
         "amulet of rancour", "virtus", "ultor ring", "bellator ring", "magus ring",
         "venator ring", "godsword", "max cape", "ancestral", "masori", "torva",
         "oathplate", "twisted bow", "zaryte crossbow", "kodai", "nightmare staff",
-        "inquisitor", "justiciar", "dinh's bulwark", "dragon hunter crossbow");
+        "inquisitor", "justiciar", "dinh's bulwark", "dragon hunter crossbow",
+        "hill giant club");
 
     @Inject
     public RankItemCatalog()

@@ -19,6 +19,7 @@ import net.runelite.api.Skill;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.gameval.VarbitID;
+import net.runelite.api.gameval.VarPlayerID;
 
 public final class LocalPlayerSnapshotService
 {
@@ -120,7 +121,8 @@ public final class LocalPlayerSnapshotService
             mysticVigourObserved,
             client.getRealSkillLevel(Skill.HERBLORE),
             captureDiaryProgress(),
-            raidKillCountService.finishLookup());
+            raidKillCountService.finishLookup(),
+            client.getVarpValue(VarPlayerID.COLLECTION_COUNT));
     }
 
     public boolean isCaptureActive()

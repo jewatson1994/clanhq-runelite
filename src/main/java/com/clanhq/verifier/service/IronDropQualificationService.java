@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import javax.inject.Inject;
+import net.runelite.api.ItemID;
 
 /** Evaluates Iron Drop's cumulative progression ranks from locally observed evidence. */
 public final class IronDropQualificationService
@@ -44,7 +45,7 @@ public final class IronDropQualificationService
         ranks.add(rank("Kitten", ranks, kitten(snapshot)));
         ranks.add(rank("Maxed", ranks, maxed(snapshot)));
         ranks.add(rank("Completionism", ranks, completionism()));
-        ranks.add(rank("Zenyte", ranks, zenyte()));
+        ranks.add(rank("Zenyte", ranks, zenyte(snapshot)));
         return ranks;
     }
 
@@ -88,7 +89,7 @@ public final class IronDropQualificationService
             case "Kitten": return kitten(snapshot);
             case "Maxed": return maxed(snapshot);
             case "Completionism": return completionism();
-            case "Zenyte": return zenyte();
+            case "Zenyte": return zenyte(snapshot);
             default: throw new IllegalArgumentException(
                 "Unknown Iron Drop rank: " + rankName);
         }
@@ -165,7 +166,7 @@ public final class IronDropQualificationService
         return list(level(s, 2200), manual("Maxed POH", "House inspection required"),
             item(s, "Ghommal's hilt 4+", "ghommal's hilt 4", "ghommal's hilt 5", "ghommal's hilt 6"),
             item(s, "Dragon hunter lance", "dragon hunter lance"), item(s, "Venator bow", "venator bow"),
-            manual("All Cerberus boots or upgraded Avernic treads", "Exact set verification pending"));
+            cerberusBootsOrTreads(s));
     }
 
     private List<RequirementResult> dragonstone(VerificationSnapshot s)
@@ -198,7 +199,8 @@ public final class IronDropQualificationService
     {
         return list(level(s, 2350), manual("7 COX / 5 TOA / 3 TOB uniques", "Collection-log evidence required"),
             count(s, "3 Ancient rings", 3, "ultor ring", "bellator ring", "magus ring", "venator ring"),
-            manual("750 collection-log slots", "Collection-log evidence required"),
+            state("750 collection-log slots", s.getCollectionLogSlots() >= 750,
+                s.getCollectionLogSlots() + " / 750"),
             item(s, "Ghommal's hilt 5+", "ghommal's hilt 5", "ghommal's hilt 6"));
     }
 
@@ -225,11 +227,11 @@ public final class IronDropQualificationService
             manual("Maxed skiff and sloop", "Sailing vessel evidence required"));
     }
 
-    private List<RequirementResult> zenyte()
+    private List<RequirementResult> zenyte(VerificationSnapshot s)
     {
         return list(manual("Grandmaster Combat Achievements", "Combat-achievement evidence required"),
             manual("All raids green logged", "Collection-log evidence required"),
-            manual("Hill giant club", "Item evidence will be added with collection-log capture"));
+            item(s, "Hill giant club", "hill giant club"));
     }
 
     private RankQualificationResult rank(String name, List<RankQualificationResult> prior, List<RequirementResult> own)
@@ -284,6 +286,24 @@ public final class IronDropQualificationService
             oathplate || torva,
             oathplate ? "Complete Oathplate set found"
                 : torva ? "Complete Torva set found" : "No complete set");
+    }
+    @SuppressWarnings("deprecation")
+    private RequirementResult cerberusBootsOrTreads(VerificationSnapshot snapshot)
+    {
+        boolean allBoots = snapshot.findItem(Collections.singleton(ItemID.PRIMORDIAL_BOOTS)).isPresent()
+            && snapshot.findItem(Collections.singleton(ItemID.PEGASIAN_BOOTS)).isPresent()
+            && snapshot.findItem(Collections.singleton(ItemID.ETERNAL_BOOTS)).isPresent();
+        boolean upgradedTreads = snapshot.getItems().stream().anyMatch(item ->
+            item.getItemId() == ItemID.AVERNIC_TREADS_PRPE
+                || item.getItemId() == ItemID.AVERNIC_TREADS_PRET
+                || item.getItemId() == ItemID.AVERNIC_TREADS_PEET
+                || item.getItemId() == ItemID.AVERNIC_TREADS_MAX
+                || item.getItemId() == ItemID.AVERNIC_TREADS_MAX_33172);
+        return setEvidenceResult(snapshot,
+            "All Cerberus boots or 2-upgrade Avernic treads",
+            allBoots || upgradedTreads,
+            allBoots ? "All three Cerberus boots found"
+                : upgradedTreads ? "Eligible Avernic treads found" : "No eligible set found");
     }
     private RequirementResult armourSet(VerificationSnapshot snapshot,
         String name, String boxedSet, String[]... slots)

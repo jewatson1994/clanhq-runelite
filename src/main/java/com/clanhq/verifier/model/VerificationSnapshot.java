@@ -21,6 +21,7 @@ public final class VerificationSnapshot
     private final int herbloreLevel;
     private final DiaryProgress diaryProgress;
     private final RaidKillCounts raidKillCounts;
+    private final int collectionLogSlots;
 
     public VerificationSnapshot(
         String rsn,
@@ -33,7 +34,7 @@ public final class VerificationSnapshot
         this(rsn, totalLevel, combatLevel, items, bankEvidenceCaptured,
             pietyActive, false, false, false, 1,
             new DiaryProgress(0, 0, 12),
-            RaidKillCounts.unavailable("Not captured"));
+            RaidKillCounts.unavailable("Not captured"), 0);
     }
 
     public VerificationSnapshot(
@@ -52,7 +53,7 @@ public final class VerificationSnapshot
         this(rsn, totalLevel, combatLevel, items, bankEvidenceCaptured,
             pietyActive, rigourActive, deadeyeActive, mysticVigourActive,
             herbloreLevel, diaryProgress,
-            RaidKillCounts.unavailable("Not captured"));
+            RaidKillCounts.unavailable("Not captured"), 0);
     }
 
     public VerificationSnapshot(
@@ -69,6 +70,26 @@ public final class VerificationSnapshot
         DiaryProgress diaryProgress,
         RaidKillCounts raidKillCounts)
     {
+        this(rsn, totalLevel, combatLevel, items, bankEvidenceCaptured,
+            pietyActive, rigourActive, deadeyeActive, mysticVigourActive,
+            herbloreLevel, diaryProgress, raidKillCounts, 0);
+    }
+
+    public VerificationSnapshot(
+        String rsn,
+        int totalLevel,
+        int combatLevel,
+        List<ObservedItem> items,
+        boolean bankEvidenceCaptured,
+        boolean pietyActive,
+        boolean rigourActive,
+        boolean deadeyeActive,
+        boolean mysticVigourActive,
+        int herbloreLevel,
+        DiaryProgress diaryProgress,
+        RaidKillCounts raidKillCounts,
+        int collectionLogSlots)
+    {
         this.rsn = Objects.requireNonNull(rsn);
         this.totalLevel = totalLevel;
         this.combatLevel = combatLevel;
@@ -81,6 +102,7 @@ public final class VerificationSnapshot
         this.herbloreLevel = herbloreLevel;
         this.diaryProgress = Objects.requireNonNull(diaryProgress);
         this.raidKillCounts = Objects.requireNonNull(raidKillCounts);
+        this.collectionLogSlots = collectionLogSlots;
     }
 
     public String getRsn()
@@ -119,6 +141,7 @@ public final class VerificationSnapshot
     public int getHerbloreLevel() { return herbloreLevel; }
     public DiaryProgress getDiaryProgress() { return diaryProgress; }
     public RaidKillCounts getRaidKillCounts() { return raidKillCounts; }
+    public int getCollectionLogSlots() { return collectionLogSlots; }
 
     public Optional<ObservedItem> findItem(Set<Integer> acceptedItemIds)
     {
@@ -153,6 +176,8 @@ public final class VerificationSnapshot
             .append(diaryProgress.getRegionCount()).append('\n');
         preview.append("Raid KC: ")
             .append(raidKillCounts.toSummary()).append('\n');
+        preview.append("Collection log slots: ")
+            .append(collectionLogSlots).append('\n');
 
         for (EvidenceSource source : EvidenceSource.values())
         {

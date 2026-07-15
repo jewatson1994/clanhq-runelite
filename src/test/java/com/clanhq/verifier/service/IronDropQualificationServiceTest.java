@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.Test;
+import net.runelite.api.ItemID;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -94,6 +95,26 @@ public class IronDropQualificationServiceTest
         assertPassed(result, "Full fortified Masori");
         assertPassed(result, "Full Oathplate or Torva");
         assertPassed(result, "Maxed Avernic treads");
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    public void verifiesCollectionSlotsUpgradedTreadsAndHillGiantClub()
+    {
+        List<ObservedItem> items = Arrays.asList(
+            bankItem(ItemID.AVERNIC_TREADS_PRPE, "Avernic treads (pr, pe)"),
+            bankItem(ItemID.HILL_GIANT_CLUB, "Hill giant club"));
+        VerificationSnapshot snapshot = new VerificationSnapshot(
+            "Mr Dimples", 2350, 126, items, true,
+            false, false, false, false, 99, new DiaryProgress(12, 12, 12),
+            RaidKillCounts.unavailable("Not requested"), 800);
+
+        assertPassed(service.evaluateTarget(snapshot, "Dragon"),
+            "All Cerberus boots or 2-upgrade Avernic treads");
+        assertPassed(service.evaluateTarget(snapshot, "Kitten"),
+            "750 collection-log slots");
+        assertPassed(service.evaluateTarget(snapshot, "Zenyte"),
+            "Hill giant club");
     }
 
     private static ObservedItem bankItem(int id, String name)
