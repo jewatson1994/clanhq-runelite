@@ -33,9 +33,10 @@ state remain staff-review requirements instead of being inferred.
 The plugin reports evidence status, not an official qualification decision.
 Only ClanHQ and the eventual staff ticket approval can verify or award a rank.
 
-Requirements RuneLite cannot yet prove reliably (for example collection-log
-counts, raid KC, POH layout, and some compound gear sets) are shown as
-`[CHECK]`. They are never treated as passed or guessed from skill levels.
+Requirements RuneLite cannot yet prove reliably (for example complete
+green-log state, Rite of Vile Transference, maxed Sailing upgrades, and some
+cosmetic sets) are shown as `[CHECK]`. They are never treated as passed or
+guessed from unrelated evidence.
 
 ## Why preview-only first?
 
@@ -99,7 +100,8 @@ use **End sessions** in the RuneScape account settings.
 - Collection Log capture stores only visible acquired item names and quantities.
 - Boat capture stores visible Sailing panel text, not cargo item contents.
 - POH capture stores only the five configured facility results and requires owner build mode.
-- Each development capture session lasts 15 seconds and discards its evidence afterward.
+- The Gear capture window lasts 15 seconds. Captured evidence remains only in
+  the local panel until the rank changes, the session is reset, or RuneLite closes.
 - Bank capture retains and displays only items used by configured rank rules;
   unrelated bank contents are discarded immediately.
 - The preview lists the exact data collected.
