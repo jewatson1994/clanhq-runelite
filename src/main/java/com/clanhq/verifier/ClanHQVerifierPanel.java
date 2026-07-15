@@ -28,6 +28,7 @@ import net.runelite.client.ui.PluginPanel;
 
 final class ClanHQVerifierPanel extends PluginPanel
 {
+    private static final int STATUS_WRAP_WIDTH = 190;
     private final JComboBox<String> rankSelector;
     private final JPanel stagePanel = new JPanel();
     private final Map<EvidenceStage, JPanel> stageRows =
@@ -42,7 +43,7 @@ final class ClanHQVerifierPanel extends PluginPanel
     private final JButton submitButton = new JButton("Submit Review Ticket");
     private final JButton resetButton = new JButton("Reset Session");
     private final JLabel apiDestinationLabel = new JLabel("API: Not configured");
-    private final JLabel statusLabel = new JLabel("Start a verification session.");
+    private final JLabel statusLabel = new JLabel();
     private final JTextArea previewArea = new JTextArea();
     private final JLabel evidenceSummary = new JLabel("Evidence: 0/0 sources");
     private final JLabel passedSummary = new JLabel("Passed: 0");
@@ -97,6 +98,7 @@ final class ClanHQVerifierPanel extends PluginPanel
         submitButton.setToolTipText("ClanHQ submission API is not connected yet");
         header.add(submitButton);
         header.add(Box.createRigidArea(new Dimension(0, 8)));
+        setStatusText("Start a verification session.");
         header.add(statusLabel);
 
         rankSelector.addActionListener(event -> rankChangedAction.accept(
@@ -129,7 +131,7 @@ final class ClanHQVerifierPanel extends PluginPanel
             showStageStatus(stage, EvidenceStageStatus.NOT_CAPTURED);
         }
         previewArea.setText("Capture each required evidence source for the selected rank.");
-        statusLabel.setText("New verification session.");
+        setStatusText("New verification session.");
         updateProgressSummary();
         revalidate();
         repaint();
@@ -151,14 +153,14 @@ final class ClanHQVerifierPanel extends PluginPanel
     {
         setControlsEnabled(false);
         showStageStatus(stage, EvidenceStageStatus.CAPTURING);
-        statusLabel.setText("Capturing " + stage.getDisplayName() + "...");
+        setStatusText("Capturing " + stage.getDisplayName() + "...");
     }
 
     void showSnapshot(VerificationSnapshot snapshot,
         RankQualificationResult qualification, String status)
     {
         setControlsEnabled(true);
-        statusLabel.setText(status);
+        setStatusText(status);
         previewArea.setText(qualification.toChecklistText()
             + "\n\nCaptured evidence\n" + snapshot.toPreviewText());
         previewArea.setCaretPosition(0);
@@ -175,13 +177,13 @@ final class ClanHQVerifierPanel extends PluginPanel
     void showMessage(String message)
     {
         setControlsEnabled(true);
-        statusLabel.setText(message);
+        setStatusText(message);
     }
 
     void showError(String message)
     {
         setControlsEnabled(true);
-        statusLabel.setText("Capture failed.");
+        setStatusText("Capture failed.");
         previewArea.setText(message);
     }
 
@@ -223,6 +225,20 @@ final class ClanHQVerifierPanel extends PluginPanel
         passedSummary.setText("Passed: " + passedRequirements);
         missingSummary.setText("Missing: " + missingRequirements);
         reviewSummary.setText("Staff Review: " + reviewRequirements);
+    }
+
+    private void setStatusText(String message)
+    {
+        statusLabel.setText("<html><body style='width: "
+            + STATUS_WRAP_WIDTH + "px'>" + escapeHtml(message)
+            + "</body></html>");
+    }
+
+    static String escapeHtml(String text)
+    {
+        return text.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;");
     }
 
     private static String buttonLabel(EvidenceStage stage)
