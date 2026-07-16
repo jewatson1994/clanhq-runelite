@@ -79,11 +79,13 @@ final class EventPanel extends JPanel
         participationLabel.setText("Participation: —");
     }
 
-    void showParticipation(boolean joined, String message)
+    void showParticipation(boolean joined, String message, String teamName)
     {
+        String team = teamName == null ? "Unassigned" : teamName;
         participationLabel.setText(
             "<html>Participation: " + (joined ? "✓ " : "✗ ")
-                + escapeHtml(message) + "</html>"
+                + escapeHtml(message) + "<br>Team: "
+                + escapeHtml(team) + "</html>"
         );
     }
 

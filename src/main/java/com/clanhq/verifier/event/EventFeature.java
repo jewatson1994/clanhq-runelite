@@ -80,7 +80,10 @@ public final class EventFeature implements ClanHQFeature
         String rsn = rsnSupplier.get();
         if (rsn == null || rsn.trim().isEmpty())
         {
-            panel.showParticipation(false, "Log in to join this event.");
+            panel.showParticipation(
+                false,
+                "Log in to join this event.",
+                null);
             return;
         }
         apiClient.joinEvent(event, rsn).thenAccept(result ->
@@ -90,7 +93,8 @@ public final class EventFeature implements ClanHQFeature
                 {
                     panel.showParticipation(
                         result.isJoined(),
-                        result.getMessage());
+                        result.getMessage(),
+                        result.getTeamName());
                 }
             }));
     }

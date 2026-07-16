@@ -100,7 +100,7 @@ public final class EventApiClient
         if (baseUrl == null || clanCode.isEmpty() || normalized(rsn).isEmpty())
         {
             future.complete(new EventJoinResult(false,
-                "Log in and configure the ClanHQ connection first."));
+                "Log in and configure the ClanHQ connection first.", null));
             return future;
         }
         JsonObject payload = new JsonObject();
@@ -117,7 +117,7 @@ public final class EventApiClient
             public void onFailure(Call call, IOException exception)
             {
                 future.complete(new EventJoinResult(false,
-                    "ClanHQ could not register event participation."));
+                    "ClanHQ could not register event participation.", null));
             }
 
             @Override
@@ -128,14 +128,19 @@ public final class EventApiClient
                 {
                     String body = response.body() == null
                         ? "" : response.body().string();
+                    JsonObject value = parseObject(body);
+                    String team = value != null && value.has("team")
+                        && !value.get("team").isJsonNull()
+                            ? value.get("team").getAsString() : null;
                     future.complete(new EventJoinResult(
                         response.isSuccessful(),
-                        responseMessage(body, response.code())));
+                        responseMessage(body, response.code()),
+                        team));
                 }
                 catch (IOException | RuntimeException exception)
                 {
                     future.complete(new EventJoinResult(false,
-                        "ClanHQ returned an invalid join response."));
+                        "ClanHQ returned an invalid join response.", null));
                 }
             }
         });
@@ -162,5 +167,17 @@ public final class EventApiClient
             // Use the stable HTTP fallback below.
         }
         return "ClanHQ returned HTTP " + status;
+    }
+
+    private static JsonObject parseObject(String body)
+    {
+        try
+        {
+            return new JsonParser().parse(body).getAsJsonObject();
+        }
+        catch (RuntimeException exception)
+        {
+            return null;
+        }
     }
 }

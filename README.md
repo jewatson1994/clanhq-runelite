@@ -10,7 +10,8 @@ without changing the evidence rules used by Rank Review.
 Events connects RuneLite to competitions created with ClanHQ's `/event create`
 command. A player enters the generated event code, and the panel displays the
 event type, randomized or selected target, inclusive dates, and current status.
-When logged in, RuneLite registers the exact active ClanHQ RSN as a participant.
+When logged in, RuneLite registers the exact active ClanHQ RSN as a participant
+and displays the server-assigned team name without receiving Discord channel IDs.
 
 ## Bingo
 
