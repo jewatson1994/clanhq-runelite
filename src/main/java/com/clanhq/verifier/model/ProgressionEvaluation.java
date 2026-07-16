@@ -38,6 +38,11 @@ public final class ProgressionEvaluation
             ? Optional.empty() : Optional.of(ranks.get(nextRankIndex));
     }
 
+    public List<RankQualificationResult> getRanks()
+    {
+        return ranks;
+    }
+
     public List<RequirementResult> getNextRankRequirements()
     {
         return getNextRank().map(RankQualificationResult::getRequirements)

@@ -2,11 +2,13 @@
 
 This is the development foundation for ClanHQ rank verification.
 
-The current build is deliberately preview-only. Verify Character reads local
+Verify Character reads local
 account, prayer, diary, Combat Achievement, and saved-boat state, then performs
 public RuneScape hiscore and TempleOSRS Collection Log lookups for that RSN.
 With the bank open, Capture Bank & Gear retains equipment, inventory, and only
-rank-relevant bank items. No evidence is submitted to ClanHQ or Discord.
+rank-relevant bank items. Evidence remains local until the player explicitly
+uses Submit Review Ticket with a configured ClanHQ API destination and clan
+code. Submission opens a Discord staff-review ticket and never changes ranks.
 
 The checklist covers every Iron Drop progression rank from Opal through
 Zenyte. A single screen exposes every evidence collector and recalculates the
@@ -23,12 +25,12 @@ double-counting the same unique. Verify Character also reads RuneLite's
 authoritative owned-boat variables and Sailing DB
 tables for all five slots. A maxed Skiff or Sloop requires a Rosewood hull,
 Rosewood mast and sails, Dragon helm, and Dragon keel. Visible Sailing panel
-text is retained only as a diagnostic fallback. POH capture requires
-the player's house in build mode and scans the loaded scene for all five configured facilities. ClanHQ
-will validate the member's existing
-rank and ensure the request is the next valid progression step when ticket
-submission is connected. Colonel is intentionally excluded because it is a
-retired-staff designation rather than a progression rank.
+text is retained only as a diagnostic fallback. POH capture requires the
+player's house in build mode and scans the loaded scene for all five configured
+facilities. Colonel is intentionally excluded because it is a
+retired-staff designation rather than a progression rank. ClanHQ validates the
+exact active Iron Drop RSN and selects only the next rank configured for that
+member before creating a ticket.
 
 Completionism bank items are reported individually. The global Collection Log
 count verifies Dragon rank (1,200 slots) and the 750-slot requirement. TOA capture checks
@@ -49,22 +51,22 @@ Only ClanHQ and the eventual staff ticket approval can verify or award a rank.
 Requirements RuneLite cannot yet prove reliably are shown as `[CHECK]`. They are never
 treated as passed or guessed from unrelated evidence.
 
-## Why preview-only first?
+## Trust boundary
 
 Iron Drop ranks include evidence that cannot be proven from equipped items
-alone. ClanHQ will eventually own the final rules and combine evidence from
-approved sources. The RuneLite plugin collects transparent evidence; it does
-not independently award ranks.
+alone. The RuneLite plugin collects transparent evidence but does not
+independently award ranks. ClanHQ validates membership and the requested next
+rank, then gives staff the final decision in Discord.
 
 Rank progression is cumulative. The plugin never skips a failed or unverified
 rank even if evidence happens to satisfy a later rank. ClanHQ remains the
 authority for recorded membership and awarded ranks; the plugin reports the
 highest rank supported by the current evidence session.
 
-RuneLite's Plugin Hub also restricts plugins that expose player information
-over HTTP. Keeping submission behind `VerificationTransport` lets us evaluate
-a private, user-consented integration separately from a Plugin-Hub-safe
-manual flow.
+Submission remains behind `VerificationTransport`, is initiated only by the
+player, and requires a clan-configured HTTPS destination. This keeps the
+network boundary isolated from evidence capture and preserves a local-only
+mode if Plugin Hub review requires it.
 
 ## Development
 
@@ -116,9 +118,11 @@ use **End sessions** in the RuneScape account settings.
   panel text, not cargo item contents.
 - POH capture stores only the five configured facility results and requires owner build mode.
 - Bank, inventory, and equipped gear are captured once while the bank is open.
-  Evidence remains only in the local panel until the rank changes, the session
-  is reset, or RuneLite closes.
+  Evidence remains only in the local panel unless the player explicitly clicks
+  Submit Review Ticket; it is otherwise cleared when the session resets or
+  RuneLite closes.
 - Bank capture retains and displays only items used by configured rank rules;
   unrelated bank contents are discarded immediately.
-- The preview lists the exact data collected.
-- The ClanHQ submission transport remains preview-only and performs no request.
+- The preview lists the exact data collected. Submission sends that evidence,
+  the calculated rank checklists, the RSN, levels, and capture time to the
+  configured ClanHQ endpoint.

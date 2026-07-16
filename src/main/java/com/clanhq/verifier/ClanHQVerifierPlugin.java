@@ -17,9 +17,8 @@ import com.clanhq.verifier.service.CollectionLogCaptureService;
 import com.clanhq.verifier.service.PohCaptureService;
 import com.clanhq.verifier.service.BoatCaptureService;
 import com.clanhq.verifier.service.TempleCollectionLogService;
-import com.clanhq.verifier.transport.PreviewOnlyVerificationTransport;
+import com.clanhq.verifier.transport.HttpVerificationTransport;
 import com.clanhq.verifier.transport.VerificationTransport;
-import com.clanhq.verifier.transport.VerificationTransportResult;
 import com.google.inject.Provides;
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -34,6 +33,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.events.ConfigChanged;
+import okhttp3.OkHttpClient;
 
 @PluginDescriptor(
     name = "ClanHQ Verifier",
@@ -87,6 +87,7 @@ public final class ClanHQVerifierPlugin extends Plugin
     private VerificationSession verificationSession;
     private VerificationSnapshot capturedSnapshot;
     private RaidKillCounts raidKillCounts;
+    private boolean ticketSubmitted;
 
     @Provides
     ClanHQVerifierConfig provideConfig(ConfigManager configManager)
@@ -95,9 +96,12 @@ public final class ClanHQVerifierPlugin extends Plugin
     }
 
     @Provides
-    VerificationTransport provideTransport()
+    VerificationTransport provideTransport(OkHttpClient httpClient,
+        ClanHQVerifierConfig verifierConfig,
+        ApiDestinationService destinationService)
     {
-        return new PreviewOnlyVerificationTransport();
+        return new HttpVerificationTransport(httpClient, verifierConfig,
+            destinationService);
     }
 
     @Override
@@ -105,7 +109,8 @@ public final class ClanHQVerifierPlugin extends Plugin
     {
         panel = new ClanHQVerifierPanel(
             this::captureEvidence,
-            this::startSession);
+            this::startSession,
+            this::submitVerification);
         refreshApiDestination();
         startSession();
         navigationButton = NavigationButton.builder()
@@ -597,6 +602,7 @@ public final class ClanHQVerifierPlugin extends Plugin
         verificationSession.setStatus(stage, EvidenceStageStatus.FAILED);
         panel.showStageStatus(stage, EvidenceStageStatus.FAILED);
         panel.showError(exception.getMessage());
+        refreshSubmissionAvailability();
     }
 
     private void renderSnapshot(String status)
@@ -609,17 +615,20 @@ public final class ClanHQVerifierPlugin extends Plugin
         ProgressionEvaluation progression =
             qualificationService.evaluateProgression(capturedSnapshot);
         panel.showSnapshot(capturedSnapshot, progression, status);
+        refreshSubmissionAvailability();
     }
 
     private void startSession()
     {
         capturedSnapshot = null;
         raidKillCounts = null;
+        ticketSubmitted = false;
         verificationSession = new VerificationSession(
             qualificationService.getAllEvidenceStages());
         if (panel != null)
         {
             panel.setRequiredStages(verificationSession.getRequiredStages());
+            refreshSubmissionAvailability();
         }
     }
 
@@ -634,7 +643,56 @@ public final class ClanHQVerifierPlugin extends Plugin
         {
             panel.showApiDestination(apiDestinationService.describe(
                 config.apiBaseUrl(), config.clanCode()));
+            refreshSubmissionAvailability();
         }
+    }
+
+    private void submitVerification()
+    {
+        if (capturedSnapshot == null || verificationSession == null
+            || !verificationSession.isReadyForSubmission())
+        {
+            panel.showMessage("Capture every required evidence source first.");
+            return;
+        }
+        ProgressionEvaluation progression =
+            qualificationService.evaluateProgression(capturedSnapshot);
+        panel.setSubmissionBusy();
+        transport.submit(capturedSnapshot, progression)
+            .thenAccept(result -> SwingUtilities.invokeLater(() ->
+            {
+                ticketSubmitted = result.isSubmitted();
+                panel.showSubmissionResult(result);
+                if (!result.isSubmitted())
+                {
+                    refreshSubmissionAvailability();
+                }
+            }));
+    }
+
+    private void refreshSubmissionAvailability()
+    {
+        if (panel == null)
+        {
+            return;
+        }
+        boolean configured = apiDestinationService.normalize(
+            config.apiBaseUrl()) != null
+            && config.clanCode() != null
+            && !config.clanCode().trim().isEmpty();
+        boolean ready = verificationSession != null
+            && verificationSession.isReadyForSubmission()
+            && capturedSnapshot != null;
+        String reason = !configured
+            ? "Configure the ClanHQ API URL and clan code"
+            : !ready
+                ? "Capture every required evidence source first"
+                : ticketSubmitted
+                    ? "A ticket was already submitted for this session"
+                    : "Open a Discord staff-review ticket";
+        panel.setSubmissionAvailable(
+            configured && ready && !ticketSubmitted,
+            reason);
     }
 
     private static BufferedImage createIcon()

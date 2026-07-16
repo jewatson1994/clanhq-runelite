@@ -5,6 +5,7 @@ import com.clanhq.verifier.model.EvidenceStageStatus;
 import com.clanhq.verifier.model.ProgressionEvaluation;
 import com.clanhq.verifier.model.RequirementStatus;
 import com.clanhq.verifier.model.VerificationSnapshot;
+import com.clanhq.verifier.transport.VerificationTransportResult;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.util.EnumMap;
@@ -54,7 +55,8 @@ final class ClanHQVerifierPanel extends PluginPanel
     private int reviewRequirements;
 
     ClanHQVerifierPanel(Consumer<EvidenceStage> captureAction,
-        Runnable resetAction)
+        Runnable resetAction,
+        Runnable submitAction)
     {
         setLayout(new BorderLayout(0, 8));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -96,6 +98,7 @@ final class ClanHQVerifierPanel extends PluginPanel
 
         submitButton.setEnabled(false);
         submitButton.setToolTipText("ClanHQ submission API is not connected yet");
+        submitButton.addActionListener(event -> submitAction.run());
         header.add(submitButton);
         header.add(Box.createRigidArea(new Dimension(0, 8)));
         setStatusText("Start a verification session.");
@@ -207,6 +210,30 @@ final class ClanHQVerifierPanel extends PluginPanel
     {
         setControlsEnabled(true);
         setStatusText(message);
+    }
+
+    void setSubmissionAvailable(boolean available, String reason)
+    {
+        submitButton.setText("Submit Review Ticket");
+        submitButton.setEnabled(available);
+        submitButton.setToolTipText(reason);
+    }
+
+    void setSubmissionBusy()
+    {
+        setControlsEnabled(false);
+        submitButton.setEnabled(false);
+        submitButton.setText("Submitting...");
+        setStatusText("Opening Discord review ticket...");
+    }
+
+    void showSubmissionResult(VerificationTransportResult result)
+    {
+        setControlsEnabled(true);
+        submitButton.setText(result.isSubmitted()
+            ? "Ticket Submitted" : "Submit Review Ticket");
+        submitButton.setEnabled(false);
+        setStatusText(result.getMessage());
     }
 
     void showError(String message)
