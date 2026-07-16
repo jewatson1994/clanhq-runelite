@@ -70,7 +70,7 @@ public final class BoatCaptureService
     {
         List<BoatConfiguration> configurations = captureOwnedBoats();
         return configurations.isEmpty()
-            ? BoatEvidence.notCaptured()
+            ? BoatEvidence.capturedEmpty()
             : new BoatEvidence(Collections.emptySet(), configurations,
                 Collections.emptyList());
     }

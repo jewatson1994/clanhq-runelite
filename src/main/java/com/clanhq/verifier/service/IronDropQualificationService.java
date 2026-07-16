@@ -349,9 +349,14 @@ public final class IronDropQualificationService
         }
         if (!snapshot.getBoatEvidence().hasStructuredConfigurations())
         {
-            return captureRequired("Maxed skiff and sloop",
+            if (snapshot.getBoatEvidence().getVisibleDetails().isEmpty())
+            {
+                return state("Maxed skiff and sloop", false,
+                    snapshot.getBoatEvidence().toSummary());
+            }
+            return manual("Maxed skiff and sloop",
                 snapshot.getBoatEvidence().toSummary()
-                    + "; recapture to read authoritative boat components");
+                    + "; authoritative boat components were unavailable");
         }
         boolean maxedSkiff = snapshot.getBoatEvidence().hasMaxedBoat("Skiff");
         boolean maxedSloop = snapshot.getBoatEvidence().hasMaxedBoat("Sloop");

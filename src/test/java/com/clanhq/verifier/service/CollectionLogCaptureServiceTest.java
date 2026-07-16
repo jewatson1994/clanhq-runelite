@@ -34,6 +34,8 @@ public class CollectionLogCaptureServiceTest
             "Icthlarin's shroud (tier 5)"));
         assertTrue(CollectionLogCaptureService.isExcludedGreenLogSlot(
             "Sinhaza shroud tier 5"));
+        assertTrue(CollectionLogCaptureService.isExcludedGreenLogSlot(
+            "Xeric's champion"));
         assertFalse(CollectionLogCaptureService.isExcludedGreenLogSlot(
             "Masori crafting kit"));
     }

@@ -45,6 +45,16 @@ public class CollectorEvidenceTest
     }
 
     @Test
+    public void distinguishesAnEmptyBoatReadFromNoBoatCapture()
+    {
+        BoatEvidence emptyRead = BoatEvidence.capturedEmpty();
+
+        assertTrue(emptyRead.isCaptured());
+        assertTrue(emptyRead.getConfigurations().isEmpty());
+        assertEquals("No owned boats found", emptyRead.toSummary());
+    }
+
+    @Test
     public void recognizesDoomUniquesAcrossCapturedPageEvidence()
     {
         Map<String, Integer> items = new LinkedHashMap<>();

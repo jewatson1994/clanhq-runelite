@@ -5,6 +5,7 @@ import com.clanhq.verifier.model.ProgressionEvaluation;
 import com.clanhq.verifier.model.EvidenceStage;
 import com.clanhq.verifier.model.EvidenceStageStatus;
 import com.clanhq.verifier.model.RaidKillCounts;
+import com.clanhq.verifier.model.TempleCollectionLogResult;
 import com.clanhq.verifier.model.VerificationSession;
 import com.clanhq.verifier.model.CollectionLogEvidence;
 import com.clanhq.verifier.model.PohEvidence;
@@ -15,6 +16,7 @@ import com.clanhq.verifier.service.ApiDestinationService;
 import com.clanhq.verifier.service.CollectionLogCaptureService;
 import com.clanhq.verifier.service.PohCaptureService;
 import com.clanhq.verifier.service.BoatCaptureService;
+import com.clanhq.verifier.service.TempleCollectionLogService;
 import com.clanhq.verifier.transport.PreviewOnlyVerificationTransport;
 import com.clanhq.verifier.transport.VerificationTransport;
 import com.clanhq.verifier.transport.VerificationTransportResult;
@@ -39,6 +41,11 @@ import net.runelite.client.events.ConfigChanged;
     tags = {"clan", "gear", "rank", "verification"})
 public final class ClanHQVerifierPlugin extends Plugin
 {
+    private static final EvidenceStage[] TEMPLE_LOG_STAGES = {
+        EvidenceStage.COX_LOG, EvidenceStage.TOB_LOG,
+        EvidenceStage.TOA_LOG, EvidenceStage.YAMA_LOG,
+        EvidenceStage.DOOM_LOG
+    };
     @Inject
     private ClientThread clientThread;
 
@@ -71,6 +78,9 @@ public final class ClanHQVerifierPlugin extends Plugin
 
     @Inject
     private BoatCaptureService boatCaptureService;
+
+    @Inject
+    private TempleCollectionLogService templeCollectionLogService;
 
     private ClanHQVerifierPanel panel;
     private NavigationButton navigationButton;
@@ -110,6 +120,9 @@ public final class ClanHQVerifierPlugin extends Plugin
     @Override
     protected void shutDown()
     {
+        verificationSession = null;
+        capturedSnapshot = null;
+        raidKillCounts = null;
         clientToolbar.removeNavigation(navigationButton);
         navigationButton = null;
         panel = null;
@@ -162,6 +175,13 @@ public final class ClanHQVerifierPlugin extends Plugin
     {
         VerificationSession session = verificationSession;
         beginStage(EvidenceStage.CHARACTER);
+        beginAutomaticStage(EvidenceStage.PRAYERS);
+        beginAutomaticStage(EvidenceStage.BOAT);
+        beginAutomaticStage(EvidenceStage.RAID_KC);
+        for (EvidenceStage stage : TEMPLE_LOG_STAGES)
+        {
+            beginAutomaticStage(stage);
+        }
         clientThread.invokeLater(() ->
         {
             try
@@ -169,13 +189,13 @@ public final class ClanHQVerifierPlugin extends Plugin
                 VerificationSnapshot snapshot = snapshotService
                     .captureAccountEvidence()
                     .withBoatEvidence(boatCaptureService.captureStoredEvidence());
-                SwingUtilities.invokeLater(() ->
-                {
-                    if (isCurrentSession(session))
-                    {
-                        acceptAccountSnapshot(snapshot);
-                    }
-                });
+                raidKillCountService.lookupAsync(snapshot.getRsn())
+                    .thenCombine(templeCollectionLogService.lookupAsync(
+                            snapshot.getRsn()),
+                        (counts, temple) -> new AutomaticEvidence(snapshot,
+                            counts, temple))
+                    .thenAccept(evidence -> SwingUtilities.invokeLater(() ->
+                        acceptAutomaticEvidence(session, evidence)));
             }
             catch (RuntimeException exception)
             {
@@ -188,6 +208,70 @@ public final class ClanHQVerifierPlugin extends Plugin
                 });
             }
         });
+    }
+
+    private void acceptAutomaticEvidence(VerificationSession session,
+        AutomaticEvidence evidence)
+    {
+        if (!isCurrentSession(session))
+        {
+            return;
+        }
+        acceptAccountSnapshot(evidence.snapshot);
+        acceptRaidKillCounts(evidence.raidKillCounts);
+        acceptTempleCollectionLog(evidence.templeCollectionLog);
+        completeStage(EvidenceStage.CHARACTER,
+            automaticCaptureMessage(evidence));
+    }
+
+    private void acceptTempleCollectionLog(TempleCollectionLogResult result)
+    {
+        if (result.isFresh())
+        {
+            capturedSnapshot = capturedSnapshot.withCollectionLogEvidence(
+                result.getEvidence());
+            for (EvidenceStage stage : TEMPLE_LOG_STAGES)
+            {
+                verificationSession.setStatus(stage,
+                    EvidenceStageStatus.CAPTURED);
+                panel.showStageStatus(stage, EvidenceStageStatus.CAPTURED);
+            }
+            return;
+        }
+        for (EvidenceStage stage : TEMPLE_LOG_STAGES)
+        {
+            verificationSession.setStatus(stage,
+                EvidenceStageStatus.NOT_CAPTURED);
+            panel.showStageStatus(stage, EvidenceStageStatus.NOT_CAPTURED);
+            panel.showFallbackStage(stage);
+        }
+    }
+
+    private static String automaticCaptureMessage(AutomaticEvidence evidence)
+    {
+        StringBuilder message = new StringBuilder(
+            "Character, prayers, and saved boats captured.");
+        if (evidence.raidKillCounts.isAvailable())
+        {
+            message.append(" Raid KC fetched.");
+        }
+        else
+        {
+            message.append(' ').append(evidence.raidKillCounts.getDetail())
+                .append("; use Fetch Raid KC to retry.");
+        }
+        if (evidence.templeCollectionLog.isFresh())
+        {
+            message.append(' ')
+                .append(evidence.templeCollectionLog.getMessage()).append('.');
+        }
+        else
+        {
+            message.append(' ')
+                .append(evidence.templeCollectionLog.getMessage())
+                .append("; manual Collection Log capture is available.");
+        }
+        return message.toString();
     }
 
     private void capturePrayers()
@@ -430,6 +514,12 @@ public final class ClanHQVerifierPlugin extends Plugin
         panel.setStageBusy(stage);
     }
 
+    private void beginAutomaticStage(EvidenceStage stage)
+    {
+        verificationSession.setStatus(stage, EvidenceStageStatus.CAPTURING);
+        panel.showStageStatus(stage, EvidenceStageStatus.CAPTURING);
+    }
+
     private void completeStage(EvidenceStage stage, String message)
     {
         verificationSession.setStatus(stage, EvidenceStageStatus.CAPTURED);
@@ -466,7 +556,11 @@ public final class ClanHQVerifierPlugin extends Plugin
         verificationSession.bindRsn(snapshot.getRsn());
         verificationSession.setStatus(EvidenceStage.CHARACTER,
             EvidenceStageStatus.CAPTURED);
+        verificationSession.setStatus(EvidenceStage.PRAYERS,
+            EvidenceStageStatus.CAPTURED);
         panel.showStageStatus(EvidenceStage.CHARACTER,
+            EvidenceStageStatus.CAPTURED);
+        panel.showStageStatus(EvidenceStage.PRAYERS,
             EvidenceStageStatus.CAPTURED);
         if (capturedSnapshot.getBoatEvidence().isCaptured())
         {
@@ -490,6 +584,10 @@ public final class ClanHQVerifierPlugin extends Plugin
             : EvidenceStageStatus.MANUAL_REVIEW;
         verificationSession.setStatus(EvidenceStage.RAID_KC, status);
         panel.showStageStatus(EvidenceStage.RAID_KC, status);
+        if (!counts.isAvailable())
+        {
+            panel.showFallbackStage(EvidenceStage.RAID_KC);
+        }
         renderSnapshot(counts.isAvailable()
             ? "Raid KC fetched." : counts.getDetail());
     }
@@ -554,5 +652,21 @@ public final class ClanHQVerifierPlugin extends Plugin
         graphics.dispose();
 
         return icon;
+    }
+
+    private static final class AutomaticEvidence
+    {
+        private final VerificationSnapshot snapshot;
+        private final RaidKillCounts raidKillCounts;
+        private final TempleCollectionLogResult templeCollectionLog;
+
+        private AutomaticEvidence(VerificationSnapshot snapshot,
+            RaidKillCounts raidKillCounts,
+            TempleCollectionLogResult templeCollectionLog)
+        {
+            this.snapshot = snapshot;
+            this.raidKillCounts = raidKillCounts;
+            this.templeCollectionLog = templeCollectionLog;
+        }
     }
 }

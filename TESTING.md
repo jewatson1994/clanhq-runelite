@@ -16,8 +16,8 @@ the current build never submits evidence.
 1. Capture Character.
 2. Confirm the RSN, total level, combat level, diary totals, highest verified
    rank, and next rank appear.
-3. Start a slow source such as Raid KC and confirm the other capture buttons
-   remain disabled until it finishes.
+3. Click Verify Character and confirm the other capture buttons remain
+   disabled until the local, hiscore, and TempleOSRS reads finish.
 4. Click Reset Session. Confirm all statuses, captured evidence, and calculated
    ranks reset.
 5. Log out during Gear capture. Confirm capture stops with a cancellation
@@ -30,18 +30,21 @@ the current build never submits evidence.
 - Expected: the logged-in RSN, levels, supported prayer unlocks, and diary
   completion totals appear.
 - Expected: any saved owned boats are also captured without opening a Sailing
-  interface. The separate Boat button remains available as a refresh and
-  diagnostic capture.
+  interface. No separate Prayer or Boat button is shown.
 - Expected: Grandmaster Combat Achievements reflects the account's completed
   CA tier state.
+- Expected: Raid KC and a fresh TempleOSRS Collection Log are fetched by the
+  same action.
 - Confirm no other RuneLite account or character can be selected.
 
-### Prayers
+### Prayers and boats
 
-- Capture after the account is fully logged in.
 - Expected: Piety passes only when King's Ransom and Knight Waves Training
   Grounds are complete; the prayer does not need to be active. Rigour, Deadeye,
   and Mystic Vigour reflect their unlock varbits.
+- Expected: owned boat configurations are read from saved Sailing variables. An
+  account with no owned boats is a completed read with a missing requirement,
+  not an uncaptured source.
 
 ### Gear
 
@@ -56,42 +59,43 @@ the current build never submits evidence.
 
 ### Raid KC
 
-- Expected: the public hiscore result shows normal, expert, and hard-mode raid
-  counts and the combined total.
-- Test an unavailable/private hiscore result. It must become staff review, not
-  zero KC or a failed qualification.
+- Verify Character should show normal, expert, and hard-mode raid counts and
+  the combined total.
+- Test an unavailable/private hiscore result. It must reveal Fetch Raid KC as
+  a retry and become staff review, not zero KC or a failed qualification.
 
-### Collection Log
+### TempleOSRS Collection Log
 
-- Use each COX, TOB, TOA, Yama, or Doom button after opening that exact page.
-- Expected: the page name appears and only acquired visible items are retained.
-- Capture multiple pages and confirm earlier pages remain in the same session.
-- Confirm each page capture records the global `obtained/total` count shown at
-  the top of the Collection Log window.
+- Synchronize the account through the TempleOSRS RuneLite plugin, then click
+  Verify Character. Expected: COX, TOB, TOA, Yama, Doom, and the global obtained
+  count are captured without opening the in-game Collection Log.
+- Confirm the status reports how many hours ago TempleOSRS was synchronized.
+- Use data older than 24 hours or an unsynchronized RSN. Expected: no stale
+  items are accepted and the five manual Collection Log buttons appear.
+- For fallback, open each exact in-game page and use its corresponding button.
+  Earlier pages must remain in the same session.
 - Confirm raid unique counts combine bank ownership and matching log entries
   without counting the same unique twice.
-- Verify Doom only passes after cloth, boots, and eye are all present.
+- Verify Doom only passes after cloth, Avernic treads, and eye are all present.
 - Verify Rite of Vile Transference passes only after it appears as acquired on
   the captured Yama page.
+- Verify TOA cosmetics report all eight required entries and identify any that
+  are missing.
+- For Zenyte, COX, TOB, and TOA should show acquired/total slots. Green log
+  passes only when all three counts are complete; Sinhaza and Icthlarin KC
+  shrouds must not affect those counts.
+- For manual fallback, confirm unacquired slots are not mistaken for acquired
+  items and the selected page title is detected correctly.
 
-### Boat
+### Boat verification
 
-- Click Capture Boat while logged in. The selection window may be open, or the
-  player may already be inside Customise mode.
+- Click Verify Character while logged in; no Sailing interface is required.
 - Expected: every owned boat slot lists its boat type, hull, mast and sails,
   helm, and keel using the names from RuneLite's Sailing DB tables.
 - A Skiff or Sloop passes its maxed-core check only with Rosewood hull and
   mast/sails plus Dragon helm and keel.
 - Confirm a wooden Skiff is reported missing, not passed. No screenshot or
   image data should be captured.
-- Verify TOA cosmetics report all eight required entries and identify any that
-  are missing.
-- For Zenyte, capture COX, TOB, and TOA. Each page should show acquired/total
-  slots and green log should pass only when all three counts are complete.
-  Sinhaza and Icthlarin KC shrouds must not affect those counts.
-- This collector uses RuneLite's active Collection Log header and item
-  container directly. Confirm unacquired slots are not mistaken for acquired
-  items and the selected page title is detected correctly.
 
 ### POH
 

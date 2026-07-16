@@ -198,7 +198,9 @@ public final class CollectionLogCaptureService
 
     static boolean isExcludedGreenLogSlot(String itemName)
     {
-        return itemName.toLowerCase(Locale.ENGLISH).contains("shroud");
+        String normalized = itemName.toLowerCase(Locale.ENGLISH);
+        return normalized.contains("shroud")
+            || normalized.startsWith("xeric's ");
     }
 
     private static String clean(String text)

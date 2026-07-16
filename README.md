@@ -2,26 +2,24 @@
 
 This is the development foundation for ClanHQ rank verification.
 
-The current build is deliberately preview-only. With the bank open, one click
-captures equipment, inventory, and rank-relevant bank items. It also reads
-levels and authoritative hard/elite
-achievement-diary completion state. Capture also performs a public RuneScape
-hiscore lookup for the selected character's raid completion counts. It does
-not send captured evidence to ClanHQ, Discord, or any other service.
+The current build is deliberately preview-only. Verify Character reads local
+account, prayer, diary, Combat Achievement, and saved-boat state, then performs
+public RuneScape hiscore and TempleOSRS Collection Log lookups for that RSN.
+With the bank open, Capture Bank & Gear retains equipment, inventory, and only
+rank-relevant bank items. No evidence is submitted to ClanHQ or Discord.
 
 The checklist covers every Iron Drop progression rank from Opal through
 Zenyte. A single screen exposes every evidence collector and recalculates the
 entire cumulative rank ladder after each capture. It shows the highest fully
 verified rank, the next rank, that rank's missing requirements, and anything
-that still needs staff review. Character, prayers, gear, raid KC, individual
-Collection Log sources, boat, and owner-POH are independent evidence stages.
-Collection Log buttons are split into COX, TOB, TOA, Yama, and Doom and
-remain available in the same session. Captured raid pages retain
-acquired and total visible slot counts and are combined with current item evidence
-for unique-count requirements without double-counting the same unique. Every
-Collection Log page capture also records the global obtained/total count
-shown in the window header. Boat
-Verify Character also reads RuneLite's authoritative owned-boat variables and Sailing DB
+that still needs staff review. The three primary actions are Verify Character,
+Capture Bank & Gear, and Capture POH Instance. TempleOSRS supplies COX, TOB,
+TOA, Yama, Doom, and the global obtained-slot count when its data was synced
+within the last 24 hours. Stale, missing, or unavailable TempleOSRS data reveals
+the existing per-page RuneLite capture buttons as fallbacks. Raid pages retain
+acquired and total slot counts and combine with current item evidence without
+double-counting the same unique. Verify Character also reads RuneLite's
+authoritative owned-boat variables and Sailing DB
 tables for all five slots. A maxed Skiff or Sloop requires a Rosewood hull,
 Rosewood mast and sails, Dragon helm, and Dragon keel. Visible Sailing panel
 text is retained only as a diagnostic fallback. POH capture requires
@@ -38,7 +36,7 @@ remnant, and Masori crafting kit. COX capture can prove Metamorphic dust; TOB
 capture can prove Sanguine dust and both ornament kits. COX, TOB, and TOA captures can verify raid
 green logs from acquired-versus-total visible slots. Sailing core upgrade state
 is verified directly from the player's owned-boat records.
-Raid KC shrouds are excluded from green-log totals.
+Raid KC capes and shrouds are excluded from green-log totals.
 The Yama page verifies Rite of Vile Transference. Piety is verified from
 completed King's Ransom and Knight Waves Training Grounds progression, so the
 prayer does not need to be activated. Grandmaster Combat Achievements are read
@@ -103,13 +101,16 @@ use **End sessions** in the RuneScape account settings.
 ## Privacy boundary
 
 - Only the local logged-in player is inspected.
-- The captured RSN is sent to RuneScape's public hiscore service for raid KC.
+- The captured RSN is sent to RuneScape's public hiscore service for raid KC
+  and TempleOSRS's public API for synchronized Collection Log evidence.
 - Capture happens only after an explicit button click.
 - Reset Session clears all locally accumulated evidence and rank calculations.
 - Evidence from different RSNs cannot be combined in one session.
 - The ClanHQ API destination is configured by each member in RuneLite settings.
 - HTTPS is required except for localhost development; changing settings never submits evidence automatically.
-- Collection Log capture stores only visible acquired item names and quantities.
+- TempleOSRS capture retains only the five configured categories, their item
+  names/counts, global obtained-slot count, and last-sync time. Manual fallback
+  capture retains only the visible supported page.
 - Boat capture stores owned boat configurations and optional visible Sailing
   panel text, not cargo item contents.
 - POH capture stores only the five configured facility results and requires owner build mode.
@@ -119,4 +120,4 @@ use **End sessions** in the RuneScape account settings.
 - Bank capture retains and displays only items used by configured rank rules;
   unrelated bank contents are discarded immediately.
 - The preview lists the exact data collected.
-- The current transport never performs a network request.
+- The ClanHQ submission transport remains preview-only and performs no request.

@@ -26,6 +26,8 @@ import net.runelite.client.ui.PluginPanel;
 final class ClanHQVerifierPanel extends PluginPanel
 {
     private static final int STATUS_WRAP_WIDTH = 190;
+    private static final Set<EvidenceStage> PRIMARY_STAGES = EnumSet.of(
+        EvidenceStage.CHARACTER, EvidenceStage.GEAR, EvidenceStage.POH);
     private final JPanel stagePanel = new JPanel();
     private final Map<EvidenceStage, JPanel> stageRows =
         new EnumMap<>(EvidenceStage.class);
@@ -135,7 +137,8 @@ final class ClanHQVerifierPanel extends PluginPanel
         for (EvidenceStage stage : EvidenceStage.values())
         {
             boolean required = requiredStages.contains(stage);
-            stageRows.get(stage).setVisible(required);
+            stageRows.get(stage).setVisible(required
+                && PRIMARY_STAGES.contains(stage));
             showStageStatus(stage, EvidenceStageStatus.NOT_CAPTURED);
         }
         previewArea.setText("Capture evidence to calculate the highest verified rank.");
@@ -147,6 +150,16 @@ final class ClanHQVerifierPanel extends PluginPanel
         updateProgressSummary();
         revalidate();
         repaint();
+    }
+
+    void showFallbackStage(EvidenceStage stage)
+    {
+        if (requiredStages.contains(stage))
+        {
+            stageRows.get(stage).setVisible(true);
+            revalidate();
+            repaint();
+        }
     }
 
     void showApiDestination(String description)

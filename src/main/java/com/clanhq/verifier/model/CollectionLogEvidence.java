@@ -87,7 +87,8 @@ public final class CollectionLogEvidence
         CollectionLogPageEvidence page = findPage("doom");
         return page != null
             && hasName(page.getAcquiredItems(), "cloth")
-            && hasName(page.getAcquiredItems(), "boots")
+            && (hasName(page.getAcquiredItems(), "boots")
+                || hasName(page.getAcquiredItems(), "treads"))
             && hasName(page.getAcquiredItems(), "eye");
     }
 

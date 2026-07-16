@@ -14,6 +14,7 @@ public final class BoatEvidence
     private final Set<String> boatTypes;
     private final List<BoatConfiguration> configurations;
     private final List<String> visibleDetails;
+    private final boolean captured;
 
     public BoatEvidence(Set<String> boatTypes, List<String> visibleDetails)
     {
@@ -22,6 +23,13 @@ public final class BoatEvidence
 
     public BoatEvidence(Set<String> boatTypes,
         List<BoatConfiguration> configurations, List<String> visibleDetails)
+    {
+        this(boatTypes, configurations, visibleDetails, true);
+    }
+
+    private BoatEvidence(Set<String> boatTypes,
+        List<BoatConfiguration> configurations, List<String> visibleDetails,
+        boolean captured)
     {
         Set<String> types = new LinkedHashSet<>(
             Objects.requireNonNull(boatTypes));
@@ -32,11 +40,19 @@ public final class BoatEvidence
             new ArrayList<>(configurations));
         this.visibleDetails = Collections.unmodifiableList(
             new ArrayList<>(Objects.requireNonNull(visibleDetails)));
+        this.captured = captured;
     }
 
     public static BoatEvidence notCaptured()
     {
-        return new BoatEvidence(Collections.emptySet(), Collections.emptyList());
+        return new BoatEvidence(Collections.emptySet(), Collections.emptyList(),
+            Collections.emptyList(), false);
+    }
+
+    public static BoatEvidence capturedEmpty()
+    {
+        return new BoatEvidence(Collections.emptySet(), Collections.emptyList(),
+            Collections.emptyList(), true);
     }
 
     public Set<String> getBoatTypes()
@@ -56,7 +72,7 @@ public final class BoatEvidence
 
     public boolean isCaptured()
     {
-        return !configurations.isEmpty() || !visibleDetails.isEmpty();
+        return captured;
     }
 
     public boolean hasSkiffAndSloop()
@@ -85,7 +101,7 @@ public final class BoatEvidence
         Set<String> details = new LinkedHashSet<>(visibleDetails);
         details.addAll(other.visibleDetails);
         return new BoatEvidence(types, new ArrayList<>(boats.values()),
-            new ArrayList<>(details));
+            new ArrayList<>(details), captured || other.captured);
     }
 
     public String toSummary()
@@ -93,6 +109,10 @@ public final class BoatEvidence
         if (!isCaptured())
         {
             return "Not captured";
+        }
+        if (configurations.isEmpty() && visibleDetails.isEmpty())
+        {
+            return "No owned boats found";
         }
         if (!configurations.isEmpty())
         {
