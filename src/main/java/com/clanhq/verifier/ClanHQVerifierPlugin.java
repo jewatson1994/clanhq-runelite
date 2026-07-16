@@ -2,6 +2,8 @@ package com.clanhq.verifier;
 
 import com.clanhq.verifier.feature.ClanHQFeature;
 import com.clanhq.verifier.feature.RankReviewFeature;
+import com.clanhq.verifier.bingo.BingoFeature;
+import com.clanhq.verifier.bingo.transport.BingoApiClient;
 import com.clanhq.verifier.model.VerificationSnapshot;
 import com.clanhq.verifier.model.ProgressionEvaluation;
 import com.clanhq.verifier.model.EvidenceStage;
@@ -32,6 +34,7 @@ import java.util.List;
 import java.util.Set;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
+import net.runelite.api.Client;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -40,6 +43,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.events.NpcLootReceived;
 import okhttp3.OkHttpClient;
 
 @PluginDescriptor(
@@ -59,6 +63,12 @@ public final class ClanHQVerifierPlugin extends Plugin
     };
     @Inject
     private ClientThread clientThread;
+
+    @Inject
+    private Client client;
+
+    @Inject
+    private OkHttpClient httpClient;
 
     @Inject
     private ClientToolbar clientToolbar;
@@ -95,6 +105,8 @@ public final class ClanHQVerifierPlugin extends Plugin
 
     private ClanHQVerifierPanel panel;
     private ClanHQPanel shellPanel;
+    private BingoFeature bingoFeature;
+    private List<ClanHQFeature> features = Collections.emptyList();
     private NavigationButton navigationButton;
     private VerificationSession verificationSession;
     private VerificationSnapshot capturedSnapshot;
@@ -123,31 +135,18 @@ public final class ClanHQVerifierPlugin extends Plugin
             this::captureEvidence,
             this::startSession,
             this::submitVerification);
-        List<ClanHQFeature> features = new ArrayList<>();
-        if (config.rankReviewEnabled())
-        {
-            features.add(new RankReviewFeature(panel));
-        }
-        shellPanel = new ClanHQPanel(features);
         refreshApiDestination();
         startSession();
-        navigationButton = NavigationButton.builder()
-            .tooltip("ClanHQ")
-            .icon(createIcon())
-            .panel(shellPanel)
-            .build();
-
-        clientToolbar.addNavigation(navigationButton);
+        rebuildFeatures();
     }
 
     @Override
     protected void shutDown()
     {
+        disposeFeatures();
         verificationSession = null;
         capturedSnapshot = null;
         raidKillCounts = null;
-        clientToolbar.removeNavigation(navigationButton);
-        navigationButton = null;
         shellPanel = null;
         panel = null;
     }
@@ -157,8 +156,68 @@ public final class ClanHQVerifierPlugin extends Plugin
     {
         if (ClanHQVerifierConfig.GROUP.equals(event.getGroup()))
         {
+            if ("rankReviewEnabled".equals(event.getKey())
+                || "bingoEnabled".equals(event.getKey()))
+            {
+                SwingUtilities.invokeLater(this::rebuildFeatures);
+                return;
+            }
             SwingUtilities.invokeLater(this::refreshApiDestination);
+            if (bingoFeature != null)
+            {
+                bingoFeature.refreshManifest();
+            }
         }
+    }
+
+    private void rebuildFeatures()
+    {
+        disposeFeatures();
+        List<ClanHQFeature> enabled = new ArrayList<>();
+        if (config.rankReviewEnabled())
+        {
+            enabled.add(new RankReviewFeature(panel));
+        }
+        if (config.bingoEnabled())
+        {
+            bingoFeature = new BingoFeature(new BingoApiClient(
+                httpClient, config, apiDestinationService));
+            enabled.add(bingoFeature);
+        }
+        features = enabled;
+        shellPanel = new ClanHQPanel(features);
+        features.forEach(ClanHQFeature::startUp);
+        navigationButton = NavigationButton.builder()
+            .tooltip("ClanHQ")
+            .icon(createIcon())
+            .panel(shellPanel)
+            .build();
+        clientToolbar.addNavigation(navigationButton);
+    }
+
+    private void disposeFeatures()
+    {
+        features.forEach(ClanHQFeature::shutDown);
+        features = Collections.emptyList();
+        bingoFeature = null;
+        if (navigationButton != null)
+        {
+            clientToolbar.removeNavigation(navigationButton);
+            navigationButton = null;
+        }
+    }
+
+    @Subscribe
+    public void onNpcLootReceived(NpcLootReceived event)
+    {
+        if (bingoFeature == null || client.getLocalPlayer() == null)
+        {
+            return;
+        }
+        bingoFeature.onNpcLoot(
+            client.getLocalPlayer().getName(),
+            event.getNpc().getName(),
+            event.getItems());
     }
 
     private void captureEvidence(EvidenceStage stage)

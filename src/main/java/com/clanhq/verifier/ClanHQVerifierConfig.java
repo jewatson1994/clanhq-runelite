@@ -27,6 +27,17 @@ public interface ClanHQVerifierConfig extends Config
         return true;
     }
 
+    @ConfigItem(
+        keyName = "bingoEnabled",
+        name = "Bingo",
+        description = "Load the active Bingo board and submit eligible NPC loot",
+        section = FEATURES_SECTION,
+        position = 1)
+    default boolean bingoEnabled()
+    {
+        return false;
+    }
+
     @ConfigSection(
         name = "ClanHQ connection",
         description = "Where review evidence will be submitted",

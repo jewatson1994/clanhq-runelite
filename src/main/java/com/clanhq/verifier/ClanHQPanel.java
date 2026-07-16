@@ -64,6 +64,14 @@ final class ClanHQPanel extends PluginPanel
         {
             showFeature(features.get(0).getId());
         }
+        else
+        {
+            JLabel empty = new JLabel(
+                "<html>Enable a ClanHQ feature in the plugin settings.</html>");
+            empty.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+            cardPanel.add(empty, "empty");
+            cards.show(cardPanel, "empty");
+        }
     }
 
     private void showFeature(String featureId)

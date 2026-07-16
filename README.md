@@ -1,8 +1,18 @@
 # ClanHQ
 
 ClanHQ is a modular RuneLite shell for opt-in clan tools. Rank Review is the
-first available feature. Each feature owns its own panel and can be enabled
-independently without changing the evidence rules used by Rank Review.
+first available feature, and Bingo provides an initial automatic NPC-loot
+adapter. Each feature owns its own panel and can be enabled independently
+without changing the evidence rules used by Rank Review.
+
+## Bingo
+
+Bingo is disabled by default. When enabled, it downloads the active board from
+the configured ClanHQ server and submits only matching NPC loot events. The
+server owns the item list, validates active membership, and sends accepted drops
+to the configured Discord drops channel. Reward chests, raids, clues, and other
+non-NPC sources require additional adapters and are not claimed as automated by
+this initial version.
 
 ## Rank Review
 
