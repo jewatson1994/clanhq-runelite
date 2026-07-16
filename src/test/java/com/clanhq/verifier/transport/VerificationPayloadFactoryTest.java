@@ -39,7 +39,8 @@ public class VerificationPayloadFactoryTest
         assertEquals("UNVERIFIED", payload.getAsJsonArray("ranks").get(1)
             .getAsJsonObject().getAsJsonArray("requirements").get(0)
             .getAsJsonObject().get("status").getAsString());
-        assertTrue(payload.getAsJsonObject("evidence").get("summary")
-            .getAsString().contains("RSN: Mr Dimples"));
+        assertEquals(2094, payload.getAsJsonObject("evidence")
+            .get("total_level").getAsInt());
+        assertTrue(!payload.getAsJsonObject("evidence").has("summary"));
     }
 }

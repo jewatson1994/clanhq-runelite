@@ -123,6 +123,6 @@ use **End sessions** in the RuneScape account settings.
   RuneLite closes.
 - Bank capture retains and displays only items used by configured rank rules;
   unrelated bank contents are discarded immediately.
-- The preview lists the exact data collected. Submission sends that evidence,
-  the calculated rank checklists, the RSN, levels, and capture time to the
-  configured ClanHQ endpoint.
+- The preview lists the exact local data collected. Submission sends only the
+  calculated rank requirement results, RSN, levels, and capture time to the
+  configured ClanHQ endpoint; it does not send the raw bank or inventory list.

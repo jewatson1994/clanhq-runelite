@@ -233,7 +233,7 @@ final class ClanHQVerifierPanel extends PluginPanel
         submitButton.setText(result.isSubmitted()
             ? "Ticket Submitted" : "Submit Review Ticket");
         submitButton.setEnabled(false);
-        setStatusText(result.getMessage());
+        setStatusText(result.isSubmitted() ? "" : result.getMessage());
     }
 
     void showError(String message)

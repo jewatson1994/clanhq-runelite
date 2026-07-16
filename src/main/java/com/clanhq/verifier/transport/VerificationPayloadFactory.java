@@ -11,8 +11,6 @@ import java.util.UUID;
 
 public final class VerificationPayloadFactory
 {
-    private static final int MAX_SUMMARY_LENGTH = 6000;
-
     private VerificationPayloadFactory()
     {
     }
@@ -51,9 +49,6 @@ public final class VerificationPayloadFactory
         JsonObject evidence = new JsonObject();
         evidence.addProperty("total_level", snapshot.getTotalLevel());
         evidence.addProperty("combat_level", snapshot.getCombatLevel());
-        String summary = snapshot.toPreviewText();
-        evidence.addProperty("summary", summary.length() <= MAX_SUMMARY_LENGTH
-            ? summary : summary.substring(0, MAX_SUMMARY_LENGTH));
         payload.add("evidence", evidence);
         return payload;
     }
