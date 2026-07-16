@@ -32,8 +32,8 @@ final class BingoPanel extends JPanel
         JPanel header = verticalPanel();
         header.add(new JLabel("ClanHQ Bingo"));
         header.add(Box.createRigidArea(new Dimension(0, 6)));
-        header.add(new JLabel("<html>Eligible NPC loot is sent automatically.<br>"
-            + "Other reward sources are not tracked yet.</html>"));
+        header.add(new JLabel("<html>Eligible RuneLite Loot Tracker drops are "
+            + "sent automatically.</html>"));
         header.add(Box.createRigidArea(new Dimension(0, 8)));
         header.add(eventLabel);
         header.add(itemCountLabel);
@@ -72,7 +72,7 @@ final class BingoPanel extends JPanel
         refreshButton.setEnabled(true);
         eventLabel.setText("Event: " + manifest.getName());
         itemCountLabel.setText("Eligible drops: " + manifest.getItems().size());
-        showStatus("Tracking eligible NPC loot.");
+        showStatus("Tracking eligible loot and reward events.");
     }
 
     void showManifestError(String message)

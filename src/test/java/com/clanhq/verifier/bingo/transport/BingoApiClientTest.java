@@ -18,8 +18,8 @@ public class BingoApiClientTest
             "Mr Dimples",
             new BingoItem(4151, "Abyssal whip", 1, 5),
             2,
-            "NPC_LOOT",
-            "Abyssal demon",
+            "EVENT",
+            "Chambers of Xeric",
             Instant.parse("2026-08-02T03:04:05Z"));
 
         JsonObject payload = BingoApiClient.payload(drop);
@@ -29,8 +29,9 @@ public class BingoApiClientTest
         assertEquals("Mr Dimples", payload.get("rsn").getAsString());
         assertEquals(4151, payload.get("item_id").getAsInt());
         assertEquals(2, payload.get("quantity").getAsInt());
-        assertEquals("NPC_LOOT", payload.get("source_type").getAsString());
-        assertEquals("Abyssal demon", payload.get("source_name").getAsString());
+        assertEquals("EVENT", payload.get("source_type").getAsString());
+        assertEquals("Chambers of Xeric",
+            payload.get("source_name").getAsString());
         assertEquals("2026-08-02T03:04:05Z",
             payload.get("occurred_at").getAsString());
     }

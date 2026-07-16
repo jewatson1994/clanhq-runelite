@@ -39,17 +39,20 @@ import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
+import net.runelite.client.plugins.PluginDependency;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.plugins.loottracker.LootReceived;
+import net.runelite.client.plugins.loottracker.LootTrackerPlugin;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.events.ConfigChanged;
-import net.runelite.client.events.NpcLootReceived;
 import okhttp3.OkHttpClient;
 
 @PluginDescriptor(
     name = "ClanHQ",
     description = "Clan tools including rank review and event tracking",
     tags = {"clan", "gear", "rank", "verification", "bingo"})
+@PluginDependency(LootTrackerPlugin.class)
 public final class ClanHQVerifierPlugin extends Plugin
 {
     private static final Set<EvidenceStage> CORE_SUBMISSION_STAGES =
@@ -208,15 +211,16 @@ public final class ClanHQVerifierPlugin extends Plugin
     }
 
     @Subscribe
-    public void onNpcLootReceived(NpcLootReceived event)
+    public void onLootReceived(LootReceived event)
     {
         if (bingoFeature == null || client.getLocalPlayer() == null)
         {
             return;
         }
-        bingoFeature.onNpcLoot(
+        bingoFeature.onLoot(
             client.getLocalPlayer().getName(),
-            event.getNpc().getName(),
+            event.getType().name(),
+            event.getName(),
             event.getItems());
     }
 

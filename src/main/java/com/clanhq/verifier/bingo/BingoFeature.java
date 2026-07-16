@@ -39,7 +39,7 @@ public final class BingoFeature implements ClanHQFeature
     @Override
     public String getDescription()
     {
-        return "Automatically submit eligible Bingo NPC drops to ClanHQ.";
+        return "Automatically submit eligible RuneLite loot to ClanHQ.";
     }
 
     @Override
@@ -84,7 +84,7 @@ public final class BingoFeature implements ClanHQFeature
             }));
     }
 
-    public void onNpcLoot(String rsn, String sourceName,
+    public void onLoot(String rsn, String sourceType, String sourceName,
         Collection<ItemStack> items)
     {
         BingoManifest active = manifest;
@@ -104,8 +104,8 @@ public final class BingoFeature implements ClanHQFeature
                 rsn,
                 item,
                 observed.getQuantity(),
-                "NPC_LOOT",
-                sourceName == null ? "Unknown NPC" : sourceName,
+                sourceType,
+                sourceName == null ? "Unknown loot source" : sourceName,
                 Instant.now());
             SwingUtilities.invokeLater(() -> panel.showDetected(
                 item.getName(), drop.getQuantity(), drop.getSourceName()));
