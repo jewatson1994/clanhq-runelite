@@ -97,6 +97,18 @@ public class IronDropQualificationServiceTest
     }
 
     @Test
+    public void acceptsMasoriAssemblerForTheJadeAssemblerRequirement()
+    {
+        VerificationSnapshot snapshot = new VerificationSnapshot(
+            "Mr Dimples", 1950, 100,
+            Collections.singletonList(bankItem(99, "Masori assembler")),
+            true, true);
+
+        assertPassed(service.evaluateTarget(snapshot, "Jade"),
+            "Ava's Assembler or better");
+    }
+
+    @Test
     public void passesCombinedRaidKcFromAllHiscoreCategories()
     {
         VerificationSnapshot snapshot = new VerificationSnapshot(
