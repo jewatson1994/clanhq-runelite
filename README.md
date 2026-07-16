@@ -1,6 +1,9 @@
-# ClanHQ RuneLite Verifier
+# ClanHQ Rank Review
 
-This is the development foundation for ClanHQ rank verification.
+ClanHQ Rank Review collects transparent, player-initiated evidence for an Iron
+Drop rank review. It calculates a checklist locally and can submit that
+checklist to a clan-configured ClanHQ server for staff review. It never awards
+a rank or changes ClanHQ, Wise Old Man, or Discord roles.
 
 Verify Character reads local
 account, prayer, diary, Combat Achievement, and saved-boat state, then performs
@@ -81,7 +84,7 @@ From this directory:
 .\gradlew.bat run
 ```
 
-RuneLite starts in developer mode with `ClanHQ Verifier` loaded. Log into a
+RuneLite starts in developer mode with `ClanHQ Rank Review` loaded. Log into a
 test account, open the ClanHQ sidebar panel, and capture the current character.
 
 ### Jagex Account login

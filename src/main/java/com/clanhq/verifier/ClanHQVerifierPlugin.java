@@ -39,8 +39,8 @@ import net.runelite.client.events.ConfigChanged;
 import okhttp3.OkHttpClient;
 
 @PluginDescriptor(
-    name = "ClanHQ Verifier",
-    description = "Preview account evidence for ClanHQ rank verification",
+    name = "ClanHQ Rank Review",
+    description = "Capture account evidence for a staff-reviewed clan rank request",
     tags = {"clan", "gear", "rank", "verification"})
 public final class ClanHQVerifierPlugin extends Plugin
 {
@@ -121,7 +121,7 @@ public final class ClanHQVerifierPlugin extends Plugin
         refreshApiDestination();
         startSession();
         navigationButton = NavigationButton.builder()
-            .tooltip("ClanHQ Verifier")
+            .tooltip("ClanHQ Rank Review")
             .icon(createIcon())
             .panel(panel)
             .build();

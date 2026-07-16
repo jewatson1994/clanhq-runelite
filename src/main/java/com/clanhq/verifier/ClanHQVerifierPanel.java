@@ -63,7 +63,7 @@ final class ClanHQVerifierPanel extends PluginPanel
         setBackground(ColorScheme.DARK_GRAY_COLOR);
 
         JPanel header = verticalPanel();
-        header.add(new JLabel("ClanHQ Rank Verifier"));
+        header.add(new JLabel("ClanHQ Rank Review"));
         header.add(Box.createRigidArea(new Dimension(0, 6)));
         header.add(new JLabel("<html>Evidence remains local until submitted.<br>"
             + "Nothing is sent automatically.</html>"));

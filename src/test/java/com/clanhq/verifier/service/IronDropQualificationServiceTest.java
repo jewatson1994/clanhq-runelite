@@ -407,6 +407,147 @@ public class IronDropQualificationServiceTest
         assertPassed(result, "Holy ornament kit");
     }
 
+    @Test
+    @SuppressWarnings("deprecation")
+    public void fullyCapturedFixtureQualifiesForEveryProgressionRank()
+    {
+        List<ObservedItem> items = new java.util.ArrayList<>(Arrays.asList(
+            bankItem(ItemID.GHOMMALS_HILT_6, "Ghommal's hilt 6"),
+            bankItem(ItemID.BARROWS_GLOVES, "Barrows gloves"),
+            bankItem(ItemID.TUMEKENS_SHADOW, "Tumeken's shadow"),
+            bankItem(ItemID.SOULREAPER_AXE, "Soulreaper axe"),
+            bankItem(ItemID.AVERNIC_DEFENDER, "Avernic defender"),
+            bankItem(1001, "Imbued god cape"),
+            bankItem(1002, "Infernal cape"),
+            bankItem(1003, "Blessed Dizana's quiver"),
+            bankItem(1004, "Torva full helm"),
+            bankItem(1005, "Torva platebody"),
+            bankItem(1006, "Torva platelegs"),
+            bankItem(1007, "Blood moon helm"),
+            bankItem(1008, "Blood moon chestplate"),
+            bankItem(1009, "Blood moon tassets"),
+            bankItem(1010, "Blue moon spear"),
+            bankItem(1011, "Dual macuahuitl"),
+            bankItem(1012, "Void ranger helm"),
+            bankItem(1013, "Elite void top"),
+            bankItem(1014, "Elite void robe"),
+            bankItem(1015, "Void knight gloves"),
+            bankItem(1016, "Amulet of torture"),
+            bankItem(1017, "Necklace of anguish"),
+            bankItem(1018, "Tormented bracelet"),
+            bankItem(1019, "Ring of suffering"),
+            bankItem(1020, "Serpentine helm"),
+            bankItem(1021, "Magic fang"),
+            bankItem(1022, "Bow of faerdhinen (c)"),
+            bankItem(1023, "Crystal helm"),
+            bankItem(1024, "Crystal body"),
+            bankItem(1025, "Crystal legs"),
+            bankItem(1026, "Occult necklace"),
+            bankItem(1027, "Primordial boots"),
+            bankItem(1028, "Bandos godsword"),
+            bankItem(1029, "Berserker ring"),
+            bankItem(1030, "Archers ring"),
+            bankItem(1031, "Seers ring"),
+            bankItem(1032, "Warrior ring"),
+            bankItem(1033, "Quest point cape"),
+            bankItem(1034, "Osmumten's fang"),
+            new ObservedItem(1035, "Tormented synapse", 2,
+                EvidenceSource.BANK),
+            bankItem(1036, "Dragon claws"),
+            bankItem(1037, "Max cape"),
+            bankItem(1038, "Voidwaker"),
+            bankItem(1039, "Dragon hunter lance"),
+            bankItem(1040, "Venator bow"),
+            bankItem(ItemID.AVERNIC_TREADS_MAX, "Avernic treads (max)"),
+            bankItem(1041, "Amulet of rancour"),
+            bankItem(1042, "Ultor ring"),
+            bankItem(1043, "Bellator ring"),
+            bankItem(1044, "Magus ring"),
+            bankItem(1045, "Ancestral hat"),
+            bankItem(1046, "Ancestral robe top"),
+            bankItem(1047, "Ancestral robe bottom"),
+            bankItem(1048, "Armadyl godsword"),
+            bankItem(1049, "Saradomin godsword"),
+            bankItem(1050, "Zamorak godsword"),
+            bankItem(1051, "Twisted bow"),
+            bankItem(1052, "Scythe of vitur"),
+            bankItem(1053, "Masori mask (f)"),
+            bankItem(1054, "Masori body (f)"),
+            bankItem(1055, "Masori chaps (f)"),
+            bankItem(1056, "Saturated heart"),
+            new ObservedItem(1057, "Twisted ancestral colour kit", 3,
+                EvidenceSource.BANK),
+            bankItem(1058, "Champion's cape"),
+            bankItem(1059, "Expert dragon archer hat"),
+            bankItem(ItemID.HILL_GIANT_CLUB, "Hill giant club")));
+
+        CollectionLogEvidence collectionLog = CollectionLogEvidence
+            .slotCount(1300)
+            .merge(greenLog("Chambers of Xeric",
+                "Dexterous prayer scroll", "Arcane prayer scroll",
+                "Dragon hunter crossbow", "Twisted buckler",
+                "Dinh's bulwark", "Ancestral hat",
+                "Ancestral robe top", "Metamorphic dust"))
+            .merge(greenLog("Theatre of Blood", "Avernic defender",
+                "Ghrazi rapier", "Sanguinesti staff", "Scythe of vitur",
+                "Sanguine dust", "Sanguine ornament kit",
+                "Holy ornament kit"))
+            .merge(greenLog("Tombs of Amascut", "Osmumten's fang",
+                "Lightbearer", "Elidinis' ward", "Masori mask",
+                "Masori body", "Remnant of kephri", "Remnant of ba-ba",
+                "Remnant of akkha", "Remnant of zebak",
+                "Menaphite ornament kit", "Cursed phalanx",
+                "Ancient remnant", "Masori crafting kit"))
+            .merge(greenLog("Yama", "Rite of Vile Transference"))
+            .merge(greenLog("Doom of Mokhaiotl", "Doom cloth",
+                "Doom boots", "Eye of Doom"));
+
+        PohEvidence poh = new PohEvidence(true,
+            new LinkedHashSet<>(Arrays.asList(PohEvidence.SPIRITUAL_FAIRY,
+                PohEvidence.JEWELLERY_BOX, PohEvidence.OCCULT_ALTAR,
+                PohEvidence.PORTAL_NEXUS,
+                PohEvidence.REJUVENATION_POOL)));
+        BoatEvidence boats = new BoatEvidence(Collections.emptySet(),
+            Arrays.asList(
+                new BoatConfiguration(1, "Skiff", "Rosewood base",
+                    "Rosewood mast and sails", "Dragon helm",
+                    "Dragon keel"),
+                new BoatConfiguration(2, "Sloop", "Rosewood base",
+                    "Rosewood mast and sails", "Dragon helm",
+                    "Dragon keel")),
+            Collections.emptyList());
+        VerificationSnapshot snapshot = new VerificationSnapshot(
+            "Fixture", 2376, 126, items, true, true, true, true, true,
+            99, new DiaryProgress(12, 12, 12),
+            RaidKillCounts.available(300, 200, 300, 100, 300, 100))
+            .withCollectionLogEvidence(collectionLog)
+            .withPohEvidence(poh)
+            .withBoatEvidence(boats)
+            .withGrandmasterCombatAchievements(true);
+
+        List<RankQualificationResult> results = service.evaluate(snapshot);
+
+        assertEquals(service.getRankNames().size(), results.size());
+        for (RankQualificationResult rank : results)
+        {
+            assertTrue(rank.getRankName() + " should qualify",
+                rank.isQualified());
+        }
+        ProgressionEvaluation progression =
+            service.evaluateProgression(snapshot);
+        assertEquals("Zenyte", progression.getHighestVerifiedRankName());
+        assertFalse(progression.getNextRank().isPresent());
+    }
+
+    private static CollectionLogEvidence greenLog(String title,
+        String... itemNames)
+    {
+        Map<String, Integer> items = new LinkedHashMap<>();
+        Arrays.stream(itemNames).forEach(name -> items.put(name, 1));
+        return CollectionLogEvidence.page(title, items, items.size(),
+            items.size());
+    }
+
     private static ObservedItem bankItem(int id, String name)
     {
         return new ObservedItem(id, name, 1, EvidenceSource.BANK);

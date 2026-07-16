@@ -1,4 +1,4 @@
-# ClanHQ Verifier live test checklist
+# ClanHQ Rank Review live test checklist
 
 Run the automated suite before opening RuneLite:
 
@@ -8,7 +8,7 @@ $env:JAVA_HOME = (Get-ChildItem -LiteralPath ..\localonly\temurin17 -Directory |
 ```
 
 Start the development client with `.\gradlew.bat run`, log into the intended
-character, and open the ClanHQ Verifier panel. Use a test ClanHQ API URL only;
+character, and open the ClanHQ Rank Review panel. Use a test ClanHQ API URL only;
 submission only posts a staff review and never changes a rank.
 
 ### Discord promotion review
