@@ -9,21 +9,21 @@ $env:JAVA_HOME = (Get-ChildItem -LiteralPath ..\localonly\temurin17 -Directory |
 
 Start the development client with `.\gradlew.bat run`, log into the intended
 character, and open the ClanHQ Verifier panel. Use a test ClanHQ API URL only;
-submission only creates a staff-review ticket and never changes a rank.
+submission only posts a staff review and never changes a rank.
 
-### Discord review ticket
+### Discord promotion review
 
 - Configure a localhost development API URL and matching clan code, or use the
-  HTTPS development endpoint. Expected: Submit Review Ticket remains disabled
+  HTTPS development endpoint. Expected: Submit Promotion Review remains disabled
   until every required evidence source is captured.
 - Submit an active Iron Drop RSN whose next rank has no missing or uncaptured
-  requirements. Expected: ClanHQ posts one embed in the configured staff-only
-  channel, creates a review thread when permitted, and RuneLite reports success.
+  requirements. Expected: ClanHQ posts one embed in the configured promotions
+  channel and RuneLite reports success.
 - Submit with a wrong clan code, non-member RSN, Iron Drip RSN, or missing next-
   rank evidence. Expected: no Discord message is created and RuneLite shows the
   server's rejection reason.
 - Click submit again in the same completed session. Expected: the button remains
-  disabled. Replaying the same submission ID returns the original ticket rather
+  disabled. Replaying the same submission ID returns the original review rather
   than creating a duplicate.
 
 ## Session safety
@@ -150,7 +150,7 @@ submission only creates a staff-review ticket and never changes a rank.
 
 ## Submission boundary
 
-Submit Review Ticket sends the versioned evidence payload only after explicit
+Submit Promotion Review sends the versioned evidence payload only after explicit
 player action. ClanHQ authenticates the shared clan code, validates exact active
 Iron Drop membership and the configured next rank, rate-limits duplicates, and
-creates a staff-review ticket. It does not update ClanHQ, WOM, or Discord roles.
+posts a staff review. It does not update ClanHQ, WOM, or Discord roles.

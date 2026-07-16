@@ -39,7 +39,7 @@ final class ClanHQVerifierPanel extends PluginPanel
     private final Map<EvidenceStage, EvidenceStageStatus> currentStatuses =
         new EnumMap<>(EvidenceStage.class);
     private Set<EvidenceStage> requiredStages = EnumSet.noneOf(EvidenceStage.class);
-    private final JButton submitButton = new JButton("Submit Review Ticket");
+    private final JButton submitButton = new JButton("Submit Promotion Review");
     private final JButton resetButton = new JButton("Reset Session");
     private final JLabel apiDestinationLabel = new JLabel("API: Not configured");
     private final JLabel statusLabel = new JLabel();
@@ -214,7 +214,7 @@ final class ClanHQVerifierPanel extends PluginPanel
 
     void setSubmissionAvailable(boolean available, String reason)
     {
-        submitButton.setText("Submit Review Ticket");
+        submitButton.setText("Submit Promotion Review");
         submitButton.setEnabled(available);
         submitButton.setToolTipText(reason);
     }
@@ -224,14 +224,14 @@ final class ClanHQVerifierPanel extends PluginPanel
         setControlsEnabled(false);
         submitButton.setEnabled(false);
         submitButton.setText("Submitting...");
-        setStatusText("Opening Discord review ticket...");
+        setStatusText("Submitting promotion review...");
     }
 
     void showSubmissionResult(VerificationTransportResult result)
     {
         setControlsEnabled(true);
         submitButton.setText(result.isSubmitted()
-            ? "Ticket Submitted" : "Submit Review Ticket");
+            ? "Review Submitted" : "Submit Promotion Review");
         submitButton.setEnabled(false);
         setStatusText(result.isSubmitted() ? "" : result.getMessage());
     }

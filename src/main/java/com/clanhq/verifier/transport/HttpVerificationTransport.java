@@ -79,10 +79,10 @@ public final class HttpVerificationTransport implements VerificationTransport
                         ? parsed.get("message").getAsString()
                         : "ClanHQ returned HTTP " + response.code();
                     if (response.isSuccessful() && parsed != null
-                        && parsed.has("ticket_url"))
+                        && parsed.has("review_url"))
                     {
                         message += " — "
-                            + parsed.get("ticket_url").getAsString();
+                            + parsed.get("review_url").getAsString();
                     }
                     result.complete(new VerificationTransportResult(
                         response.isSuccessful(), message));

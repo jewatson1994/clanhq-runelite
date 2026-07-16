@@ -87,7 +87,7 @@ public final class ClanHQVerifierPlugin extends Plugin
     private VerificationSession verificationSession;
     private VerificationSnapshot capturedSnapshot;
     private RaidKillCounts raidKillCounts;
-    private boolean ticketSubmitted;
+    private boolean reviewSubmitted;
 
     @Provides
     ClanHQVerifierConfig provideConfig(ConfigManager configManager)
@@ -622,7 +622,7 @@ public final class ClanHQVerifierPlugin extends Plugin
     {
         capturedSnapshot = null;
         raidKillCounts = null;
-        ticketSubmitted = false;
+        reviewSubmitted = false;
         verificationSession = new VerificationSession(
             qualificationService.getAllEvidenceStages());
         if (panel != null)
@@ -661,7 +661,7 @@ public final class ClanHQVerifierPlugin extends Plugin
         transport.submit(capturedSnapshot, progression)
             .thenAccept(result -> SwingUtilities.invokeLater(() ->
             {
-                ticketSubmitted = result.isSubmitted();
+                reviewSubmitted = result.isSubmitted();
                 panel.showSubmissionResult(result);
                 if (!result.isSubmitted())
                 {
@@ -687,11 +687,11 @@ public final class ClanHQVerifierPlugin extends Plugin
             ? "Configure the ClanHQ API URL and clan code"
             : !ready
                 ? "Capture every required evidence source first"
-                : ticketSubmitted
-                    ? "A ticket was already submitted for this session"
-                    : "Open a Discord staff-review ticket";
+                : reviewSubmitted
+                    ? "A review was already submitted for this session"
+                    : "Submit to the ClanHQ promotions feed";
         panel.setSubmissionAvailable(
-            configured && ready && !ticketSubmitted,
+            configured && ready && !reviewSubmitted,
             reason);
     }
 
