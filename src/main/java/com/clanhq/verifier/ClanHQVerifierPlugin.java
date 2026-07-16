@@ -4,6 +4,8 @@ import com.clanhq.verifier.feature.ClanHQFeature;
 import com.clanhq.verifier.feature.RankReviewFeature;
 import com.clanhq.verifier.bingo.BingoFeature;
 import com.clanhq.verifier.bingo.transport.BingoApiClient;
+import com.clanhq.verifier.event.EventFeature;
+import com.clanhq.verifier.event.transport.EventApiClient;
 import com.clanhq.verifier.model.VerificationSnapshot;
 import com.clanhq.verifier.model.ProgressionEvaluation;
 import com.clanhq.verifier.model.EvidenceStage;
@@ -35,6 +37,8 @@ import java.util.Set;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
 import net.runelite.api.Client;
+import net.runelite.api.GameState;
+import net.runelite.api.events.GameStateChanged;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -109,6 +113,7 @@ public final class ClanHQVerifierPlugin extends Plugin
     private ClanHQVerifierPanel panel;
     private ClanHQPanel shellPanel;
     private BingoFeature bingoFeature;
+    private EventFeature eventFeature;
     private List<ClanHQFeature> features = Collections.emptyList();
     private NavigationButton navigationButton;
     private VerificationSession verificationSession;
@@ -160,7 +165,8 @@ public final class ClanHQVerifierPlugin extends Plugin
         if (ClanHQVerifierConfig.GROUP.equals(event.getGroup()))
         {
             if ("rankReviewEnabled".equals(event.getKey())
-                || "bingoEnabled".equals(event.getKey()))
+                || "bingoEnabled".equals(event.getKey())
+                || "eventsEnabled".equals(event.getKey()))
             {
                 SwingUtilities.invokeLater(this::rebuildFeatures);
                 return;
@@ -169,6 +175,10 @@ public final class ClanHQVerifierPlugin extends Plugin
             if (bingoFeature != null)
             {
                 bingoFeature.refreshManifest();
+            }
+            if (eventFeature != null)
+            {
+                eventFeature.refresh();
             }
         }
     }
@@ -180,6 +190,12 @@ public final class ClanHQVerifierPlugin extends Plugin
         if (config.rankReviewEnabled())
         {
             enabled.add(new RankReviewFeature(panel));
+        }
+        if (config.eventsEnabled())
+        {
+            eventFeature = new EventFeature(new EventApiClient(
+                httpClient, config, apiDestinationService), this::currentRsn);
+            enabled.add(eventFeature);
         }
         if (config.bingoEnabled())
         {
@@ -203,6 +219,7 @@ public final class ClanHQVerifierPlugin extends Plugin
         features.forEach(ClanHQFeature::shutDown);
         features = Collections.emptyList();
         bingoFeature = null;
+        eventFeature = null;
         if (navigationButton != null)
         {
             clientToolbar.removeNavigation(navigationButton);
@@ -222,6 +239,21 @@ public final class ClanHQVerifierPlugin extends Plugin
             event.getType().name(),
             event.getName(),
             event.getItems());
+    }
+
+    @Subscribe
+    public void onGameStateChanged(GameStateChanged event)
+    {
+        if (eventFeature != null && event.getGameState() == GameState.LOGGED_IN)
+        {
+            eventFeature.refresh();
+        }
+    }
+
+    private String currentRsn()
+    {
+        return client.getLocalPlayer() == null
+            ? null : client.getLocalPlayer().getName();
     }
 
     private void captureEvidence(EvidenceStage stage)

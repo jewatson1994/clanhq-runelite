@@ -5,6 +5,13 @@ first available feature, and Bingo consumes RuneLite's aggregated loot
 adapter. Each feature owns its own panel and can be enabled independently
 without changing the evidence rules used by Rank Review.
 
+## Events
+
+Events connects RuneLite to competitions created with ClanHQ's `/event create`
+command. A player enters the generated event code, and the panel displays the
+event type, randomized or selected target, inclusive dates, and current status.
+When logged in, RuneLite registers the exact active ClanHQ RSN as a participant.
+
 ## Bingo
 
 Bingo is disabled by default. When enabled, it downloads the active board from
