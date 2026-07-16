@@ -155,5 +155,7 @@ submission only posts a staff review and never changes a rank.
 
 Submit Promotion Review sends the versioned evidence payload only after explicit
 player action. ClanHQ authenticates the shared clan code, validates exact active
-Iron Drop membership and the configured next rank, rate-limits duplicates, and
-posts a staff review. It does not update ClanHQ, WOM, or Discord roles.
+Iron Drop membership and the configured next rank, limits each RSN to two
+successful reviews per rolling 24 hours, and posts a staff review. Replaying an
+identical submission does not consume another slot. It does not update ClanHQ,
+WOM, or Discord roles.
