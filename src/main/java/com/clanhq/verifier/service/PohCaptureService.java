@@ -30,7 +30,7 @@ public final class PohCaptureService
         if (client.getVarbitValue(VarbitID.POH_BUILDING_MODE) != 1)
         {
             throw new IllegalStateException(
-                "Enter your own POH in build mode before capturing.");
+                "Enter your POH in build mode.");
         }
         WorldView worldView = client.getTopLevelWorldView();
         if (worldView == null)
