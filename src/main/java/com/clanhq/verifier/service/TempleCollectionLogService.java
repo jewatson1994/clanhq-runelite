@@ -27,7 +27,6 @@ public final class TempleCollectionLogService
     private static final String CATEGORIES = String.join(",",
         "chambers_of_xeric", "theatre_of_blood", "tombs_of_amascut",
         "yama", "doom_of_mokhaiotl");
-    private static final Duration MAX_AGE = Duration.ofHours(24);
     private static final Map<String, String> PAGE_TITLES = pageTitles();
     private final OkHttpClient httpClient;
 
@@ -101,11 +100,6 @@ public final class TempleCollectionLogService
                 "TempleOSRS Collection Log has never been synchronized");
         }
         Instant lastChecked = Instant.ofEpochSecond(checkedEpoch);
-        if (lastChecked.isBefore(now.minus(MAX_AGE)))
-        {
-            return TempleCollectionLogResult.stale(lastChecked);
-        }
-
         JsonObject categories = object(data, "items");
         if (categories == null || !PAGE_TITLES.keySet().stream()
             .allMatch(categories::has))

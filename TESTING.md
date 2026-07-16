@@ -70,8 +70,9 @@ the current build never submits evidence.
   Verify Character. Expected: COX, TOB, TOA, Yama, Doom, and the global obtained
   count are captured without opening the in-game Collection Log.
 - Confirm the status reports how many hours ago TempleOSRS was synchronized.
-- Use data older than 24 hours or an unsynchronized RSN. Expected: no stale
-  items are accepted and the five manual Collection Log buttons appear.
+- Use old synchronized data. Expected: its items are accepted and the sync age
+  is displayed. Use an unsynchronized RSN and confirm the five manual Collection
+  Log buttons appear.
 - For fallback, open each exact in-game page and use its corresponding button.
   Earlier pages must remain in the same session.
 - Confirm raid unique counts combine bank ownership and matching log entries

@@ -6,7 +6,6 @@ import java.time.Instant;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class TempleCollectionLogServiceTest
@@ -38,15 +37,14 @@ public class TempleCollectionLogServiceTest
     }
 
     @Test
-    public void rejectsCollectionLogDataOlderThanTwentyFourHours()
+    public void acceptsOldCollectionLogDataWithoutAnAgeLimit()
     {
         TempleCollectionLogResult result =
             TempleCollectionLogService.parseResponse(response(
-                NOW.minusSeconds(25 * 3600).getEpochSecond()), NOW);
+                NOW.minusSeconds(365L * 24 * 3600).getEpochSecond()), NOW);
 
-        assertEquals(TempleCollectionLogResult.Status.STALE,
-            result.getStatus());
-        assertFalse(result.getEvidence().isCaptured());
+        assertTrue(result.isFresh());
+        assertTrue(result.getEvidence().isCaptured());
     }
 
     @Test

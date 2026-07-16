@@ -9,7 +9,6 @@ public final class TempleCollectionLogResult
     public enum Status
     {
         FRESH,
-        STALE,
         NOT_SYNCED,
         UNAVAILABLE
     }
@@ -33,14 +32,6 @@ public final class TempleCollectionLogResult
     {
         return new TempleCollectionLogResult(Status.FRESH, evidence,
             lastChecked, message);
-    }
-
-    public static TempleCollectionLogResult stale(Instant lastChecked)
-    {
-        return new TempleCollectionLogResult(Status.STALE,
-            CollectionLogEvidence.empty(), lastChecked,
-            "TempleOSRS Collection Log is older than 24 hours; synchronize "
-                + "TempleOSRS and verify again");
     }
 
     public static TempleCollectionLogResult notSynced(String message)

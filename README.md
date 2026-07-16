@@ -14,9 +14,10 @@ entire cumulative rank ladder after each capture. It shows the highest fully
 verified rank, the next rank, that rank's missing requirements, and anything
 that still needs staff review. The three primary actions are Verify Character,
 Capture Bank & Gear, and Capture POH Instance. TempleOSRS supplies COX, TOB,
-TOA, Yama, Doom, and the global obtained-slot count when its data was synced
-within the last 24 hours. Stale, missing, or unavailable TempleOSRS data reveals
-the existing per-page RuneLite capture buttons as fallbacks. Raid pages retain
+TOA, Yama, Doom, and the global obtained-slot count whenever that account has
+been synchronized. The snapshot age is displayed but does not invalidate these
+permanent unlocks. Missing or unavailable TempleOSRS data reveals the existing
+per-page RuneLite capture buttons as fallbacks. Raid pages retain
 acquired and total slot counts and combine with current item evidence without
 double-counting the same unique. Verify Character also reads RuneLite's
 authoritative owned-boat variables and Sailing DB
