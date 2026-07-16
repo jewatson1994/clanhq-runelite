@@ -111,6 +111,8 @@ use **End sessions** in the RuneScape account settings.
 - Reset Session clears all locally accumulated evidence and rank calculations.
 - Evidence from different RSNs cannot be combined in one session.
 - The ClanHQ API destination is configured by each member in RuneLite settings.
+- No ClanHQ destination or clan code is bundled with the public plugin. The
+  connection settings are blank until a member configures them.
 - HTTPS is required except for localhost development; changing settings never submits evidence automatically.
 - TempleOSRS capture retains only the five configured categories, their item
   names/counts, global obtained-slot count, and last-sync time. Manual fallback

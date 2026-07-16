@@ -12,7 +12,7 @@ public final class ApiDestinationService
     {
     }
 
-    public String describe(String configuredUrl, String clanCode)
+    public String describe(String configuredUrl)
     {
         String normalized = normalize(configuredUrl);
         if (normalized == null)
@@ -21,8 +21,20 @@ public final class ApiDestinationService
                 ? "API: Not configured"
                 : "API: Invalid destination";
         }
-        String code = clanCode == null ? "" : clanCode.trim();
-        return "API: " + normalized + (code.isEmpty() ? "" : " [" + code + "]");
+        try
+        {
+            URI uri = new URI(normalized);
+            String destination = uri.getHost();
+            if (uri.getPort() >= 0)
+            {
+                destination += ":" + uri.getPort();
+            }
+            return "Submits to: " + destination;
+        }
+        catch (URISyntaxException exception)
+        {
+            return "API: Invalid destination";
+        }
     }
 
     public String normalize(String configuredUrl)

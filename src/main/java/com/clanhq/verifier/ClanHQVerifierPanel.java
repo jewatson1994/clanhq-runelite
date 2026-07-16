@@ -66,7 +66,7 @@ final class ClanHQVerifierPanel extends PluginPanel
         header.add(new JLabel("ClanHQ Rank Verifier"));
         header.add(Box.createRigidArea(new Dimension(0, 6)));
         header.add(new JLabel("<html>Evidence remains local until submitted.<br>"
-            + "Submission is not connected yet.</html>"));
+            + "Nothing is sent automatically.</html>"));
         header.add(Box.createRigidArea(new Dimension(0, 4)));
         header.add(apiDestinationLabel);
         header.add(Box.createRigidArea(new Dimension(0, 10)));

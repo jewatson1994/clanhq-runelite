@@ -649,7 +649,7 @@ public final class ClanHQVerifierPlugin extends Plugin
         if (panel != null)
         {
             panel.showApiDestination(apiDestinationService.describe(
-                config.apiBaseUrl(), config.clanCode()));
+                config.apiBaseUrl()));
             refreshSubmissionAvailability();
         }
     }

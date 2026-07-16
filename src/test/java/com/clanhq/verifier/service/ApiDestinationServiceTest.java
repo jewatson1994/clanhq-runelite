@@ -29,4 +29,16 @@ public class ApiDestinationServiceTest
         assertNull(service.normalize("https://user:secret@clanhq.example/api"));
         assertNull(service.normalize("https://clanhq.example/api?token=secret"));
     }
+
+    @Test
+    public void describesOnlyTheSubmissionHost()
+    {
+        assertEquals("Submits to: clanhq.example",
+            service.describe("https://clanhq.example/private/path"));
+        assertEquals("Submits to: localhost:8765",
+            service.describe("http://localhost:8765"));
+        assertEquals("API: Not configured", service.describe(" "));
+        assertEquals("API: Invalid destination",
+            service.describe("http://clanhq.example"));
+    }
 }
