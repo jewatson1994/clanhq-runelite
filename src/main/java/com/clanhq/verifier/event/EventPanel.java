@@ -21,6 +21,7 @@ final class EventPanel extends JPanel
     private final JLabel datesLabel = new JLabel("Dates: —");
     private final JLabel statusLabel = new JLabel();
     private final JLabel participationLabel = new JLabel("Participation: —");
+    private final JLabel activityLabel = new JLabel("Activity: Waiting");
     private final JButton refreshButton = new JButton("Refresh Event");
 
     EventPanel(Runnable refreshAction)
@@ -45,6 +46,7 @@ final class EventPanel extends JPanel
         content.add(Box.createRigidArea(new Dimension(0, 8)));
         content.add(statusLabel);
         content.add(participationLabel);
+        content.add(activityLabel);
         add(content, BorderLayout.NORTH);
         showStatus("Configure an event code to begin.");
     }
@@ -77,6 +79,16 @@ final class EventPanel extends JPanel
         datesLabel.setText("Dates: —");
         showStatus(message);
         participationLabel.setText("Participation: —");
+        activityLabel.setText("Activity: Waiting");
+    }
+
+    void showObservation(boolean recorded, String target, String message)
+    {
+        activityLabel.setText(
+            "<html>Activity: " + (recorded ? "✓ " : "✗ ")
+                + escapeHtml(target) + "<br>" + escapeHtml(message)
+                + "</html>"
+        );
     }
 
     void showParticipation(boolean joined, String message, String teamName)

@@ -56,4 +56,19 @@ public final class ClanEventSummary
     public LocalDate getEndDate() { return endDate; }
     public String getStatus() { return status; }
     public String getEventCode() { return eventCode; }
+
+    public boolean isActive()
+    {
+        return "ACTIVE".equals(status);
+    }
+
+    public boolean isSkillEvent()
+    {
+        return eventType.startsWith("SKILL_");
+    }
+
+    public boolean isBossEvent()
+    {
+        return eventType.startsWith("BOSS_");
+    }
 }

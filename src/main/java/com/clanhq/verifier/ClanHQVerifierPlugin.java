@@ -41,6 +41,7 @@ import javax.swing.SwingUtilities;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.events.GameStateChanged;
+import net.runelite.api.events.StatChanged;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -241,15 +242,33 @@ public final class ClanHQVerifierPlugin extends Plugin
     @Subscribe
     public void onLootReceived(LootReceived event)
     {
-        if (bingoFeature == null || client.getLocalPlayer() == null)
+        if (client.getLocalPlayer() == null)
         {
             return;
         }
-        bingoFeature.onLoot(
-            client.getLocalPlayer().getName(),
-            event.getType().name(),
-            event.getName(),
-            event.getItems());
+        if (bingoFeature != null)
+        {
+            bingoFeature.onLoot(
+                client.getLocalPlayer().getName(),
+                event.getType().name(),
+                event.getName(),
+                event.getItems());
+        }
+        if (eventFeature != null)
+        {
+            eventFeature.onLoot(event.getName());
+        }
+    }
+
+    @Subscribe
+    public void onStatChanged(StatChanged event)
+    {
+        if (eventFeature != null)
+        {
+            eventFeature.onSkillExperience(
+                event.getSkill().getName(),
+                event.getXp());
+        }
     }
 
     @Subscribe

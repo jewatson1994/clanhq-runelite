@@ -7,6 +7,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+import java.time.Instant;
+import java.util.UUID;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.HttpUrl;
@@ -141,6 +143,68 @@ public final class EventApiClient
                 {
                     future.complete(new EventJoinResult(false,
                         "ClanHQ returned an invalid join response.", null));
+                }
+            }
+        });
+        return future;
+    }
+
+    public CompletableFuture<EventObservationResult> submitObservation(
+        ClanEventSummary event,
+        String rsn,
+        String metricType,
+        String target,
+        int value)
+    {
+        CompletableFuture<EventObservationResult> future =
+            new CompletableFuture<>();
+        String baseUrl = destinationService.normalize(config.apiBaseUrl());
+        String clanCode = normalized(config.clanCode());
+        if (baseUrl == null || clanCode.isEmpty() || normalized(rsn).isEmpty())
+        {
+            future.complete(new EventObservationResult(false,
+                "ClanHQ connection is not ready."));
+            return future;
+        }
+        JsonObject payload = new JsonObject();
+        payload.addProperty("schema_version", 1);
+        payload.addProperty("submission_id", UUID.randomUUID().toString());
+        payload.addProperty("event_code", event.getEventCode());
+        payload.addProperty("rsn", rsn.trim());
+        payload.addProperty("metric_type", metricType);
+        payload.addProperty("target", target);
+        payload.addProperty("value", value);
+        payload.addProperty("observed_at", Instant.now().toString());
+        Request request = new Request.Builder()
+            .url(baseUrl + "/api/v1/events/observations")
+            .header("X-ClanHQ-Code", clanCode)
+            .post(RequestBody.create(JSON, payload.toString()))
+            .build();
+        httpClient.newCall(request).enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException exception)
+            {
+                future.complete(new EventObservationResult(false,
+                    "ClanHQ could not record event progress."));
+            }
+
+            @Override
+            public void onResponse(Call call, Response response)
+                throws IOException
+            {
+                try (Response closeable = response)
+                {
+                    String body = response.body() == null
+                        ? "" : response.body().string();
+                    future.complete(new EventObservationResult(
+                        response.isSuccessful(),
+                        responseMessage(body, response.code())));
+                }
+                catch (IOException | RuntimeException exception)
+                {
+                    future.complete(new EventObservationResult(false,
+                        "ClanHQ returned an invalid progress response."));
                 }
             }
         });

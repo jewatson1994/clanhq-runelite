@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class ClanEventSummaryTest
 {
@@ -30,5 +32,8 @@ public class ClanEventSummaryTest
         assertEquals(LocalDate.of(2026, 7, 24), event.getEndDate());
         assertEquals("SCHEDULED", event.getStatus());
         assertEquals("SOTW-ABC123", event.getEventCode());
+        assertTrue(event.isSkillEvent());
+        assertFalse(event.isBossEvent());
+        assertFalse(event.isActive());
     }
 }
