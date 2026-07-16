@@ -4,6 +4,7 @@ import com.clanhq.verifier.feature.ClanHQFeature;
 import com.clanhq.verifier.feature.RankReviewFeature;
 import com.clanhq.verifier.bingo.BingoFeature;
 import com.clanhq.verifier.bingo.transport.BingoApiClient;
+import com.clanhq.verifier.bingo.service.BingoScreenshotService;
 import com.clanhq.verifier.event.EventFeature;
 import com.clanhq.verifier.event.transport.EventApiClient;
 import com.clanhq.verifier.model.VerificationSnapshot;
@@ -34,6 +35,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ScheduledExecutorService;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
 import net.runelite.api.Client;
@@ -48,6 +50,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.loottracker.LootReceived;
 import net.runelite.client.plugins.loottracker.LootTrackerPlugin;
 import net.runelite.client.ui.ClientToolbar;
+import net.runelite.client.ui.DrawManager;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.events.ConfigChanged;
 import okhttp3.OkHttpClient;
@@ -76,6 +79,12 @@ public final class ClanHQVerifierPlugin extends Plugin
 
     @Inject
     private OkHttpClient httpClient;
+
+    @Inject
+    private DrawManager drawManager;
+
+    @Inject
+    private ScheduledExecutorService executor;
 
     @Inject
     private ClientToolbar clientToolbar;
@@ -199,8 +208,10 @@ public final class ClanHQVerifierPlugin extends Plugin
         }
         if (config.bingoEnabled())
         {
-            bingoFeature = new BingoFeature(new BingoApiClient(
-                httpClient, config, apiDestinationService));
+            bingoFeature = new BingoFeature(
+                new BingoApiClient(httpClient, config, apiDestinationService),
+                new BingoScreenshotService(drawManager, executor),
+                config::bingoScreenshotsEnabled);
             enabled.add(bingoFeature);
         }
         features = enabled;

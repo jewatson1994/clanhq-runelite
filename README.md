@@ -23,6 +23,12 @@ owns the item list, validates active membership, and sends accepted drops to the
 configured Discord drops channel. Arbitrary inventory changes are never treated
 as drops.
 
+By default, each accepted Bingo drop includes a gameplay screenshot captured
+from RuneLite's next rendered frame. The image is resized and watermarked with
+the event name/code, RSN, drop, quantity, and UTC timestamp, then uploaded from
+memory without saving a local screenshot. Team events are routed by ClanHQ to
+the server-configured team channel.
+
 ## Rank Review
 
 ClanHQ Rank Review collects transparent, player-initiated evidence for an Iron

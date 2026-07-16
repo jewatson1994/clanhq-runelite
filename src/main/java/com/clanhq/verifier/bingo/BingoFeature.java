@@ -4,9 +4,12 @@ import com.clanhq.verifier.bingo.model.BingoDrop;
 import com.clanhq.verifier.bingo.model.BingoItem;
 import com.clanhq.verifier.bingo.model.BingoManifest;
 import com.clanhq.verifier.bingo.transport.BingoApiClient;
+import com.clanhq.verifier.bingo.service.BingoScreenshotService;
 import com.clanhq.verifier.feature.ClanHQFeature;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.BooleanSupplier;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
 import net.runelite.client.game.ItemStack;
@@ -15,12 +18,19 @@ public final class BingoFeature implements ClanHQFeature
 {
     private final BingoApiClient apiClient;
     private final BingoPanel panel;
+    private final BingoScreenshotService screenshotService;
+    private final BooleanSupplier screenshotsEnabled;
     private volatile BingoManifest manifest;
     private volatile boolean running;
 
-    public BingoFeature(BingoApiClient apiClient)
+    public BingoFeature(
+        BingoApiClient apiClient,
+        BingoScreenshotService screenshotService,
+        BooleanSupplier screenshotsEnabled)
     {
         this.apiClient = apiClient;
+        this.screenshotService = screenshotService;
+        this.screenshotsEnabled = screenshotsEnabled;
         this.panel = new BingoPanel(this::refreshManifest);
     }
 
@@ -109,7 +119,13 @@ public final class BingoFeature implements ClanHQFeature
                 Instant.now());
             SwingUtilities.invokeLater(() -> panel.showDetected(
                 item.getName(), drop.getQuantity(), drop.getSourceName()));
-            apiClient.submit(drop).thenAccept(result ->
+            CompletableFuture<byte[]> screenshot =
+                screenshotsEnabled.getAsBoolean()
+                    ? screenshotService.capture(drop, active.getName())
+                        .handle((bytes, error) -> error == null ? bytes : null)
+                    : CompletableFuture.completedFuture(null);
+            screenshot.thenCompose(bytes -> apiClient.submit(drop, bytes))
+                .thenAccept(result ->
                 SwingUtilities.invokeLater(() ->
                 {
                     if (running)

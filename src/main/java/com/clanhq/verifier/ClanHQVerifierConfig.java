@@ -49,6 +49,17 @@ public interface ClanHQVerifierConfig extends Config
         return false;
     }
 
+    @ConfigItem(
+        keyName = "bingoScreenshotsEnabled",
+        name = "Bingo screenshots",
+        description = "Attach a watermarked gameplay screenshot to Bingo drops",
+        section = FEATURES_SECTION,
+        position = 3)
+    default boolean bingoScreenshotsEnabled()
+    {
+        return true;
+    }
+
     @ConfigSection(
         name = "ClanHQ connection",
         description = "Where review evidence will be submitted",

@@ -11,6 +11,8 @@ import java.util.concurrent.CompletableFuture;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
+import okhttp3.HttpUrl;
+import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -20,6 +22,7 @@ public final class BingoApiClient
 {
     private static final MediaType JSON =
         MediaType.parse("application/json; charset=utf-8");
+    private static final MediaType JPEG = MediaType.parse("image/jpeg");
     private final OkHttpClient httpClient;
     private final ClanHQVerifierConfig config;
     private final ApiDestinationService destinationService;
@@ -44,7 +47,11 @@ public final class BingoApiClient
                 "Configure the ClanHQ API URL and clan code first."));
             return future;
         }
-        Request request = request(baseUrl + "/api/v1/bingo/manifest")
+        HttpUrl url = HttpUrl.parse(baseUrl + "/api/v1/bingo/manifest")
+            .newBuilder()
+            .addQueryParameter("code", config.eventCode().trim())
+            .build();
+        Request request = request(url.toString())
             .get()
             .build();
         httpClient.newCall(request).enqueue(new Callback()
@@ -86,6 +93,13 @@ public final class BingoApiClient
 
     public CompletableFuture<BingoTransportResult> submit(BingoDrop drop)
     {
+        return submit(drop, null);
+    }
+
+    public CompletableFuture<BingoTransportResult> submit(
+        BingoDrop drop,
+        byte[] screenshot)
+    {
         CompletableFuture<BingoTransportResult> future =
             new CompletableFuture<>();
         String baseUrl = configuredBaseUrl();
@@ -95,8 +109,21 @@ public final class BingoApiClient
                 "Configure the ClanHQ API URL and clan code first."));
             return future;
         }
+        RequestBody body = screenshot == null
+            ? RequestBody.create(JSON, payload(drop).toString())
+            : new MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart(
+                    "payload",
+                    null,
+                    RequestBody.create(JSON, payload(drop).toString()))
+                .addFormDataPart(
+                    "screenshot",
+                    "bingo-drop.jpg",
+                    RequestBody.create(JPEG, screenshot))
+                .build();
         Request request = request(baseUrl + "/api/v1/bingo/drops")
-            .post(RequestBody.create(JSON, payload(drop).toString()))
+            .post(body)
             .build();
         httpClient.newCall(request).enqueue(new Callback()
         {
@@ -140,7 +167,10 @@ public final class BingoApiClient
     {
         String baseUrl = destinationService.normalize(config.apiBaseUrl());
         String code = config.clanCode() == null ? "" : config.clanCode().trim();
-        return baseUrl == null || code.isEmpty() ? null : baseUrl;
+        String eventCode = config.eventCode() == null
+            ? "" : config.eventCode().trim();
+        return baseUrl == null || code.isEmpty() || eventCode.isEmpty()
+            ? null : baseUrl;
     }
 
     static JsonObject payload(BingoDrop drop)
