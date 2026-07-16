@@ -15,7 +15,10 @@ submission only posts a staff review and never changes a rank.
 
 - Configure a localhost development API URL and matching clan code, or use the
   HTTPS development endpoint. Expected: Submit Promotion Review remains disabled
-  until every required evidence source is captured.
+  until Verify Character and Capture Bank & Gear are complete.
+- Leave POH uncaptured for a lower-rank applicant. Expected: submission remains
+  available. A Dragon review must still be rejected if Maxed POH evidence is
+  missing.
 - Submit an active Iron Drop RSN whose next rank has no missing or uncaptured
   requirements. Expected: ClanHQ posts one embed in the configured promotions
   channel and RuneLite reports success.

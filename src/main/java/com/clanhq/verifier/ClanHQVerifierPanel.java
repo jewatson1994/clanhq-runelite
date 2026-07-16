@@ -180,6 +180,7 @@ final class ClanHQVerifierPanel extends PluginPanel
     void setStageBusy(EvidenceStage stage)
     {
         setControlsEnabled(false);
+        submitButton.setEnabled(false);
         showStageStatus(stage, EvidenceStageStatus.CAPTURING);
         setStatusText("Capturing " + stage.getDisplayName() + "...");
     }

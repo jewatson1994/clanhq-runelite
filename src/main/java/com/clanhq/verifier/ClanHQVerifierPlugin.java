@@ -23,6 +23,9 @@ import com.google.inject.Provides;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Set;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
 import net.runelite.client.callback.ClientThread;
@@ -41,6 +44,10 @@ import okhttp3.OkHttpClient;
     tags = {"clan", "gear", "rank", "verification"})
 public final class ClanHQVerifierPlugin extends Plugin
 {
+    private static final Set<EvidenceStage> CORE_SUBMISSION_STAGES =
+        Collections.unmodifiableSet(EnumSet.of(
+            EvidenceStage.CHARACTER,
+            EvidenceStage.GEAR));
     private static final EvidenceStage[] TEMPLE_LOG_STAGES = {
         EvidenceStage.COX_LOG, EvidenceStage.TOB_LOG,
         EvidenceStage.TOA_LOG, EvidenceStage.YAMA_LOG,
@@ -650,7 +657,8 @@ public final class ClanHQVerifierPlugin extends Plugin
     private void submitVerification()
     {
         if (capturedSnapshot == null || verificationSession == null
-            || !verificationSession.isReadyForSubmission())
+            || !verificationSession.isReadyForSubmission(
+                CORE_SUBMISSION_STAGES))
         {
             panel.showMessage("Capture every required evidence source first.");
             return;
@@ -681,12 +689,13 @@ public final class ClanHQVerifierPlugin extends Plugin
             && config.clanCode() != null
             && !config.clanCode().trim().isEmpty();
         boolean ready = verificationSession != null
-            && verificationSession.isReadyForSubmission()
+            && verificationSession.isReadyForSubmission(
+                CORE_SUBMISSION_STAGES)
             && capturedSnapshot != null;
         String reason = !configured
             ? "Configure the ClanHQ API URL and clan code"
             : !ready
-                ? "Capture every required evidence source first"
+                ? "Verify Character and Capture Bank & Gear first"
                 : reviewSubmitted
                     ? "A review was already submitted for this session"
                     : "Submit to the ClanHQ promotions feed";

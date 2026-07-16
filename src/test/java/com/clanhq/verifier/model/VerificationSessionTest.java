@@ -23,6 +23,22 @@ public class VerificationSessionTest
         assertTrue(session.isReadyForSubmission());
     }
 
+    @Test
+    public void allowsSubmissionWhenOptionalPohIsNotCaptured()
+    {
+        VerificationSession session = new VerificationSession(
+            EnumSet.of(EvidenceStage.CHARACTER, EvidenceStage.GEAR,
+                EvidenceStage.POH));
+        session.bindRsn("Mr Dimples");
+        session.setStatus(EvidenceStage.CHARACTER,
+            EvidenceStageStatus.CAPTURED);
+        session.setStatus(EvidenceStage.GEAR, EvidenceStageStatus.CAPTURED);
+
+        assertTrue(session.isReadyForSubmission(EnumSet.of(
+            EvidenceStage.CHARACTER, EvidenceStage.GEAR)));
+        assertFalse(session.isReadyForSubmission());
+    }
+
     @Test(expected = IllegalStateException.class)
     public void rejectsEvidenceFromAnotherCharacter()
     {

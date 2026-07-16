@@ -45,7 +45,12 @@ public final class VerificationSession
 
     public boolean isReadyForSubmission()
     {
-        return rsn != null && requiredStages.stream()
+        return isReadyForSubmission(requiredStages);
+    }
+
+    public boolean isReadyForSubmission(Set<EvidenceStage> submissionStages)
+    {
+        return rsn != null && Objects.requireNonNull(submissionStages).stream()
             .allMatch(stage -> statuses.get(stage).isSubmissionReady());
     }
 }

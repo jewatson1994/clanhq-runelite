@@ -14,8 +14,9 @@ The checklist covers every Iron Drop progression rank from Opal through
 Zenyte. A single screen exposes every evidence collector and recalculates the
 entire cumulative rank ladder after each capture. It shows the highest fully
 verified rank, the next rank, that rank's missing requirements, and anything
-that still needs staff review. The three primary actions are Verify Character,
-Capture Bank & Gear, and Capture POH Instance. TempleOSRS supplies COX, TOB,
+that still needs staff review. The two core actions are Verify Character and
+Capture Bank & Gear. Capture POH Instance is rank-dependent and is needed only
+when the requested rank requires Maxed POH evidence. TempleOSRS supplies COX, TOB,
 TOA, Yama, Doom, and the global obtained-slot count whenever that account has
 been synchronized. The snapshot age is displayed but does not invalidate these
 permanent unlocks. Missing or unavailable TempleOSRS data reveals the existing
