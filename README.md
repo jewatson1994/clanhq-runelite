@@ -1,4 +1,10 @@
-# ClanHQ Rank Review
+# ClanHQ
+
+ClanHQ is a modular RuneLite shell for opt-in clan tools. Rank Review is the
+first available feature. Each feature owns its own panel and can be enabled
+independently without changing the evidence rules used by Rank Review.
+
+## Rank Review
 
 ClanHQ Rank Review collects transparent, player-initiated evidence for an Iron
 Drop rank review. It calculates a checklist locally and can submit that

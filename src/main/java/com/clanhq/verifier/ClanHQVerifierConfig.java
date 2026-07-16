@@ -11,6 +11,23 @@ public interface ClanHQVerifierConfig extends Config
     String GROUP = "clanhqVerifier";
 
     @ConfigSection(
+        name = "Features",
+        description = "ClanHQ tools available in the side panel",
+        position = -1)
+    String FEATURES_SECTION = "features";
+
+    @ConfigItem(
+        keyName = "rankReviewEnabled",
+        name = "Rank Review",
+        description = "Show the Iron Drop rank-review feature",
+        section = FEATURES_SECTION,
+        position = 0)
+    default boolean rankReviewEnabled()
+    {
+        return true;
+    }
+
+    @ConfigSection(
         name = "ClanHQ connection",
         description = "Where review evidence will be submitted",
         position = 0)

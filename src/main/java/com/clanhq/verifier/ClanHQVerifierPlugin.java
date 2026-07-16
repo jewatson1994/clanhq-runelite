@@ -1,5 +1,7 @@
 package com.clanhq.verifier;
 
+import com.clanhq.verifier.feature.ClanHQFeature;
+import com.clanhq.verifier.feature.RankReviewFeature;
 import com.clanhq.verifier.model.VerificationSnapshot;
 import com.clanhq.verifier.model.ProgressionEvaluation;
 import com.clanhq.verifier.model.EvidenceStage;
@@ -24,7 +26,9 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.Collections;
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
@@ -39,9 +43,9 @@ import net.runelite.client.events.ConfigChanged;
 import okhttp3.OkHttpClient;
 
 @PluginDescriptor(
-    name = "ClanHQ Rank Review",
-    description = "Capture account evidence for a staff-reviewed clan rank request",
-    tags = {"clan", "gear", "rank", "verification"})
+    name = "ClanHQ",
+    description = "Clan tools including rank review and event tracking",
+    tags = {"clan", "gear", "rank", "verification", "bingo"})
 public final class ClanHQVerifierPlugin extends Plugin
 {
     private static final Set<EvidenceStage> CORE_SUBMISSION_STAGES =
@@ -90,6 +94,7 @@ public final class ClanHQVerifierPlugin extends Plugin
     private TempleCollectionLogService templeCollectionLogService;
 
     private ClanHQVerifierPanel panel;
+    private ClanHQPanel shellPanel;
     private NavigationButton navigationButton;
     private VerificationSession verificationSession;
     private VerificationSnapshot capturedSnapshot;
@@ -118,12 +123,18 @@ public final class ClanHQVerifierPlugin extends Plugin
             this::captureEvidence,
             this::startSession,
             this::submitVerification);
+        List<ClanHQFeature> features = new ArrayList<>();
+        if (config.rankReviewEnabled())
+        {
+            features.add(new RankReviewFeature(panel));
+        }
+        shellPanel = new ClanHQPanel(features);
         refreshApiDestination();
         startSession();
         navigationButton = NavigationButton.builder()
-            .tooltip("ClanHQ Rank Review")
+            .tooltip("ClanHQ")
             .icon(createIcon())
-            .panel(panel)
+            .panel(shellPanel)
             .build();
 
         clientToolbar.addNavigation(navigationButton);
@@ -137,6 +148,7 @@ public final class ClanHQVerifierPlugin extends Plugin
         raidKillCounts = null;
         clientToolbar.removeNavigation(navigationButton);
         navigationButton = null;
+        shellPanel = null;
         panel = null;
     }
 
