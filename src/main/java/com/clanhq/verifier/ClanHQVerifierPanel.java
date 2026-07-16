@@ -7,6 +7,7 @@ import com.clanhq.verifier.model.RequirementStatus;
 import com.clanhq.verifier.model.VerificationSnapshot;
 import com.clanhq.verifier.transport.VerificationTransportResult;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.util.EnumMap;
 import java.util.Map;
@@ -250,8 +251,32 @@ final class ClanHQVerifierPanel extends PluginPanel
         JPanel row = verticalPanel();
         JButton button = new JButton(buttonLabel(stage));
         JLabel status = new JLabel(EvidenceStageStatus.NOT_CAPTURED.getDisplayText());
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        button.setAlignmentX(Component.LEFT_ALIGNMENT);
+        status.setAlignmentX(Component.LEFT_ALIGNMENT);
         button.addActionListener(event -> captureAction.accept(stage));
-        row.add(button);
+        if (stage == EvidenceStage.POH)
+        {
+            JPanel buttonRow = new JPanel();
+            buttonRow.setLayout(new BoxLayout(buttonRow, BoxLayout.X_AXIS));
+            buttonRow.setBackground(ColorScheme.DARK_GRAY_COLOR);
+            buttonRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+            JLabel optional = new JLabel("(Optional)");
+            optional.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+            optional.setFont(optional.getFont().deriveFont(
+                optional.getFont().getSize2D() - 1.0f));
+            optional.setToolTipText(
+                "Required only when the target rank needs Maxed POH evidence");
+            buttonRow.add(button);
+            buttonRow.add(Box.createRigidArea(new Dimension(6, 0)));
+            buttonRow.add(optional);
+            buttonRow.setMaximumSize(buttonRow.getPreferredSize());
+            row.add(buttonRow);
+        }
+        else
+        {
+            row.add(button);
+        }
         row.add(status);
         row.add(Box.createRigidArea(new Dimension(0, 6)));
         stageRows.put(stage, row);
@@ -272,6 +297,7 @@ final class ClanHQVerifierPanel extends PluginPanel
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
         return panel;
     }
 
@@ -314,7 +340,7 @@ final class ClanHQVerifierPanel extends PluginPanel
             case TOA_LOG: return "Capture TOA Log";
             case YAMA_LOG: return "Capture Yama Log";
             case DOOM_LOG: return "Capture Doom Log";
-            case POH: return "Capture POH Instance";
+            case POH: return "Capture POH";
             case BOAT: return "Capture Boat";
             default: throw new IllegalArgumentException("Unknown evidence stage");
         }
