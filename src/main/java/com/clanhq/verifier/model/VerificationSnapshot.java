@@ -3,6 +3,8 @@ package com.clanhq.verifier.model;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -26,6 +28,7 @@ public final class VerificationSnapshot
     private PohEvidence pohEvidence = PohEvidence.notCaptured();
     private BoatEvidence boatEvidence = BoatEvidence.notCaptured();
     private boolean grandmasterCombatAchievements;
+    private Map<String, Integer> accountMetrics = Collections.emptyMap();
 
     public VerificationSnapshot(
         String rsn,
@@ -156,6 +159,19 @@ public final class VerificationSnapshot
         return grandmasterCombatAchievements;
     }
 
+    public Map<String, Integer> getAccountMetrics()
+    {
+        return accountMetrics;
+    }
+
+    public VerificationSnapshot withAccountMetrics(Map<String, Integer> metrics)
+    {
+        VerificationSnapshot copy = withRaidKillCounts(raidKillCounts);
+        copy.accountMetrics = Collections.unmodifiableMap(
+            new LinkedHashMap<>(Objects.requireNonNull(metrics)));
+        return copy;
+    }
+
     public VerificationSnapshot withRaidKillCounts(RaidKillCounts counts)
     {
         VerificationSnapshot copy = new VerificationSnapshot(rsn, totalLevel, combatLevel, items,
@@ -166,6 +182,7 @@ public final class VerificationSnapshot
         copy.pohEvidence = pohEvidence;
         copy.boatEvidence = boatEvidence;
         copy.grandmasterCombatAchievements = grandmasterCombatAchievements;
+        copy.accountMetrics = accountMetrics;
         return copy;
     }
 
@@ -214,6 +231,7 @@ public final class VerificationSnapshot
         copy.boatEvidence = boatEvidence.merge(evidence.boatEvidence);
         copy.grandmasterCombatAchievements =
             evidence.grandmasterCombatAchievements;
+        copy.accountMetrics = evidence.accountMetrics;
         return copy;
     }
 
@@ -236,6 +254,7 @@ public final class VerificationSnapshot
         copy.boatEvidence = boatEvidence.merge(evidence.boatEvidence);
         copy.grandmasterCombatAchievements =
             evidence.grandmasterCombatAchievements;
+        copy.accountMetrics = evidence.accountMetrics;
         return copy;
     }
 
@@ -256,6 +275,7 @@ public final class VerificationSnapshot
         copy.pohEvidence = pohEvidence;
         copy.boatEvidence = boatEvidence;
         copy.grandmasterCombatAchievements = grandmasterCombatAchievements;
+        copy.accountMetrics = accountMetrics;
         return copy;
     }
 

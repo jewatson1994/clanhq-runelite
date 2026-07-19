@@ -11,6 +11,8 @@ public interface ClanHQFeature
 
     String getDescription();
 
+    String getNavigationIconResource();
+
     JComponent getPanel();
 
     default void startUp()

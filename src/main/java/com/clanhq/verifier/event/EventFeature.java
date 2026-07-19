@@ -41,6 +41,12 @@ public final class EventFeature implements ClanHQFeature
     }
 
     @Override
+    public String getNavigationIconResource()
+    {
+        return "/com/clanhq/verifier/icons/events.png";
+    }
+
+    @Override
     public String getDescription()
     {
         return "View the ClanHQ event associated with an event code.";

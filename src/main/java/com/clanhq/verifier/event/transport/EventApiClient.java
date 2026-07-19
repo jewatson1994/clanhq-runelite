@@ -38,12 +38,12 @@ public final class EventApiClient
     {
         CompletableFuture<EventLookupResult> future = new CompletableFuture<>();
         String baseUrl = destinationService.normalize(config.apiBaseUrl());
-        String clanCode = normalized(config.clanCode());
+        String token = normalized(config.installationToken());
         String eventCode = normalized(config.eventCode());
-        if (baseUrl == null || clanCode.isEmpty() || eventCode.isEmpty())
+        if (baseUrl == null || token.isEmpty() || eventCode.isEmpty())
         {
             future.complete(new EventLookupResult(null,
-                "Configure the API URL, clan code, and event code."));
+                "Configure the API URL, installation token, and event code."));
             return future;
         }
         HttpUrl url = HttpUrl.parse(baseUrl + "/api/v1/events/current")
@@ -52,7 +52,7 @@ public final class EventApiClient
             .build();
         Request request = new Request.Builder()
             .url(url)
-            .header("X-ClanHQ-Code", clanCode)
+            .header("Authorization", "Bearer " + token)
             .get()
             .build();
         httpClient.newCall(request).enqueue(new Callback()
@@ -96,21 +96,28 @@ public final class EventApiClient
         ClanEventSummary event,
         String rsn)
     {
+        return joinEventCode(event.getEventCode(), rsn);
+    }
+
+    public CompletableFuture<EventJoinResult> joinEventCode(
+        String eventCode,
+        String rsn)
+    {
         CompletableFuture<EventJoinResult> future = new CompletableFuture<>();
         String baseUrl = destinationService.normalize(config.apiBaseUrl());
-        String clanCode = normalized(config.clanCode());
-        if (baseUrl == null || clanCode.isEmpty() || normalized(rsn).isEmpty())
+        String token = normalized(config.installationToken());
+        if (baseUrl == null || token.isEmpty() || normalized(rsn).isEmpty())
         {
             future.complete(new EventJoinResult(false,
                 "Log in and configure the ClanHQ connection first.", null));
             return future;
         }
         JsonObject payload = new JsonObject();
-        payload.addProperty("event_code", event.getEventCode());
+        payload.addProperty("event_code", eventCode);
         payload.addProperty("rsn", rsn.trim());
         Request request = new Request.Builder()
             .url(baseUrl + "/api/v1/events/join")
-            .header("X-ClanHQ-Code", clanCode)
+            .header("Authorization", "Bearer " + token)
             .post(RequestBody.create(JSON, payload.toString()))
             .build();
         httpClient.newCall(request).enqueue(new Callback()
@@ -159,8 +166,8 @@ public final class EventApiClient
         CompletableFuture<EventObservationResult> future =
             new CompletableFuture<>();
         String baseUrl = destinationService.normalize(config.apiBaseUrl());
-        String clanCode = normalized(config.clanCode());
-        if (baseUrl == null || clanCode.isEmpty() || normalized(rsn).isEmpty())
+        String token = normalized(config.installationToken());
+        if (baseUrl == null || token.isEmpty() || normalized(rsn).isEmpty())
         {
             future.complete(new EventObservationResult(false,
                 "ClanHQ connection is not ready."));
@@ -177,7 +184,7 @@ public final class EventApiClient
         payload.addProperty("observed_at", Instant.now().toString());
         Request request = new Request.Builder()
             .url(baseUrl + "/api/v1/events/observations")
-            .header("X-ClanHQ-Code", clanCode)
+            .header("Authorization", "Bearer " + token)
             .post(RequestBody.create(JSON, payload.toString()))
             .build();
         httpClient.newCall(request).enqueue(new Callback()

@@ -4,7 +4,6 @@ import com.clanhq.verifier.model.EvidenceSource;
 import com.clanhq.verifier.model.DiaryProgress;
 import com.clanhq.verifier.model.ObservedItem;
 import com.clanhq.verifier.model.VerificationSnapshot;
-import com.clanhq.verifier.rules.RankItemCatalog;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -27,18 +26,13 @@ import net.runelite.api.gameval.VarPlayerID;
 public final class LocalPlayerSnapshotService
 {
     private final Client client;
-    private final RankItemCatalog rankItemCatalog;
-
     @Inject
-    public LocalPlayerSnapshotService(
-        Client client,
-        RankItemCatalog rankItemCatalog)
+    public LocalPlayerSnapshotService(Client client)
     {
         this.client = client;
-        this.rankItemCatalog = rankItemCatalog;
     }
 
-    public VerificationSnapshot captureItemsEvidence()
+    public VerificationSnapshot captureCompleteItemsEvidence()
     {
         Player player = requireLoggedInPlayer();
         net.runelite.api.widgets.Widget bankFrame = client.getWidget(
@@ -84,7 +78,24 @@ public final class LocalPlayerSnapshotService
             com.clanhq.verifier.model.RaidKillCounts.unavailable("Not fetched"),
             client.getVarpValue(VarPlayerID.COLLECTION_COUNT))
             .withGrandmasterCombatAchievements(client.getVarbitValue(
-                VarbitID.CA_TIER_STATUS_GRANDMASTER) > 0);
+                VarbitID.CA_TIER_STATUS_GRANDMASTER) > 0)
+            .withAccountMetrics(captureBingoMetrics());
+    }
+
+    private Map<String, Integer> captureBingoMetrics()
+    {
+        Map<String, Integer> metrics = new LinkedHashMap<>();
+        metrics.put("wintertodt_reward_points",
+            Math.max(0, client.getVarbitValue(VarbitID.WINT_REWARD_POOL)));
+        metrics.put("tempoross_reward_permits",
+            Math.max(0, client.getVarbitValue(
+                VarbitID.TEMPOROSS_REWARDPERMITS)));
+        int elemental = Math.max(0,
+            client.getVarpValue(VarPlayerID.TOTE_PRIMARY));
+        int catalytic = Math.max(0,
+            client.getVarpValue(VarPlayerID.TOTE_SECONDARY));
+        metrics.put("gotr_reward_searches", Math.min(elemental, catalytic));
+        return metrics;
     }
 
     private boolean isPietyUnlocked()
@@ -129,21 +140,26 @@ public final class LocalPlayerSnapshotService
             }
 
             String itemName = client.getItemDefinition(item.getId()).getName();
-            if (source == EvidenceSource.BANK
-                && !rankItemCatalog.isRelevant(item.getId(), itemName))
-            {
-                continue;
-            }
-
             ObservedItem observedItem = new ObservedItem(
                 item.getId(),
                 itemName,
                 item.getQuantity(),
                 source);
 
-            observedItems.put(
-                source.name() + ':' + item.getId(),
-                observedItem);
+            String key = source.name() + ':' + item.getId();
+            ObservedItem existing = observedItems.get(key);
+            if (existing == null)
+            {
+                observedItems.put(key, observedItem);
+            }
+            else
+            {
+                observedItems.put(key, new ObservedItem(
+                    item.getId(),
+                    itemName,
+                    existing.getQuantity() + item.getQuantity(),
+                    source));
+            }
         }
     }
 

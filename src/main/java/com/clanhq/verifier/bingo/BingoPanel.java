@@ -18,12 +18,18 @@ final class BingoPanel extends JPanel
 {
     private static final int WRAP_WIDTH = 190;
     private final JLabel eventLabel = new JLabel("Event: Not loaded");
-    private final JLabel itemCountLabel = new JLabel("Eligible drops: 0");
+    private final JLabel participationLabel = new JLabel("Participation: —");
+    private final JLabel teamLabel = new JLabel("Team: Unassigned");
+    private final JLabel boardLabel = new JLabel("Board: Not loaded");
+    private final JLabel trackingLabel = new JLabel("Drop tracking: Inactive");
+    private final JLabel characterCheckLabel = new JLabel(
+        "Character check: Not submitted");
     private final JLabel statusLabel = new JLabel();
     private final JTextArea activity = new JTextArea();
     private final JButton refreshButton = new JButton("Refresh Bingo Board");
+    private final JButton characterSubmitButton = new JButton("Character Submit");
 
-    BingoPanel(Runnable refreshAction)
+    BingoPanel(Runnable refreshAction, Runnable characterSubmitAction)
     {
         setLayout(new BorderLayout(0, 8));
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -32,14 +38,23 @@ final class BingoPanel extends JPanel
         JPanel header = verticalPanel();
         header.add(new JLabel("ClanHQ Bingo"));
         header.add(Box.createRigidArea(new Dimension(0, 6)));
-        header.add(new JLabel("<html>Eligible RuneLite Loot Tracker drops are "
-            + "sent automatically.</html>"));
+        header.add(new JLabel("<html>Enter the code identified with the event. "
+            + "Please reach out to Staff for support.</html>"));
         header.add(Box.createRigidArea(new Dimension(0, 8)));
         header.add(eventLabel);
-        header.add(itemCountLabel);
+        header.add(participationLabel);
+        header.add(teamLabel);
+        header.add(boardLabel);
+        header.add(trackingLabel);
+        header.add(characterCheckLabel);
         header.add(Box.createRigidArea(new Dimension(0, 8)));
         refreshButton.addActionListener(event -> refreshAction.run());
         header.add(refreshButton);
+        header.add(Box.createRigidArea(new Dimension(0, 6)));
+        characterSubmitButton.addActionListener(
+            event -> characterSubmitAction.run());
+        characterSubmitButton.setEnabled(false);
+        header.add(characterSubmitButton);
         header.add(Box.createRigidArea(new Dimension(0, 8)));
         header.add(statusLabel);
 
@@ -70,16 +85,39 @@ final class BingoPanel extends JPanel
     void showManifest(BingoManifest manifest)
     {
         refreshButton.setEnabled(true);
+        characterSubmitButton.setEnabled(true);
         eventLabel.setText("Event: " + manifest.getName());
-        itemCountLabel.setText("Eligible drops: " + manifest.getItems().size());
-        showStatus("Tracking eligible loot and reward events.");
+        boardLabel.setText("Board: Loaded (" + manifest.getItems().size()
+            + " tracked items/tasks)");
+        trackingLabel.setText("Drop tracking: Active");
+        characterCheckLabel.setText("Character check: "
+            + manifest.getCharacterCheck().getDisplayStatus());
+        characterSubmitButton.setText(
+            manifest.getCharacterCheck().getButtonLabel());
+        characterSubmitButton.setEnabled(
+            manifest.getCharacterCheck().canSubmit());
+        showStatus("Bingo board loaded.");
     }
 
     void showManifestError(String message)
     {
         refreshButton.setEnabled(true);
+        characterSubmitButton.setEnabled(false);
         eventLabel.setText("Event: Not loaded");
-        itemCountLabel.setText("Eligible drops: 0");
+        participationLabel.setText("Participation: —");
+        teamLabel.setText("Team: Unassigned");
+        boardLabel.setText("Board: Not loaded");
+        trackingLabel.setText("Drop tracking: Inactive");
+        characterCheckLabel.setText("Character check: Not submitted");
+        showStatus(message);
+    }
+
+    void showParticipation(boolean joined, String teamName, String message)
+    {
+        participationLabel.setText("Participation: "
+            + (joined ? "Joined" : "Not joined"));
+        teamLabel.setText("Team: "
+            + (teamName == null ? "Unassigned" : teamName));
         showStatus(message);
     }
 
@@ -93,6 +131,24 @@ final class BingoPanel extends JPanel
     {
         append((successful ? "✓ Sent " : "✗ Failed ") + itemName
             + ": " + message);
+    }
+
+    void setCharacterSubmitting()
+    {
+        characterSubmitButton.setEnabled(false);
+        showStatus("Capturing and submitting the complete character snapshot...");
+    }
+
+    void showCharacterSubmission(boolean successful, String message)
+    {
+        characterSubmitButton.setEnabled(!successful);
+        showStatus((successful ? "Character submitted. " : "Submission failed. ")
+            + message);
+    }
+
+    void resetCharacterSubmission()
+    {
+        characterSubmitButton.setEnabled(true);
     }
 
     private void append(String message)

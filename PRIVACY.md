@@ -1,16 +1,14 @@
 # Privacy
 
-ClanHQ Rank Review does not contain a ClanHQ server address, clan code, Discord
+ClanHQ does not contain a ClanHQ server address, installation token, Discord
 credential, or RuneScape credential. Connection settings are blank by default.
 
 ## Local collection
 
-Evidence is collected only after the player clicks a capture button. The
-plugin reads the logged-in character, supported account progression, relevant
-equipped/inventory/bank items, configured Collection Log pages, owned boat
-configuration, and supported POH facilities. Unrelated bank items are discarded
-immediately. Evidence remains in memory and is cleared when the session resets
-or RuneLite closes.
+Character data is collected only after the player clicks Character Sync or
+Bingo Character Submit. Those actions read the complete available bank,
+inventory, and equipped-item contents. Evidence remains in memory until the
+request completes or RuneLite closes.
 
 ## External requests
 
@@ -19,11 +17,22 @@ and synchronized Collection Log information from TempleOSRS for the logged-in
 RSN. The plugin does not send bank, inventory, equipment, boat, or POH contents
 to those services.
 
-Nothing is submitted to ClanHQ automatically. If a player explicitly clicks
-Submit Promotion Review, the plugin sends the RSN, levels, capture timestamp,
-and calculated requirement results to the HTTPS server configured by that
-player. Raw bank, inventory, and equipment lists are not included. The panel
-shows the destination hostname before submission.
+Character Sync sends the RSN, levels, capture timestamp, submission ID, and
+complete bank, inventory, and equipment contents to the configured ClanHQ
+server. Promotion requirements are not present in or evaluated by RuneLite.
+
+If a player explicitly clicks Bingo Character Submit, the plugin sends the RSN,
+event code, capture timestamp, submission ID, levels, and complete bank,
+inventory, and equipment contents (item IDs, names, and quantities) to the
+configured ClanHQ server. ClanHQ retains the original snapshot for audit and an
+additions-only verified-item history for the linked Discord identity.
 
 Players should configure only a destination supplied by a clan they trust.
 HTTP destinations are rejected except for localhost development.
+
+Pairing sends a short-lived Discord-generated code, a user-visible device
+label, and a locally generated random installation token to the configured
+ClanHQ server. The code is consumed once. ClanHQ stores only a one-way hash of
+the installation token; RuneLite retains the token in a secret configuration
+field. Daily-task requests identify the linked Discord wallet through that
+token and do not send bank contents.

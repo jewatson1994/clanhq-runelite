@@ -3,16 +3,21 @@ package com.clanhq.verifier.bingo;
 import com.clanhq.verifier.bingo.model.BingoDrop;
 import com.clanhq.verifier.bingo.model.BingoItem;
 import com.clanhq.verifier.bingo.model.BingoManifest;
+import com.clanhq.verifier.bingo.model.BingoCharacterSubmission;
 import com.clanhq.verifier.bingo.transport.BingoApiClient;
 import com.clanhq.verifier.bingo.service.BingoScreenshotService;
+import com.clanhq.verifier.service.LocalPlayerSnapshotService;
 import com.clanhq.verifier.feature.ClanHQFeature;
+import com.clanhq.verifier.event.transport.EventApiClient;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
 import net.runelite.client.game.ItemStack;
+import net.runelite.client.callback.ClientThread;
 
 public final class BingoFeature implements ClanHQFeature
 {
@@ -20,18 +25,33 @@ public final class BingoFeature implements ClanHQFeature
     private final BingoPanel panel;
     private final BingoScreenshotService screenshotService;
     private final BooleanSupplier screenshotsEnabled;
+    private final LocalPlayerSnapshotService snapshotService;
+    private final ClientThread clientThread;
+    private final EventApiClient eventApiClient;
+    private final Supplier<String> rsnSupplier;
     private volatile BingoManifest manifest;
     private volatile boolean running;
+    private volatile BingoCharacterSubmission pendingCharacterSubmission;
 
     public BingoFeature(
         BingoApiClient apiClient,
         BingoScreenshotService screenshotService,
-        BooleanSupplier screenshotsEnabled)
+        BooleanSupplier screenshotsEnabled,
+        LocalPlayerSnapshotService snapshotService,
+        ClientThread clientThread,
+        EventApiClient eventApiClient,
+        Supplier<String> rsnSupplier)
     {
         this.apiClient = apiClient;
         this.screenshotService = screenshotService;
         this.screenshotsEnabled = screenshotsEnabled;
-        this.panel = new BingoPanel(this::refreshManifest);
+        this.snapshotService = snapshotService;
+        this.clientThread = clientThread;
+        this.eventApiClient = eventApiClient;
+        this.rsnSupplier = rsnSupplier;
+        this.panel = new BingoPanel(
+            this::refreshManifest,
+            this::submitCharacter);
     }
 
     @Override
@@ -44,6 +64,12 @@ public final class BingoFeature implements ClanHQFeature
     public String getDisplayName()
     {
         return "Bingo";
+    }
+
+    @Override
+    public String getNavigationIconResource()
+    {
+        return "/com/clanhq/verifier/icons/bingo.png";
     }
 
     @Override
@@ -70,6 +96,7 @@ public final class BingoFeature implements ClanHQFeature
     {
         running = false;
         manifest = null;
+        pendingCharacterSubmission = null;
     }
 
     public void refreshManifest()
@@ -84,13 +111,109 @@ public final class BingoFeature implements ClanHQFeature
                 }
                 result.getManifest().ifPresentOrElse(value ->
                 {
+                    if (manifest == null
+                        || !manifest.getEventId().equals(value.getEventId()))
+                    {
+                        pendingCharacterSubmission = null;
+                    }
                     manifest = value;
                     panel.showManifest(value);
+                    if (value.getCharacterCheck().canSubmit()
+                        && !"FINAL".equals(
+                            value.getCharacterCheck().getNextPhase()))
+                    {
+                        joinBingo(value);
+                    }
                 }, () ->
                 {
                     manifest = null;
                     panel.showManifestError(result.getMessage());
                 });
+            }));
+    }
+
+    private void joinBingo(BingoManifest active)
+    {
+        String rsn = rsnSupplier.get();
+        if (rsn == null || rsn.trim().isEmpty())
+        {
+            panel.showParticipation(false, null,
+                "Log in to join this Bingo event.");
+            return;
+        }
+        eventApiClient.joinEventCode(active.getEventId(), rsn)
+            .thenAccept(result -> SwingUtilities.invokeLater(() ->
+            {
+                if (running)
+                {
+                    panel.showParticipation(
+                        result.isJoined(),
+                        result.getTeamName(),
+                        result.getMessage());
+                }
+            }));
+    }
+
+    public void submitCharacter()
+    {
+        BingoManifest active = manifest;
+        if (!running || active == null)
+        {
+            panel.showCharacterSubmission(false,
+                "Load an active Bingo board first.");
+            return;
+        }
+        if (!active.getCharacterCheck().canSubmit())
+        {
+            panel.showCharacterSubmission(false,
+                "No additional character check is currently required.");
+            return;
+        }
+        panel.setCharacterSubmitting();
+        BingoCharacterSubmission pending = pendingCharacterSubmission;
+        if (pending != null)
+        {
+            deliverCharacter(pending);
+            return;
+        }
+        clientThread.invokeLater(() ->
+        {
+            try
+            {
+                BingoCharacterSubmission captured =
+                    new BingoCharacterSubmission(
+                        active.getEventId(),
+                        snapshotService.captureCompleteItemsEvidence());
+                pendingCharacterSubmission = captured;
+                deliverCharacter(captured);
+            }
+            catch (RuntimeException exception)
+            {
+                SwingUtilities.invokeLater(() -> panel.showCharacterSubmission(
+                    false, exception.getMessage()));
+            }
+        });
+    }
+
+    private void deliverCharacter(BingoCharacterSubmission submission)
+    {
+        apiClient.submitCharacter(submission).thenAccept(result ->
+            SwingUtilities.invokeLater(() ->
+            {
+                if (!running)
+                {
+                    return;
+                }
+                if (result.isSuccessful())
+                {
+                    pendingCharacterSubmission = null;
+                    panel.showCharacterSubmission(true, result.getMessage());
+                    refreshManifest();
+                }
+                else
+                {
+                    panel.showCharacterSubmission(false, result.getMessage());
+                }
             }));
     }
 

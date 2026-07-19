@@ -2,6 +2,7 @@ package com.clanhq.verifier.bingo.transport;
 
 import com.clanhq.verifier.ClanHQVerifierConfig;
 import com.clanhq.verifier.bingo.model.BingoDrop;
+import com.clanhq.verifier.bingo.model.BingoCharacterSubmission;
 import com.clanhq.verifier.bingo.model.BingoManifest;
 import com.clanhq.verifier.service.ApiDestinationService;
 import com.google.gson.JsonObject;
@@ -44,12 +45,12 @@ public final class BingoApiClient
         if (baseUrl == null)
         {
             future.complete(new BingoManifestResult(null,
-                "Configure the ClanHQ API URL and clan code first."));
+                "Configure the ClanHQ API URL, installation token, and event code first."));
             return future;
         }
         HttpUrl url = HttpUrl.parse(baseUrl + "/api/v1/bingo/manifest")
             .newBuilder()
-            .addQueryParameter("code", config.eventCode().trim())
+            .addQueryParameter("code", config.bingoEventCode().trim())
             .build();
         Request request = request(url.toString())
             .get()
@@ -106,7 +107,7 @@ public final class BingoApiClient
         if (baseUrl == null)
         {
             future.complete(new BingoTransportResult(false,
-                "Configure the ClanHQ API URL and clan code first."));
+                "Configure the ClanHQ API URL, installation token, and event code first."));
             return future;
         }
         RequestBody body = screenshot == null
@@ -156,20 +157,69 @@ public final class BingoApiClient
         return future;
     }
 
+    public CompletableFuture<BingoTransportResult> submitCharacter(
+        BingoCharacterSubmission submission)
+    {
+        CompletableFuture<BingoTransportResult> future =
+            new CompletableFuture<>();
+        String baseUrl = configuredBaseUrl();
+        if (baseUrl == null)
+        {
+            future.complete(new BingoTransportResult(false,
+                "Configure the ClanHQ API URL, installation token, and event code first."));
+            return future;
+        }
+        Request request = request(baseUrl + "/api/v1/bingo/characters")
+            .post(RequestBody.create(JSON,
+                BingoCharacterPayloadFactory.create(submission).toString()))
+            .build();
+        httpClient.newCall(request).enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException exception)
+            {
+                future.complete(new BingoTransportResult(false,
+                    "ClanHQ could not be reached."));
+            }
+
+            @Override
+            public void onResponse(Call call, Response response)
+                throws IOException
+            {
+                try (Response closeable = response)
+                {
+                    String body = response.body() == null
+                        ? "" : response.body().string();
+                    future.complete(new BingoTransportResult(
+                        response.isSuccessful(),
+                        responseMessage(body, response.code())));
+                }
+                catch (IOException | RuntimeException exception)
+                {
+                    future.complete(new BingoTransportResult(false,
+                        "ClanHQ returned an invalid response."));
+                }
+            }
+        });
+        return future;
+    }
+
     private Request.Builder request(String url)
     {
         return new Request.Builder()
             .url(url)
-            .header("X-ClanHQ-Code", config.clanCode().trim());
+            .header("Authorization", "Bearer "
+                + config.installationToken().trim());
     }
 
     private String configuredBaseUrl()
     {
         String baseUrl = destinationService.normalize(config.apiBaseUrl());
-        String code = config.clanCode() == null ? "" : config.clanCode().trim();
-        String eventCode = config.eventCode() == null
-            ? "" : config.eventCode().trim();
-        return baseUrl == null || code.isEmpty() || eventCode.isEmpty()
+        String token = config.installationToken() == null
+            ? "" : config.installationToken().trim();
+        String eventCode = config.bingoEventCode() == null
+            ? "" : config.bingoEventCode().trim();
+        return baseUrl == null || token.isEmpty() || eventCode.isEmpty()
             ? null : baseUrl;
     }
 

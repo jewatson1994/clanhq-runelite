@@ -1,14 +1,40 @@
 # ClanHQ
 
-ClanHQ is a modular RuneLite shell for opt-in clan tools. Rank Review is the
-first available feature, and Bingo consumes RuneLite's aggregated loot
-adapter. Each feature owns its own panel and can be enabled independently
-without changing the evidence rules used by Rank Review.
+ClanHQ is a modular RuneLite shell for opt-in clan tools. Its icon navigation
+opens Overview, Character Sync, Events, Bingo, and Daily Tasks without placing
+rank rules in the plugin. ClanHQ remains the authority for membership,
+promotion requirements, rewards, and event configuration.
+
+## Daily Tasks and pairing
+
+Daily Tasks is the normal onboarding surface. Run `/plugin pair` in Discord,
+enter `https://verify.clanhq.dev` and the private one-time code in the plugin
+settings, open **Overview**, then select **Pair Installation**. The code expires
+after 10 minutes
+and cannot link a second device. RuneLite creates a unique revocable device
+token locally; ClanHQ stores only its hash.
+
+Once paired, the panel shows the current skilling, PvM, and minigame tasks and
+their local reset time. Each category has its own claim button. Claims use the
+same server-side WOM verification, linked-RSN policy, cooldown, placement, and
+idempotent DripDrops ledger as Discord. Overview can show the linked RSNs and
+private wallet balance; the balance can be hidden in settings.
+
+Pairing remains valid while the Discord identity owns at least one active
+ClanHQ member. ClanHQ rejects and revokes installations after the last linked
+member becomes inactive, archived, or banned.
+
+## Character Sync
+
+Character Sync is player-initiated and reads the complete currently available
+bank, inventory, and equipment contents. ClanHQ stores the immutable snapshot
+and updates its additions-only verified-item collection. Promotion rules and
+adjudication remain entirely server-side.
 
 ## Events
 
-Events connects RuneLite to competitions created with ClanHQ's `/event create`
-command. A player enters the generated event code, and the panel displays the
+Events connects RuneLite to non-Bingo competitions created with ClanHQ. A
+player enters the event's code, and the panel displays the
 event type, randomized or selected target, inclusive dates, and current status.
 When logged in, RuneLite registers the exact active ClanHQ RSN as a participant
 and displays the server-assigned team name without receiving Discord channel IDs.
@@ -29,79 +55,13 @@ the event name/code, RSN, drop, quantity, and UTC timestamp, then uploaded from
 memory without saving a local screenshot. Team events are routed by ClanHQ to
 the server-configured team channel.
 
-## Rank Review
-
-ClanHQ Rank Review collects transparent, player-initiated evidence for an Iron
-Drop rank review. It calculates a checklist locally and can submit that
-checklist to a clan-configured ClanHQ server for staff review. It never awards
-a rank or changes ClanHQ, Wise Old Man, or Discord roles.
-
-Verify Character reads local
-account, prayer, diary, Combat Achievement, and saved-boat state, then performs
-public RuneScape hiscore and TempleOSRS Collection Log lookups for that RSN.
-With the bank open, Capture Bank & Gear retains equipment, inventory, and only
-rank-relevant bank items. Evidence remains local until the player explicitly
-uses Submit Promotion Review with a configured ClanHQ API destination and clan
-code. Submission posts to ClanHQ's promotions feed and never changes ranks.
-
-The checklist covers every Iron Drop progression rank from Opal through
-Zenyte. A single screen exposes every evidence collector and recalculates the
-entire cumulative rank ladder after each capture. It shows the highest fully
-verified rank, the next rank, that rank's missing requirements, and anything
-that still needs staff review. The two core actions are Verify Character and
-Capture Bank & Gear. Capture POH Instance is rank-dependent and is needed only
-when the requested rank requires Maxed POH evidence. TempleOSRS supplies COX, TOB,
-TOA, Yama, Doom, and the global obtained-slot count whenever that account has
-been synchronized. The snapshot age is displayed but does not invalidate these
-permanent unlocks. Missing or unavailable TempleOSRS data reveals the existing
-per-page RuneLite capture buttons as fallbacks. Raid pages retain
-acquired and total slot counts and combine with current item evidence without
-double-counting the same unique. Verify Character also reads RuneLite's
-authoritative owned-boat variables and Sailing DB
-tables for all five slots. A maxed Skiff or Sloop requires a Rosewood hull,
-Rosewood mast and sails, Dragon helm, and Dragon keel. Visible Sailing panel
-text is retained only as a diagnostic fallback. POH capture requires the
-player's house in build mode and scans the loaded scene for all five configured
-facilities. Colonel is intentionally excluded because it is a
-retired-staff designation rather than a progression rank. ClanHQ validates the
-exact active Iron Drop RSN and selects only the next rank configured for that
-member before publishing a review.
-
-Completionism bank items are reported individually. The global Collection Log
-count verifies Dragon rank (1,200 slots) and the 750-slot requirement. TOA capture checks
-the four boss remnants, Menaphite ornament kit, Cursed phalanx, Ancient
-remnant, and Masori crafting kit. COX capture can prove Metamorphic dust; TOB
-capture can prove Sanguine dust and both ornament kits. COX, TOB, and TOA captures can verify raid
-green logs from acquired-versus-total visible slots. Sailing core upgrade state
-is verified directly from the player's owned-boat records.
-Raid KC capes and shrouds are excluded from green-log totals.
-The Yama page verifies Rite of Vile Transference. Piety is verified from
-completed King's Ransom and Knight Waves Training Grounds progression, so the
-prayer does not need to be activated. Grandmaster Combat Achievements are read
-from RuneLite's authoritative tier-completion state.
-
-The plugin reports evidence status, not an official qualification decision.
-Only ClanHQ and staff approval can verify or award a rank.
-
-Requirements RuneLite cannot yet prove reliably are shown as `[CHECK]`. They are never
-treated as passed or guessed from unrelated evidence.
-
 ## Trust boundary
 
-Iron Drop ranks include evidence that cannot be proven from equipped items
-alone. The RuneLite plugin collects transparent evidence but does not
-independently award ranks. ClanHQ validates membership and the requested next
-rank, then gives staff the final decision in Discord.
-
-Rank progression is cumulative. The plugin never skips a failed or unverified
-rank even if evidence happens to satisfy a later rank. ClanHQ remains the
-authority for recorded membership and awarded ranks; the plugin reports the
-highest rank supported by the current evidence session.
-
-Submission remains behind `VerificationTransport`, is initiated only by the
-player, and requires a clan-configured HTTPS destination. This keeps the
-network boundary isolated from evidence capture and preserves a local-only
-mode if Plugin Hub review requires it.
+The plugin captures observations only after an explicit member action or an
+enabled Bingo event. It does not contain promotion requirements and never
+changes a rank, wallet, WOM group, or Discord role directly. Every request uses
+a member-controlled, revocable installation credential and a clan-configured
+HTTPS destination.
 
 ## Development
 
@@ -115,8 +75,8 @@ From this directory:
 .\gradlew.bat run
 ```
 
-RuneLite starts in developer mode with `ClanHQ Rank Review` loaded. Log into a
-test account, open the ClanHQ sidebar panel, and capture the current character.
+RuneLite starts in developer mode with ClanHQ loaded. Log into a test account,
+open the ClanHQ sidebar panel, and test only against the development API.
 
 ### Jagex Account login
 
@@ -139,27 +99,18 @@ use **End sessions** in the RuneScape account settings.
 ## Privacy boundary
 
 - Only the local logged-in player is inspected.
-- The captured RSN is sent to RuneScape's public hiscore service for raid KC
-  and TempleOSRS's public API for synchronized Collection Log evidence.
 - Capture happens only after an explicit button click.
-- Reset Session clears all locally accumulated evidence and rank calculations.
-- Evidence from different RSNs cannot be combined in one session.
 - The ClanHQ API destination is configured by each member in RuneLite settings.
-- No ClanHQ destination or clan code is bundled with the public plugin. The
+- No ClanHQ destination or installation token is bundled with the public plugin. The
   connection settings are blank until a member configures them.
 - HTTPS is required except for localhost development; changing settings never submits evidence automatically.
-- TempleOSRS capture retains only the five configured categories, their item
-  names/counts, global obtained-slot count, and last-sync time. Manual fallback
-  capture retains only the visible supported page.
-- Boat capture stores owned boat configurations and optional visible Sailing
-  panel text, not cargo item contents.
-- POH capture stores only the five configured facility results and requires owner build mode.
 - Bank, inventory, and equipped gear are captured once while the bank is open.
-  Evidence remains only in the local panel unless the player explicitly clicks
-  Submit Promotion Review; it is otherwise cleared when the session resets or
-  RuneLite closes.
-- Bank capture retains and displays only items used by configured rank rules;
-  unrelated bank contents are discarded immediately.
-- The preview lists the exact local data collected. Submission sends only the
-  calculated rank requirement results, RSN, levels, and capture time to the
-  configured ClanHQ endpoint; it does not send the raw bank or inventory list.
+- Character Sync and Bingo Character Submit intentionally send the complete
+  snapshot only after their respective buttons are clicked.
+- In the Bingo module, Character Submit is a separate explicit action. It sends
+  the complete current bank, inventory, and equipment snapshot to ClanHQ for
+  permanent additions-only verification and auditing. It also sends supported
+  reward counters for Wintertodt, Guardians of the Rift, and Tempoross.
+- Character Submit is phase-aware per Bingo and linked Discord identity. The
+  first submission is the baseline, active-event submissions are checkpoints,
+  and an ended event accepts one final reconciliation snapshot.

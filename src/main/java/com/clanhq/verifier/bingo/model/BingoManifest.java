@@ -20,15 +20,25 @@ public final class BingoManifest
     private final Instant endsAt;
     private final List<BingoItem> items;
     private final Map<Integer, BingoItem> itemsById;
+    private final BingoCharacterCheckStatus characterCheck;
 
     public BingoManifest(String eventId, String name, Instant startsAt,
         Instant endsAt, List<BingoItem> items)
+    {
+        this(eventId, name, startsAt, endsAt, items,
+            BingoCharacterCheckStatus.empty());
+    }
+
+    public BingoManifest(String eventId, String name, Instant startsAt,
+        Instant endsAt, List<BingoItem> items,
+        BingoCharacterCheckStatus characterCheck)
     {
         this.eventId = eventId;
         this.name = name;
         this.startsAt = startsAt;
         this.endsAt = endsAt;
         this.items = Collections.unmodifiableList(new ArrayList<>(items));
+        this.characterCheck = characterCheck;
         Map<Integer, BingoItem> indexed = new LinkedHashMap<>();
         for (BingoItem item : items)
         {
@@ -59,12 +69,26 @@ public final class BingoManifest
                 integer(item, "minimum_quantity"),
                 integer(item, "points")));
         }
+        BingoCharacterCheckStatus characterCheck =
+            BingoCharacterCheckStatus.empty();
+        if (root.has("character_check")
+            && root.get("character_check").isJsonObject())
+        {
+            JsonObject check = root.getAsJsonObject("character_check");
+            characterCheck = new BingoCharacterCheckStatus(
+                optionalText(check, "status", "NOT_SUBMITTED"),
+                optionalText(check, "next_phase", "BASELINE"),
+                optionalInteger(check, "checkpoint_count", 0),
+                optionalNullableText(check, "baseline_captured_at"),
+                optionalNullableText(check, "final_captured_at"));
+        }
         return new BingoManifest(
             text(root, "event_id"),
             text(root, "name"),
             Instant.parse(text(root, "starts_at")),
             Instant.parse(text(root, "ends_at")),
-            items);
+            items,
+            characterCheck);
     }
 
     private static String text(JsonObject value, String key)
@@ -90,6 +114,31 @@ public final class BingoManifest
         return value.get(key).getAsInt();
     }
 
+    private static String optionalText(JsonObject value, String key,
+        String fallback)
+    {
+        String result = optionalNullableText(value, key);
+        return result == null ? fallback : result;
+    }
+
+    private static String optionalNullableText(JsonObject value, String key)
+    {
+        if (!value.has(key) || value.get(key).isJsonNull()
+            || !value.get(key).isJsonPrimitive())
+        {
+            return null;
+        }
+        String result = value.get(key).getAsString().trim();
+        return result.isEmpty() ? null : result;
+    }
+
+    private static int optionalInteger(JsonObject value, String key,
+        int fallback)
+    {
+        return value.has(key) && value.get(key).isJsonPrimitive()
+            ? value.get(key).getAsInt() : fallback;
+    }
+
     public String getEventId()
     {
         return eventId;
@@ -113,6 +162,11 @@ public final class BingoManifest
     public List<BingoItem> getItems()
     {
         return items;
+    }
+
+    public BingoCharacterCheckStatus getCharacterCheck()
+    {
+        return characterCheck;
     }
 
     public Optional<BingoItem> findItem(int itemId)
