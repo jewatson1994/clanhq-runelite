@@ -41,7 +41,7 @@ public interface ClanHQVerifierConfig extends Config
     @ConfigItem(
         keyName = "dailyTasksEnabled",
         name = "Daily Tasks",
-        description = "View and claim ClanHQ DripDrops daily tasks",
+        description = "View and claim ClanHQ currency daily tasks",
         section = FEATURES_SECTION,
         position = 3)
     default boolean dailyTasksEnabled()
@@ -62,11 +62,11 @@ public interface ClanHQVerifierConfig extends Config
 
     @ConfigItem(
         keyName = "showDripDropsBalance",
-        name = "Show DripDrops balance",
-        description = "Show your private DripDrops balance on the Overview page",
+        name = "Show currency balance",
+        description = "Show your private configured currency balance on Overview",
         section = FEATURES_SECTION,
         position = 5)
-    default boolean showDripDropsBalance()
+    default boolean showCurrencyBalance()
     {
         return true;
     }

@@ -40,7 +40,7 @@ public final class DailyTasksFeature implements ClanHQFeature
     @Override
     public String getDescription()
     {
-        return "View and claim WOM-verified DripDrops daily tasks.";
+        return "View and claim WOM-verified currency daily tasks.";
     }
 
     @Override
@@ -108,8 +108,10 @@ public final class DailyTasksFeature implements ClanHQFeature
             String message = result.getMessage();
             if (result.getRewardAmount() > 0)
             {
-                message += " Awarded " + result.getRewardAmount()
-                    + " DripDrops.";
+                message += " Awarded " + result.getRewardAmount() + " "
+                    + result.getCurrencyName()
+                    + (result.getCurrencySymbol().isEmpty()
+                        ? "." : " " + result.getCurrencySymbol() + ".");
             }
             refresh(message);
         }));

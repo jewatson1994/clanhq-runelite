@@ -87,7 +87,8 @@ public final class DailyTasksApiClient
         if (base == null)
         {
             future.complete(new DailyActionResult(false,
-                "Pair this RuneLite installation before claiming.", 0));
+                "Pair this RuneLite installation before claiming.", 0,
+                "Currency", ""));
             return future;
         }
         JsonObject payload = new JsonObject();
@@ -110,7 +111,8 @@ public final class DailyTasksApiClient
             @Override
             public void onFailure(Call call, IOException exception)
             {
-                future.complete(new DailyActionResult(false, failureMessage, 0));
+                future.complete(new DailyActionResult(
+                    false, failureMessage, 0, "Currency", ""));
             }
 
             @Override
@@ -122,15 +124,24 @@ public final class DailyTasksApiClient
                     String body = body(response);
                     int reward = response.isSuccessful()
                         ? rewardAmount(body, rewardField) : 0;
+                    JsonObject value = response.isSuccessful()
+                        ? parse(body) : new JsonObject();
                     future.complete(new DailyActionResult(
                         response.isSuccessful(),
                         responseMessage(body, response.code()),
-                        reward));
+                        reward,
+                        value.has("currency_name")
+                            ? value.get("currency_name").getAsString()
+                            : "Currency",
+                        value.has("currency_symbol")
+                            ? value.get("currency_symbol").getAsString()
+                            : ""));
                 }
                 catch (IOException | RuntimeException exception)
                 {
                     future.complete(new DailyActionResult(false,
-                        "ClanHQ returned an invalid response.", 0));
+                        "ClanHQ returned an invalid response.", 0,
+                        "Currency", ""));
                 }
             }
         });

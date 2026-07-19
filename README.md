@@ -17,7 +17,7 @@ token locally; ClanHQ stores only its hash.
 Once paired, the panel shows the current skilling, PvM, and minigame tasks and
 their local reset time. Each category has its own claim button. Claims use the
 same server-side WOM verification, linked-RSN policy, cooldown, placement, and
-idempotent DripDrops ledger as Discord. Overview can show the linked RSNs and
+idempotent configured-currency ledger as Discord. Overview can show the linked RSNs and
 private wallet balance; the balance can be hidden in settings.
 
 Pairing remains valid while the Discord identity owns at least one active

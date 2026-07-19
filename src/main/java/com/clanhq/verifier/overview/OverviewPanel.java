@@ -84,7 +84,10 @@ final class OverviewPanel extends JPanel
         connection.setText("Connection: Paired (" + value.getDeviceName() + ")");
         identity.setText("Linked RSNs: " + String.join(", ", value.getRsns()));
         balance.setText(showBalance
-            ? "DripDrops: " + value.getBalance() : "");
+            ? value.getCurrencyName() + ": " + value.getBalance()
+                + (value.getCurrencySymbol().isEmpty()
+                    ? "" : " " + value.getCurrencySymbol())
+            : "");
         showStatus("Connection verified.");
     }
 
