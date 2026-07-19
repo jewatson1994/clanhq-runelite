@@ -3,6 +3,7 @@ package com.clanhq.verifier.character;
 import com.clanhq.verifier.bingo.model.BingoCharacterSubmission;
 import com.clanhq.verifier.feature.ClanHQFeature;
 import com.clanhq.verifier.service.LocalPlayerSnapshotService;
+import com.clanhq.verifier.service.SubmissionConsentService;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
 import net.runelite.client.callback.ClientThread;
@@ -12,16 +13,19 @@ public final class CharacterSyncFeature implements ClanHQFeature
     private final CharacterSyncApiClient apiClient;
     private final LocalPlayerSnapshotService snapshotService;
     private final ClientThread clientThread;
+    private final SubmissionConsentService consentService;
     private final CharacterSyncPanel panel;
     private volatile boolean running;
     private volatile BingoCharacterSubmission pending;
 
     public CharacterSyncFeature(CharacterSyncApiClient apiClient,
-        LocalPlayerSnapshotService snapshotService, ClientThread clientThread)
+        LocalPlayerSnapshotService snapshotService, ClientThread clientThread,
+        SubmissionConsentService consentService)
     {
         this.apiClient = apiClient;
         this.snapshotService = snapshotService;
         this.clientThread = clientThread;
+        this.consentService = consentService;
         this.panel = new CharacterSyncPanel(this::submit);
     }
 
@@ -39,6 +43,11 @@ public final class CharacterSyncFeature implements ClanHQFeature
     public void submit()
     {
         if (!running) { return; }
+        if (!consentService.confirm(panel, "character synchronization"))
+        {
+            panel.showResult(true, "Character submission cancelled.");
+            return;
+        }
         panel.setSubmitting();
         if (pending != null)
         {

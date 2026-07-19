@@ -55,6 +55,10 @@ final class BingoPanel extends JPanel
             event -> characterSubmitAction.run());
         characterSubmitButton.setEnabled(false);
         header.add(characterSubmitButton);
+        header.add(Box.createRigidArea(new Dimension(0, 4)));
+        header.add(new JLabel("<html>Character Submit sends your complete "
+            + "bank, inventory, and equipped item IDs and quantities. "
+            + "RuneLite asks for confirmation first.</html>"));
         header.add(Box.createRigidArea(new Dimension(0, 8)));
         header.add(statusLabel);
 
@@ -149,6 +153,12 @@ final class BingoPanel extends JPanel
     void resetCharacterSubmission()
     {
         characterSubmitButton.setEnabled(true);
+    }
+
+    void showCharacterSubmissionCancelled()
+    {
+        characterSubmitButton.setEnabled(true);
+        showStatus("Character submission cancelled.");
     }
 
     private void append(String message)

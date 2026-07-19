@@ -8,6 +8,7 @@ import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JOptionPane;
 import net.runelite.client.ui.ColorScheme;
 
 final class OverviewPanel extends JPanel
@@ -17,9 +18,11 @@ final class OverviewPanel extends JPanel
     private final JLabel balance = new JLabel();
     private final JLabel status = new JLabel();
     private final JButton pair = new JButton("Pair Installation");
+    private final JButton disconnect = new JButton("Disconnect This Device");
     private final JButton refresh = new JButton("Refresh Overview");
 
-    OverviewPanel(Runnable pairAction, Runnable refreshAction)
+    OverviewPanel(Runnable pairAction, Runnable refreshAction,
+        Runnable disconnectAction)
     {
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -39,6 +42,10 @@ final class OverviewPanel extends JPanel
         pair.addActionListener(event -> pairAction.run());
         content.add(pair);
         content.add(Box.createRigidArea(new Dimension(0, 5)));
+        disconnect.addActionListener(event -> disconnectAction.run());
+        disconnect.setEnabled(false);
+        content.add(disconnect);
+        content.add(Box.createRigidArea(new Dimension(0, 5)));
         refresh.addActionListener(event -> refreshAction.run());
         content.add(refresh);
         content.add(Box.createRigidArea(new Dimension(0, 8)));
@@ -46,9 +53,11 @@ final class OverviewPanel extends JPanel
         add(content, BorderLayout.NORTH);
     }
 
-    void setLoading()
+    void setLoading(boolean hasStoredPairing)
     {
         refresh.setEnabled(false);
+        pair.setEnabled(!hasStoredPairing);
+        disconnect.setEnabled(hasStoredPairing);
         showStatus("Checking the ClanHQ connection...");
     }
 
@@ -59,10 +68,19 @@ final class OverviewPanel extends JPanel
         showStatus("Pairing this RuneLite installation...");
     }
 
+    void setDisconnecting()
+    {
+        pair.setEnabled(false);
+        disconnect.setEnabled(false);
+        refresh.setEnabled(false);
+        showStatus("Revoking this RuneLite installation...");
+    }
+
     void showIdentity(IdentitySnapshot value, boolean showBalance)
     {
         refresh.setEnabled(true);
         pair.setEnabled(false);
+        disconnect.setEnabled(true);
         connection.setText("Connection: Paired (" + value.getDeviceName() + ")");
         identity.setText("Linked RSNs: " + String.join(", ", value.getRsns()));
         balance.setText(showBalance
@@ -70,11 +88,35 @@ final class OverviewPanel extends JPanel
         showStatus("Connection verified.");
     }
 
-    void showError(String message)
+    void showError(String message, boolean hasStoredPairing)
+    {
+        refresh.setEnabled(true);
+        pair.setEnabled(!hasStoredPairing);
+        disconnect.setEnabled(hasStoredPairing);
+        connection.setText("Connection: Not available");
+        identity.setText("Linked RSNs: —");
+        balance.setText("");
+        showStatus(message);
+    }
+
+    boolean confirmDisconnect()
+    {
+        return JOptionPane.showConfirmDialog(
+            this,
+            "Disconnect this RuneLite installation from ClanHQ?\n\n"
+                + "The server token will be revoked and the local pairing "
+                + "will be removed.",
+            "Disconnect ClanHQ",
+            JOptionPane.OK_CANCEL_OPTION,
+            JOptionPane.WARNING_MESSAGE) == JOptionPane.OK_OPTION;
+    }
+
+    void showDisconnected(String message)
     {
         refresh.setEnabled(true);
         pair.setEnabled(true);
-        connection.setText("Connection: Not available");
+        disconnect.setEnabled(false);
+        connection.setText("Connection: Not paired");
         identity.setText("Linked RSNs: —");
         balance.setText("");
         showStatus(message);

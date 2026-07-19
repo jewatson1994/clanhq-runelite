@@ -2,7 +2,7 @@ package com.clanhq.verifier;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.net.URL;
+import java.io.InputStream;
 import javax.imageio.ImageIO;
 import org.junit.Test;
 
@@ -20,14 +20,17 @@ public class NavigationIconAssetsTest
             "overview", "character", "events", "bingo", "dailies"
         })
         {
-            URL resource = getClass().getResource(
-                "/com/clanhq/verifier/icons/" + name + ".png");
-            assertNotNull(name, resource);
-            BufferedImage image = ImageIO.read(resource);
-            assertEquals(name, 20, image.getWidth());
-            assertEquals(name, 20, image.getHeight());
-            assertTrue(name, image.getColorModel().hasAlpha());
-            assertEquals(name, 0, image.getRGB(0, 0) >>> 24);
+            try (InputStream resource = getClass().getResourceAsStream(
+                "/com/clanhq/verifier/icons/" + name + ".png"))
+            {
+                assertNotNull(name, resource);
+                BufferedImage image = ImageIO.read(resource);
+                assertNotNull(name, image);
+                assertEquals(name, 20, image.getWidth());
+                assertEquals(name, 20, image.getHeight());
+                assertTrue(name, image.getColorModel().hasAlpha());
+                assertEquals(name, 0, image.getRGB(0, 0) >>> 24);
+            }
         }
     }
 }

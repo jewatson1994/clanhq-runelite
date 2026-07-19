@@ -57,7 +57,7 @@ public interface ClanHQVerifierConfig extends Config
         position = 4)
     default boolean bingoScreenshotsEnabled()
     {
-        return true;
+        return false;
     }
 
     @ConfigItem(
@@ -103,7 +103,7 @@ public interface ClanHQVerifierConfig extends Config
     @ConfigItem(
         keyName = "installationToken",
         name = "Installation token",
-        description = "Unique revocable token supplied by your ClanHQ administrator",
+        description = "Unique revocable token created automatically during pairing",
         section = CONNECTION_SECTION,
         secret = true,
         position = 1)

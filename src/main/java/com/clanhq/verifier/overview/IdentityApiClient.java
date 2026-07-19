@@ -141,6 +141,53 @@ public final class IdentityApiClient
         return future;
     }
 
+    public CompletableFuture<DisconnectResult> disconnect()
+    {
+        CompletableFuture<DisconnectResult> future = new CompletableFuture<>();
+        String baseUrl = destinationService.normalize(config.apiBaseUrl());
+        String token = normalized(config.installationToken());
+        if (baseUrl == null || token.isEmpty())
+        {
+            future.complete(new DisconnectResult(false,
+                "No paired ClanHQ installation is configured."));
+            return future;
+        }
+        Request request = new Request.Builder()
+            .url(baseUrl + "/api/v1/installations/current")
+            .header("Authorization", "Bearer " + token)
+            .delete()
+            .build();
+        httpClient.newCall(request).enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException exception)
+            {
+                future.complete(new DisconnectResult(false,
+                    "ClanHQ could not revoke this installation."));
+            }
+
+            @Override
+            public void onResponse(Call call, Response response)
+                throws IOException
+            {
+                try (Response closeable = response)
+                {
+                    String body = response.body() == null
+                        ? "" : response.body().string();
+                    boolean disconnected = response.isSuccessful()
+                        || response.code() == 401;
+                    future.complete(new DisconnectResult(
+                        disconnected,
+                        response.code() == 401
+                            ? "The server no longer recognizes this device; "
+                                + "its local pairing was removed."
+                            : responseMessage(body, response.code())));
+                }
+            }
+        });
+        return future;
+    }
+
     private static String responseMessage(String body, int status)
     {
         try

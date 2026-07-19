@@ -14,9 +14,8 @@ import com.clanhq.verifier.overview.IdentityApiClient;
 import com.clanhq.verifier.overview.OverviewFeature;
 import com.clanhq.verifier.service.ApiDestinationService;
 import com.clanhq.verifier.service.LocalPlayerSnapshotService;
+import com.clanhq.verifier.service.SubmissionConsentService;
 import com.google.inject.Provides;
-import java.awt.Color;
-import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,6 +39,7 @@ import net.runelite.client.plugins.loottracker.LootTrackerPlugin;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.DrawManager;
 import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.util.ImageUtil;
 import okhttp3.OkHttpClient;
 
 @PluginDescriptor(
@@ -118,12 +118,15 @@ public final class ClanHQVerifierPlugin extends Plugin
             new IdentityApiClient(httpClient, config, apiDestinationService),
             config,
             configManager);
+        SubmissionConsentService submissionConsent =
+            new SubmissionConsentService(config, apiDestinationService);
         enabled.add(overviewFeature);
         enabled.add(new CharacterSyncFeature(
             new CharacterSyncApiClient(
                 httpClient, config, apiDestinationService),
             snapshotService,
-            clientThread));
+            clientThread,
+            submissionConsent));
         if (config.eventsEnabled())
         {
             eventFeature = new EventFeature(new EventApiClient(
@@ -138,6 +141,7 @@ public final class ClanHQVerifierPlugin extends Plugin
                 config::bingoScreenshotsEnabled,
                 snapshotService,
                 clientThread,
+                submissionConsent,
                 new EventApiClient(
                     httpClient, config, apiDestinationService),
                 this::currentRsn);
@@ -219,14 +223,8 @@ public final class ClanHQVerifierPlugin extends Plugin
 
     private static BufferedImage createIcon()
     {
-        BufferedImage icon = new BufferedImage(
-            16, 16, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D graphics = icon.createGraphics();
-        graphics.setColor(new Color(212, 175, 55));
-        graphics.fillOval(1, 1, 14, 14);
-        graphics.setColor(new Color(30, 33, 36));
-        graphics.fillOval(4, 4, 8, 8);
-        graphics.dispose();
-        return icon;
+        return ImageUtil.loadImageResource(
+            ClanHQVerifierPlugin.class,
+            "/com/clanhq/verifier/icons/overview.png");
     }
 }

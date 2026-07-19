@@ -26,7 +26,9 @@ final class CharacterSyncPanel extends JPanel
         content.add(new JLabel("Character Sync"));
         content.add(Box.createRigidArea(new Dimension(0, 8)));
         content.add(new JLabel("<html>Send your complete bank, inventory, and "
-            + "equipped items to ClanHQ for server-side verification.</html>"));
+            + "equipped item IDs and quantities to ClanHQ for server-side "
+            + "verification. You will confirm the destination before each "
+            + "submission.</html>"));
         content.add(Box.createRigidArea(new Dimension(0, 10)));
         submit.addActionListener(event -> submitAction.run());
         content.add(submit);

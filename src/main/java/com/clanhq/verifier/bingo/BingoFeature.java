@@ -7,6 +7,7 @@ import com.clanhq.verifier.bingo.model.BingoCharacterSubmission;
 import com.clanhq.verifier.bingo.transport.BingoApiClient;
 import com.clanhq.verifier.bingo.service.BingoScreenshotService;
 import com.clanhq.verifier.service.LocalPlayerSnapshotService;
+import com.clanhq.verifier.service.SubmissionConsentService;
 import com.clanhq.verifier.feature.ClanHQFeature;
 import com.clanhq.verifier.event.transport.EventApiClient;
 import java.time.Instant;
@@ -27,6 +28,7 @@ public final class BingoFeature implements ClanHQFeature
     private final BooleanSupplier screenshotsEnabled;
     private final LocalPlayerSnapshotService snapshotService;
     private final ClientThread clientThread;
+    private final SubmissionConsentService consentService;
     private final EventApiClient eventApiClient;
     private final Supplier<String> rsnSupplier;
     private volatile BingoManifest manifest;
@@ -39,6 +41,7 @@ public final class BingoFeature implements ClanHQFeature
         BooleanSupplier screenshotsEnabled,
         LocalPlayerSnapshotService snapshotService,
         ClientThread clientThread,
+        SubmissionConsentService consentService,
         EventApiClient eventApiClient,
         Supplier<String> rsnSupplier)
     {
@@ -47,6 +50,7 @@ public final class BingoFeature implements ClanHQFeature
         this.screenshotsEnabled = screenshotsEnabled;
         this.snapshotService = snapshotService;
         this.clientThread = clientThread;
+        this.consentService = consentService;
         this.eventApiClient = eventApiClient;
         this.rsnSupplier = rsnSupplier;
         this.panel = new BingoPanel(
@@ -167,6 +171,12 @@ public final class BingoFeature implements ClanHQFeature
         {
             panel.showCharacterSubmission(false,
                 "No additional character check is currently required.");
+            return;
+        }
+        if (!consentService.confirm(
+            panel, "Bingo " + active.getName()))
+        {
+            panel.showCharacterSubmissionCancelled();
             return;
         }
         panel.setCharacterSubmitting();

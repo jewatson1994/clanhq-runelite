@@ -8,7 +8,8 @@ credential, or RuneScape credential. Connection settings are blank by default.
 Character data is collected only after the player clicks Character Sync or
 Bingo Character Submit. Those actions read the complete available bank,
 inventory, and equipped-item contents. Evidence remains in memory until the
-request completes or RuneLite closes.
+request completes or RuneLite closes. Before capture, RuneLite shows the
+configured destination and data categories and requires confirmation.
 
 ## External requests
 
@@ -36,3 +37,12 @@ ClanHQ server. The code is consumed once. ClanHQ stores only a one-way hash of
 the installation token; RuneLite retains the token in a secret configuration
 field. Daily-task requests identify the linked Discord wallet through that
 token and do not send bank contents.
+
+The Overview module can disconnect the current device. ClanHQ revokes the
+server-side token before RuneLite removes the local pairing. ClanHQ also
+automatically revokes all installations after the linked Discord identity no
+longer owns an active clan member.
+
+Bingo screenshots are disabled by default. When a player enables them, an
+accepted board drop may include a watermarked gameplay screenshot captured in
+memory and sent to ClanHQ. The plugin does not save that screenshot to disk.

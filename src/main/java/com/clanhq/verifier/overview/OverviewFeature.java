@@ -22,7 +22,8 @@ public final class OverviewFeature implements ClanHQFeature
         this.apiClient = apiClient;
         this.config = config;
         this.configManager = configManager;
-        this.panel = new OverviewPanel(this::pair, this::refresh);
+        this.panel = new OverviewPanel(
+            this::pair, this::refresh, this::disconnect);
     }
 
     public String getId() { return "overview"; }
@@ -45,14 +46,17 @@ public final class OverviewFeature implements ClanHQFeature
     public void refresh()
     {
         if (!running) { return; }
-        panel.setLoading();
+        boolean hasStoredPairing = !normalized(
+            config.installationToken()).isEmpty();
+        panel.setLoading(hasStoredPairing);
         apiClient.fetch().thenAccept(result -> SwingUtilities.invokeLater(() ->
         {
             if (!running) { return; }
             result.getIdentity().ifPresentOrElse(
                 value -> panel.showIdentity(value,
                     config.showDripDropsBalance()),
-                () -> panel.showError(result.getMessage()));
+                () -> panel.showError(
+                    result.getMessage(), hasStoredPairing));
         }));
     }
 
@@ -62,7 +66,8 @@ public final class OverviewFeature implements ClanHQFeature
         if (code.isEmpty())
         {
             panel.showError(
-                "Run /plugin pair in Discord and enter the code in settings.");
+                "Run /plugin pair in Discord and enter the code in settings.",
+                false);
             return;
         }
         String pendingToken = normalized(config.pendingInstallationToken());
@@ -85,7 +90,7 @@ public final class OverviewFeature implements ClanHQFeature
                 }
                 if (!result.isSuccessful())
                 {
-                    panel.showError(result.getMessage());
+                    panel.showError(result.getMessage(), false);
                     return;
                 }
                 configManager.setConfiguration(
@@ -99,6 +104,43 @@ public final class OverviewFeature implements ClanHQFeature
                     ClanHQVerifierConfig.GROUP,
                     "pendingInstallationToken");
                 refresh();
+            }));
+    }
+
+    public void disconnect()
+    {
+        if (!running || normalized(config.installationToken()).isEmpty())
+        {
+            panel.showDisconnected("This installation is not paired.");
+            return;
+        }
+        if (!panel.confirmDisconnect())
+        {
+            return;
+        }
+        panel.setDisconnecting();
+        apiClient.disconnect().thenAccept(result ->
+            SwingUtilities.invokeLater(() ->
+            {
+                if (!running)
+                {
+                    return;
+                }
+                if (!result.isSuccessful())
+                {
+                    panel.showError(result.getMessage(), true);
+                    return;
+                }
+                configManager.unsetConfiguration(
+                    ClanHQVerifierConfig.GROUP,
+                    "installationToken");
+                configManager.unsetConfiguration(
+                    ClanHQVerifierConfig.GROUP,
+                    "pendingInstallationToken");
+                configManager.unsetConfiguration(
+                    ClanHQVerifierConfig.GROUP,
+                    "pairingCode");
+                panel.showDisconnected(result.getMessage());
             }));
     }
 

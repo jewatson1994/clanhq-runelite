@@ -18,6 +18,8 @@ $env:JAVA_HOME = (Get-ChildItem .\localonly\temurin17 -Directory | Select-Object
 - Overview should show paired status, device name, and all active linked RSNs.
 - Toggle **Show DripDrops balance** and confirm the private balance hides and
   reappears without changing the wallet.
+- Build the plugin JAR and confirm all five navigation icons load through the
+  classpath stream rather than a filesystem URL.
 
 ## Pairing and eligibility
 
@@ -32,10 +34,16 @@ $env:JAVA_HOME = (Get-ChildItem .\localonly\temurin17 -Directory | Select-Object
 - Inactivate, archive, or ban the final active RSN. Existing installation
   requests must return HTTP 401 and all identity installations must be revoked.
 - Rejoining requires a new pairing code and does not repeat the link reward.
+- Select **Disconnect This Device**, cancel once, then confirm. The server token
+  must be revoked, local pairing fields cleared, and subsequent authenticated
+  requests rejected until the device pairs again.
 
 ## Character Sync
 
 - Open the full bank and click **Sync Character Data**.
+- Cancel the disclosure once and confirm that no capture or request occurs.
+- Confirm again and verify the dialog identifies the configured destination and
+  complete bank, inventory, and equipment data categories.
 - Confirm ClanHQ stores bank, inventory, and equipment item IDs, names, and
   quantities, including items unrelated to current promotion or Bingo rules.
 - Retry the same request after simulating a lost response. It must not create a
@@ -73,6 +81,7 @@ $env:JAVA_HOME = (Get-ChildItem .\localonly\temurin17 -Directory | Select-Object
   channel and non-board items are ignored.
 - With screenshots enabled, verify the image watermark contains event, RSN,
   drop, quantity, and UTC timestamp without writing an image to disk.
+- On a fresh profile, confirm Bingo screenshots are disabled by default.
 - Click Bingo Character Submit and confirm the panel changes from
   `Not submitted` to `Baseline captured` and exactly one baseline embed is
   posted for the immutable complete snapshot.

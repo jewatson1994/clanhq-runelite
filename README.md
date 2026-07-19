@@ -5,9 +5,9 @@ opens Overview, Character Sync, Events, Bingo, and Daily Tasks without placing
 rank rules in the plugin. ClanHQ remains the authority for membership,
 promotion requirements, rewards, and event configuration.
 
-## Daily Tasks and pairing
+## Overview and pairing
 
-Daily Tasks is the normal onboarding surface. Run `/plugin pair` in Discord,
+Overview is the normal onboarding surface. Run `/plugin pair` in Discord,
 enter `https://verify.clanhq.dev` and the private one-time code in the plugin
 settings, open **Overview**, then select **Pair Installation**. The code expires
 after 10 minutes
@@ -24,12 +24,18 @@ Pairing remains valid while the Discord identity owns at least one active
 ClanHQ member. ClanHQ rejects and revokes installations after the last linked
 member becomes inactive, archived, or banned.
 
+Overview also provides **Disconnect This Device**. Disconnecting asks for
+confirmation, revokes the server-side installation token, and removes the
+local pairing. Reconnecting requires a new single-use pairing code.
+
 ## Character Sync
 
 Character Sync is player-initiated and reads the complete currently available
 bank, inventory, and equipment contents. ClanHQ stores the immutable snapshot
 and updates its additions-only verified-item collection. Promotion rules and
-adjudication remain entirely server-side.
+adjudication remain entirely server-side. Before every submission, RuneLite
+names the configured destination, lists the data categories, and requires an
+explicit confirmation.
 
 ## Events
 
@@ -49,11 +55,11 @@ owns the item list, validates active membership, and sends accepted drops to the
 configured Discord drops channel. Arbitrary inventory changes are never treated
 as drops.
 
-By default, each accepted Bingo drop includes a gameplay screenshot captured
-from RuneLite's next rendered frame. The image is resized and watermarked with
-the event name/code, RSN, drop, quantity, and UTC timestamp, then uploaded from
-memory without saving a local screenshot. Team events are routed by ClanHQ to
-the server-configured team channel.
+Gameplay screenshots are disabled by default. A player may opt in to capture
+RuneLite's next rendered frame for accepted Bingo drops. The image is resized
+and watermarked with the event name/code, RSN, drop, quantity, and UTC
+timestamp, then uploaded from memory without saving a local screenshot. Team
+events are routed by ClanHQ to the server-configured team channel.
 
 ## Trust boundary
 
@@ -106,7 +112,8 @@ use **End sessions** in the RuneScape account settings.
 - HTTPS is required except for localhost development; changing settings never submits evidence automatically.
 - Bank, inventory, and equipped gear are captured once while the bank is open.
 - Character Sync and Bingo Character Submit intentionally send the complete
-  snapshot only after their respective buttons are clicked.
+  snapshot only after their respective buttons are clicked and the disclosure
+  dialog is confirmed.
 - In the Bingo module, Character Submit is a separate explicit action. It sends
   the complete current bank, inventory, and equipment snapshot to ClanHQ for
   permanent additions-only verification and auditing. It also sends supported

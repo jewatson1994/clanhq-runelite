@@ -39,6 +39,11 @@ Before requesting Plugin Hub review:
    account credentials, or unrelated bank contents.
 5. Ask for informal feedback in RuneLite's development Discord if external
    evidence submission needs clarification.
+6. Do not submit the Plugin Hub pull request until a RuneLite reviewer confirms
+   whether explicit self-submission of complete character contents is eligible.
+7. Confirm `build=standard`, the release version, the root `icon.png`, and
+   packaged navigation resources are present in the release repository and
+   built JAR as applicable.
 
 ## Plugin Hub manifest
 
@@ -54,8 +59,10 @@ Open one pull request explaining that the plugin:
 
 - captures only the logged-in player's evidence after explicit actions;
 - sends complete character contents only after Character Sync or Bingo
-  Character Submit is clicked;
+  Character Submit is clicked and its disclosure is confirmed;
 - ships with no endpoint or installation token;
+- disables gameplay screenshots by default;
+- lets the player revoke and remove the current installation from Overview;
 - submits only after the player clicks the button; and
 - never awards a rank or performs game actions.
 

@@ -11,7 +11,7 @@ import java.awt.GridLayout;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.net.URL;
+import java.io.InputStream;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -112,15 +112,20 @@ final class ClanHQPanel extends PluginPanel
 
     private static ImageIcon loadIcon(String resource)
     {
-        URL url = ClanHQPanel.class.getResource(resource);
-        if (url == null)
+        try (InputStream stream =
+            ClanHQPanel.class.getResourceAsStream(resource))
         {
-            throw new IllegalStateException(
-                "Missing ClanHQ navigation icon: " + resource);
-        }
-        try
-        {
-            BufferedImage source = ImageIO.read(url);
+            if (stream == null)
+            {
+                throw new IllegalStateException(
+                    "Missing ClanHQ navigation icon: " + resource);
+            }
+            BufferedImage source = ImageIO.read(stream);
+            if (source == null)
+            {
+                throw new IllegalStateException(
+                    "Invalid ClanHQ navigation icon: " + resource);
+            }
             BufferedImage scaled = new BufferedImage(
                 ICON_SIZE,
                 ICON_SIZE,
