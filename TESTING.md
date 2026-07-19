@@ -16,7 +16,7 @@ $env:JAVA_HOME = (Get-ChildItem .\localonly\temurin17 -Directory | Select-Object
 - Confirm the top navigation is one compact icon row at minimum panel width.
 - Confirm tooltips identify Overview, Character, Events, Bingo, and Dailies.
 - Overview should show paired status, device name, and all active linked RSNs.
-- Toggle **Show DripDrops balance** and confirm the private balance hides and
+- Toggle **Show currency balance** and confirm the private balance hides and
   reappears without changing the wallet.
 - Build the plugin JAR and confirm all five navigation icons load through the
   classpath stream rather than a filesystem URL.

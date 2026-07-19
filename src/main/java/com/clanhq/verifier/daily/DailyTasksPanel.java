@@ -96,7 +96,10 @@ final class DailyTasksPanel extends JPanel
             TaskCard card = cardFor(task.getCategory());
             if (card != null)
             {
-                card.showTask(task);
+                card.showTask(
+                    task,
+                    snapshot.getCurrencyName(),
+                    snapshot.getCurrencySymbol());
                 card.setEnabled(!task.isCompleted());
             }
         }
@@ -180,7 +183,8 @@ final class DailyTasksPanel extends JPanel
             clear();
         }
 
-        private void showTask(DailyTaskSummary task)
+        private void showTask(DailyTaskSummary task, String currencyName,
+            String currencySymbol)
         {
             String marker = task.isCompleted() ? "&#10003;" : "&#9675;";
             StringBuilder value = new StringBuilder("<html><body style='width: 190px'>")
@@ -192,7 +196,11 @@ final class DailyTasksPanel extends JPanel
                 .append(" / ").append(NUMBERS.format(task.getTarget()))
                 .append("<br>Base reward: ")
                 .append(NUMBERS.format(task.getReward()))
-                .append(" DripDrops");
+                .append(' ').append(escapeHtml(currencyName));
+            if (!currencySymbol.isEmpty())
+            {
+                value.append(' ').append(escapeHtml(currencySymbol));
+            }
             if (task.isCompleted())
             {
                 value.append("<br>Claimed: ")

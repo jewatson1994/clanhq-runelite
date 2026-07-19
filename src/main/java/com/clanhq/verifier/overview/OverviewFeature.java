@@ -54,7 +54,7 @@ public final class OverviewFeature implements ClanHQFeature
             if (!running) { return; }
             result.getIdentity().ifPresentOrElse(
                 value -> panel.showIdentity(value,
-                    config.showDripDropsBalance()),
+                    config.showCurrencyBalance()),
                 () -> panel.showError(
                     result.getMessage(), hasStoredPairing));
         }));

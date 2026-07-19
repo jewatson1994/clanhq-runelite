@@ -14,13 +14,17 @@ public final class DailyTasksSnapshot
     private final Instant resetAt;
     private final List<DailyTaskSummary> tasks;
     private final int balance;
+    private final String currencyName;
+    private final String currencySymbol;
 
     private DailyTasksSnapshot(Instant resetAt, List<DailyTaskSummary> tasks,
-        int balance)
+        int balance, String currencyName, String currencySymbol)
     {
         this.resetAt = resetAt;
         this.tasks = Collections.unmodifiableList(new ArrayList<>(tasks));
         this.balance = balance;
+        this.currencyName = currencyName;
+        this.currencySymbol = currencySymbol;
     }
 
     public static DailyTasksSnapshot fromJson(String json)
@@ -46,11 +50,19 @@ public final class DailyTasksSnapshot
                 value.has("placement") && !value.get("placement").isJsonNull()
                     ? value.get("placement").getAsInt() : null));
         }
-        return new DailyTasksSnapshot(resetAt, tasks,
-            root.has("balance") ? root.get("balance").getAsInt() : 0);
+        return new DailyTasksSnapshot(
+            resetAt,
+            tasks,
+            root.has("balance") ? root.get("balance").getAsInt() : 0,
+            root.has("currency_name")
+                ? root.get("currency_name").getAsString() : "Currency",
+            root.has("currency_symbol")
+                ? root.get("currency_symbol").getAsString() : "");
     }
 
     public Instant getResetAt() { return resetAt; }
     public List<DailyTaskSummary> getTasks() { return tasks; }
     public int getBalance() { return balance; }
+    public String getCurrencyName() { return currencyName; }
+    public String getCurrencySymbol() { return currencySymbol; }
 }
