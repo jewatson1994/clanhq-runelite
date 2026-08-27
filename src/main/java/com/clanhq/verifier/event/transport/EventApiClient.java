@@ -2,6 +2,7 @@ package com.clanhq.verifier.event.transport;
 
 import com.clanhq.verifier.ClanHQVerifierConfig;
 import com.clanhq.verifier.event.model.ClanEventSummary;
+import com.clanhq.verifier.event.model.ClanEventsSnapshot;
 import com.clanhq.verifier.service.ApiDestinationService;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -11,7 +12,6 @@ import java.time.Instant;
 import java.util.UUID;
 import okhttp3.Call;
 import okhttp3.Callback;
-import okhttp3.HttpUrl;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -34,24 +34,19 @@ public final class EventApiClient
         this.destinationService = destinationService;
     }
 
-    public CompletableFuture<EventLookupResult> fetchCurrentEvent()
+    public CompletableFuture<EventListResult> fetchEvents()
     {
-        CompletableFuture<EventLookupResult> future = new CompletableFuture<>();
+        CompletableFuture<EventListResult> future = new CompletableFuture<>();
         String baseUrl = destinationService.normalize(config.apiBaseUrl());
         String token = normalized(config.installationToken());
-        String eventCode = normalized(config.eventCode());
-        if (baseUrl == null || token.isEmpty() || eventCode.isEmpty())
+        if (baseUrl == null || token.isEmpty())
         {
-            future.complete(new EventLookupResult(null,
-                "Configure the API URL, installation token, and event code."));
+            future.complete(new EventListResult(null,
+                "Pair this RuneLite installation to load ClanHQ events."));
             return future;
         }
-        HttpUrl url = HttpUrl.parse(baseUrl + "/api/v1/events/current")
-            .newBuilder()
-            .addQueryParameter("code", eventCode)
-            .build();
         Request request = new Request.Builder()
-            .url(url)
+            .url(baseUrl + "/api/v1/events")
             .header("Authorization", "Bearer " + token)
             .get()
             .build();
@@ -60,7 +55,7 @@ public final class EventApiClient
             @Override
             public void onFailure(Call call, IOException exception)
             {
-                future.complete(new EventLookupResult(null,
+                future.complete(new EventListResult(null,
                     "ClanHQ could not be reached."));
             }
 
@@ -74,17 +69,17 @@ public final class EventApiClient
                         ? "" : response.body().string();
                     if (!response.isSuccessful())
                     {
-                        future.complete(new EventLookupResult(null,
+                        future.complete(new EventListResult(null,
                             responseMessage(body, response.code())));
                         return;
                     }
-                    future.complete(new EventLookupResult(
-                        ClanEventSummary.fromJson(body),
-                        "Event information loaded."));
+                    future.complete(new EventListResult(
+                        ClanEventsSnapshot.fromJson(body),
+                        "ClanHQ events loaded."));
                 }
                 catch (IOException | RuntimeException exception)
                 {
-                    future.complete(new EventLookupResult(null,
+                    future.complete(new EventListResult(null,
                         "ClanHQ returned invalid event information."));
                 }
             }

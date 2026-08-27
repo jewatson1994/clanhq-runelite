@@ -3,11 +3,13 @@ package com.clanhq.verifier.bingo.transport;
 import com.clanhq.verifier.bingo.model.BingoCharacterSubmission;
 import com.clanhq.verifier.model.EvidenceSource;
 import com.clanhq.verifier.model.ObservedItem;
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 public final class BingoCharacterPayloadFactory
 {
+    private static final Gson GSON = new Gson();
     private BingoCharacterPayloadFactory()
     {
     }
@@ -52,6 +54,10 @@ public final class BingoCharacterPayloadFactory
             value.addProperty("item_id", item.getItemId());
             value.addProperty("name", item.getName());
             value.addProperty("quantity", item.getQuantity());
+            if (!item.getEquipment().isEmpty())
+            {
+                value.add("equipment", GSON.toJsonTree(item.getEquipment()));
+            }
             values.add(value);
         }
         return values;

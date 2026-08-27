@@ -41,13 +41,30 @@ final class CharacterSyncPanel extends JPanel
     void setSubmitting()
     {
         submit.setEnabled(false);
-        showStatus("Capturing complete character data...");
+        status.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+        showStatus("Syncing...");
     }
 
     void showResult(boolean successful, String message)
     {
         submit.setEnabled(true);
         showStatus((successful ? "" : "Sync failed. ") + message);
+        status.setForeground(successful
+            ? ColorScheme.LIGHT_GRAY_COLOR : new java.awt.Color(0xD95C5C));
+    }
+
+    void showSynced()
+    {
+        submit.setEnabled(true);
+        status.setForeground(new java.awt.Color(0x70C090));
+        status.setText("✓ Synced");
+    }
+
+    void showCancelled()
+    {
+        submit.setEnabled(true);
+        status.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+        showStatus("Sync cancelled.");
     }
 
     private void showStatus(String message)

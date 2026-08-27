@@ -21,17 +21,25 @@ public final class BingoManifest
     private final List<BingoItem> items;
     private final Map<Integer, BingoItem> itemsById;
     private final BingoCharacterCheckStatus characterCheck;
+    private final String serverName;
 
     public BingoManifest(String eventId, String name, Instant startsAt,
         Instant endsAt, List<BingoItem> items)
     {
         this(eventId, name, startsAt, endsAt, items,
-            BingoCharacterCheckStatus.empty());
+            BingoCharacterCheckStatus.empty(), "ClanHQ");
     }
 
     public BingoManifest(String eventId, String name, Instant startsAt,
         Instant endsAt, List<BingoItem> items,
         BingoCharacterCheckStatus characterCheck)
+    {
+        this(eventId, name, startsAt, endsAt, items, characterCheck, "ClanHQ");
+    }
+
+    public BingoManifest(String eventId, String name, Instant startsAt,
+        Instant endsAt, List<BingoItem> items,
+        BingoCharacterCheckStatus characterCheck, String serverName)
     {
         this.eventId = eventId;
         this.name = name;
@@ -39,6 +47,8 @@ public final class BingoManifest
         this.endsAt = endsAt;
         this.items = Collections.unmodifiableList(new ArrayList<>(items));
         this.characterCheck = characterCheck;
+        this.serverName = serverName == null || serverName.trim().isEmpty()
+            ? "ClanHQ" : serverName.trim();
         Map<Integer, BingoItem> indexed = new LinkedHashMap<>();
         for (BingoItem item : items)
         {
@@ -88,7 +98,9 @@ public final class BingoManifest
             Instant.parse(text(root, "starts_at")),
             Instant.parse(text(root, "ends_at")),
             items,
-            characterCheck);
+            characterCheck,
+            root.has("server_name") ? root.get("server_name").getAsString()
+                : "ClanHQ");
     }
 
     private static String text(JsonObject value, String key)
@@ -167,6 +179,11 @@ public final class BingoManifest
     public BingoCharacterCheckStatus getCharacterCheck()
     {
         return characterCheck;
+    }
+
+    public String getServerName()
+    {
+        return serverName;
     }
 
     public Optional<BingoItem> findItem(int itemId)

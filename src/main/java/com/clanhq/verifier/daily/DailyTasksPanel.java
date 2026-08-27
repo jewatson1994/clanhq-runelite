@@ -25,6 +25,8 @@ final class DailyTasksPanel extends JPanel
     private static final NumberFormat NUMBERS =
         NumberFormat.getIntegerInstance(Locale.US);
 
+    private String serverName = "ClanHQ";
+    private final JLabel titleLabel = new JLabel("ClanHQ Daily Tasks");
     private final JLabel statusLabel = new JLabel();
     private final JLabel resetLabel = new JLabel();
     private final JButton refreshButton = new JButton("Refresh Tasks");
@@ -42,7 +44,7 @@ final class DailyTasksPanel extends JPanel
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
         content.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        content.add(new JLabel("ClanHQ Daily Tasks"));
+        content.add(titleLabel);
         content.add(Box.createRigidArea(new Dimension(0, 8)));
 
         refreshButton.addActionListener(event -> refreshAction.run());
@@ -88,6 +90,8 @@ final class DailyTasksPanel extends JPanel
 
     void showTasks(DailyTasksSnapshot snapshot, String message)
     {
+        serverName = snapshot.getServerName();
+        titleLabel.setText(serverName + " Daily Tasks");
         refreshButton.setEnabled(true);
         setClaimButtons(true);
         clearTasks();
@@ -135,6 +139,7 @@ final class DailyTasksPanel extends JPanel
 
     private void clearTasks()
     {
+        titleLabel.setText(serverName + " Daily Tasks");
         skillingCard.clear();
         minigameCard.clear();
         pvmCard.clear();

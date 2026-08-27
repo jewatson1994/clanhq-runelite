@@ -39,6 +39,7 @@ import net.runelite.client.plugins.loottracker.LootTrackerPlugin;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.DrawManager;
 import net.runelite.client.ui.NavigationButton;
+import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.util.ImageUtil;
 import okhttp3.OkHttpClient;
 
@@ -55,6 +56,7 @@ public final class ClanHQVerifierPlugin extends Plugin
     @Inject private DrawManager drawManager;
     @Inject private ScheduledExecutorService executor;
     @Inject private ClientToolbar clientToolbar;
+    @Inject private OverlayManager overlayManager;
     @Inject private LocalPlayerSnapshotService snapshotService;
     @Inject private ApiDestinationService apiDestinationService;
     @Inject private ClanHQVerifierConfig config;
@@ -96,7 +98,8 @@ public final class ClanHQVerifierPlugin extends Plugin
         }
         if ("bingoEnabled".equals(event.getKey())
             || "eventsEnabled".equals(event.getKey())
-            || "dailyTasksEnabled".equals(event.getKey()))
+            || "dailyTasksEnabled".equals(event.getKey())
+            || "dailyTasksOverlay".equals(event.getKey()))
         {
             SwingUtilities.invokeLater(this::rebuildFeatures);
             return;
@@ -152,8 +155,13 @@ public final class ClanHQVerifierPlugin extends Plugin
             dailyTasksFeature = new DailyTasksFeature(
                 new DailyTasksApiClient(
                     httpClient, config, apiDestinationService),
-                config);
+                config,
+                configManager);
             enabled.add(dailyTasksFeature);
+            if (config.dailyTasksOverlay())
+            {
+                overlayManager.add(dailyTasksFeature.getOverlay());
+            }
         }
         features = enabled;
         shellPanel = new ClanHQPanel(features);
@@ -168,6 +176,10 @@ public final class ClanHQVerifierPlugin extends Plugin
 
     private void disposeFeatures()
     {
+        if (dailyTasksFeature != null)
+        {
+            overlayManager.remove(dailyTasksFeature.getOverlay());
+        }
         features.forEach(ClanHQFeature::shutDown);
         features = Collections.emptyList();
         overviewFeature = null;
@@ -194,6 +206,10 @@ public final class ClanHQVerifierPlugin extends Plugin
                 event.getItems());
         }
         if (eventFeature != null) { eventFeature.onLoot(event.getName()); }
+        if (dailyTasksFeature != null)
+        {
+            dailyTasksFeature.observeLoot(event.getName());
+        }
     }
 
     @Subscribe
@@ -202,6 +218,11 @@ public final class ClanHQVerifierPlugin extends Plugin
         if (eventFeature != null)
         {
             eventFeature.onSkillExperience(
+                event.getSkill().getName(), event.getXp());
+        }
+        if (dailyTasksFeature != null)
+        {
+            dailyTasksFeature.observeSkillExperience(
                 event.getSkill().getName(), event.getXp());
         }
     }

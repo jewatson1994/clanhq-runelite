@@ -1,20 +1,25 @@
 package com.clanhq.verifier.daily;
 
 import com.clanhq.verifier.ClanHQVerifierConfig;
+import com.clanhq.verifier.daily.model.DailyTasksSnapshot;
 import com.clanhq.verifier.daily.transport.DailyTasksApiClient;
 import com.clanhq.verifier.feature.ClanHQFeature;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
+import net.runelite.client.config.ConfigManager;
 
 public final class DailyTasksFeature implements ClanHQFeature
 {
     private final DailyTasksApiClient apiClient;
     private final ClanHQVerifierConfig config;
     private final DailyTasksPanel panel;
+    private final DailyTasksOverlay overlay;
+    private volatile DailyTasksSnapshot snapshot;
     private volatile boolean running;
 
     public DailyTasksFeature(DailyTasksApiClient apiClient,
-        ClanHQVerifierConfig config)
+        ClanHQVerifierConfig config,
+        ConfigManager configManager)
     {
         this.apiClient = apiClient;
         this.config = config;
@@ -23,6 +28,7 @@ public final class DailyTasksFeature implements ClanHQFeature
             () -> claim("SKILLING"),
             () -> claim("MINIGAME"),
             () -> claim("PVM"));
+        this.overlay = new DailyTasksOverlay(() -> snapshot, configManager);
     }
 
     @Override
@@ -46,6 +52,8 @@ public final class DailyTasksFeature implements ClanHQFeature
     @Override
     public JComponent getPanel() { return panel; }
 
+    public DailyTasksOverlay getOverlay() { return overlay; }
+
     @Override
     public void startUp()
     {
@@ -57,6 +65,8 @@ public final class DailyTasksFeature implements ClanHQFeature
     public void shutDown()
     {
         running = false;
+        snapshot = null;
+        overlay.setSnapshot(null);
     }
 
     public void refresh()
@@ -72,6 +82,8 @@ public final class DailyTasksFeature implements ClanHQFeature
         }
         if (normalized(config.installationToken()).isEmpty())
         {
+            snapshot = null;
+            overlay.clearPersistedState();
             panel.showUnpaired(
                 "Use /plugin pair in Discord, then enter the code in settings.");
             return;
@@ -84,17 +96,31 @@ public final class DailyTasksFeature implements ClanHQFeature
                 return;
             }
             result.getSnapshot().ifPresentOrElse(
-                snapshot -> panel.showTasks(snapshot,
-                    successMessage == null ? result.getMessage() : successMessage),
+                snapshot -> {
+                    this.snapshot = snapshot;
+                    overlay.setSnapshot(snapshot);
+                    panel.showTasks(snapshot,
+                        successMessage == null ? result.getMessage() : successMessage);
+                },
                 () -> panel.showError(result.getMessage(), true));
         }));
     }
 
     public void claim(String category)
     {
-        panel.setLoading("Refreshing WOM and checking the "
+        DailyTasksSnapshot current = snapshot;
+        if (current == null || current.getPeriodDate().isEmpty())
+        {
+            panel.showError("Refresh today's tasks before claiming.", true);
+            return;
+        }
+        panel.setLoading("Checking saved client progress for the "
             + category.toLowerCase() + " task...");
-        apiClient.claim(category).thenAccept(result -> SwingUtilities.invokeLater(() ->
+        apiClient.claim(
+            category,
+            current.getPeriodDate(),
+            overlay.buildClientProgress(null))
+            .thenAccept(result -> SwingUtilities.invokeLater(() ->
         {
             if (!running)
             {
@@ -114,7 +140,17 @@ public final class DailyTasksFeature implements ClanHQFeature
                         ? "." : " " + result.getCurrencySymbol() + ".");
             }
             refresh(message);
-        }));
+            }));
+    }
+
+    public void observeSkillExperience(String skillName, int experience)
+    {
+        overlay.observeSkillExperience(skillName, experience);
+    }
+
+    public void observeLoot(String sourceName)
+    {
+        overlay.observeLoot(sourceName);
     }
 
     private static String normalized(String value)

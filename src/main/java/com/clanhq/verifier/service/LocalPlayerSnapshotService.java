@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import javax.inject.Inject;
 import net.runelite.api.Client;
+import net.runelite.api.EquipmentInventorySlot;
 import net.runelite.api.GameState;
 import net.runelite.api.Item;
 import net.runelite.api.ItemContainer;
@@ -22,14 +23,20 @@ import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.api.gameval.VarPlayerID;
+import net.runelite.client.game.ItemEquipmentStats;
+import net.runelite.client.game.ItemManager;
+import net.runelite.client.game.ItemStats;
 
 public final class LocalPlayerSnapshotService
 {
     private final Client client;
+    private final ItemManager itemManager;
+
     @Inject
-    public LocalPlayerSnapshotService(Client client)
+    public LocalPlayerSnapshotService(Client client, ItemManager itemManager)
     {
         this.client = client;
+        this.itemManager = itemManager;
     }
 
     public VerificationSnapshot captureCompleteItemsEvidence()
@@ -95,6 +102,16 @@ public final class LocalPlayerSnapshotService
         int catalytic = Math.max(0,
             client.getVarpValue(VarPlayerID.TOTE_SECONDARY));
         metrics.put("gotr_reward_searches", Math.min(elemental, catalytic));
+        for (Skill skill : Skill.values())
+        {
+            metrics.put("skill_" + skill.name().toLowerCase(),
+                Math.max(1, client.getRealSkillLevel(skill)));
+        }
+        for (Quest quest : Quest.values())
+        {
+            metrics.put("quest_" + quest.name().toLowerCase(),
+                quest.getState(client) == QuestState.FINISHED ? 1 : 0);
+        }
         return metrics;
     }
 
@@ -140,11 +157,13 @@ public final class LocalPlayerSnapshotService
             }
 
             String itemName = client.getItemDefinition(item.getId()).getName();
+            Map<String, Object> equipment = equipmentMetadata(item.getId());
             ObservedItem observedItem = new ObservedItem(
                 item.getId(),
                 itemName,
                 item.getQuantity(),
-                source);
+                source,
+                equipment);
 
             String key = source.name() + ':' + item.getId();
             ObservedItem existing = observedItems.get(key);
@@ -158,9 +177,84 @@ public final class LocalPlayerSnapshotService
                     item.getId(),
                     itemName,
                     existing.getQuantity() + item.getQuantity(),
-                    source));
+                    source,
+                    existing.getEquipment().isEmpty()
+                        ? equipment : existing.getEquipment()));
             }
         }
+    }
+
+    private Map<String, Object> equipmentMetadata(int itemId)
+    {
+        if (itemManager == null)
+        {
+            return Collections.emptyMap();
+        }
+        ItemStats stats;
+        try
+        {
+            stats = itemManager.getItemStats(itemId);
+        }
+        catch (RuntimeException ignored)
+        {
+            return Collections.emptyMap();
+        }
+        if (stats == null || !stats.isEquipable() || stats.getEquipment() == null)
+        {
+            return Collections.emptyMap();
+        }
+        ItemEquipmentStats equipment = stats.getEquipment();
+        String slot = equipmentSlot(equipment.getSlot());
+        if (slot == null)
+        {
+            return Collections.emptyMap();
+        }
+        Map<String, Object> values = new LinkedHashMap<>();
+        values.put("slot", slot);
+        values.put("two_handed", equipment.isTwoHanded());
+        values.put("attack_stab", equipment.getAstab());
+        values.put("attack_slash", equipment.getAslash());
+        values.put("attack_crush", equipment.getAcrush());
+        values.put("attack_magic", equipment.getAmagic());
+        values.put("attack_ranged", equipment.getArange());
+        values.put("defence_stab", equipment.getDstab());
+        values.put("defence_slash", equipment.getDslash());
+        values.put("defence_crush", equipment.getDcrush());
+        values.put("defence_magic", equipment.getDmagic());
+        values.put("defence_ranged", equipment.getDrange());
+        values.put("strength", equipment.getStr());
+        values.put("ranged_strength", equipment.getRstr());
+        values.put("magic_damage", equipment.getMdmg());
+        values.put("prayer", equipment.getPrayer());
+        values.put("attack_speed", equipment.getAspeed());
+        return values;
+    }
+
+    private static String equipmentSlot(int slot)
+    {
+        for (EquipmentInventorySlot value : EquipmentInventorySlot.values())
+        {
+            if (value.getSlotIdx() != slot)
+            {
+                continue;
+            }
+            switch (value)
+            {
+                case HEAD: return "HEAD";
+                case CAPE: return "CAPE";
+                case AMULET: return "NECK";
+                case WEAPON: return "WEAPON";
+                case BODY: return "BODY";
+                case SHIELD: return "SHIELD";
+                case LEGS: return "LEGS";
+                case GLOVES: return "HANDS";
+                case BOOTS: return "FEET";
+                case RING: return "RING";
+                case AMMO: return "AMMO";
+                default: return null;
+            }
+        }
+        return null;
     }
 
     private DiaryProgress captureDiaryProgress()

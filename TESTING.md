@@ -57,6 +57,14 @@ $env:JAVA_HOME = (Get-ChildItem .\localonly\temurin17 -Directory | Select-Object
 
 - Refresh and compare all three tasks, reset time, completion, reward, and
   placement with Discord.
+- Enable **Daily tasks overlay** in the plugin settings. Confirm the in-game
+  overlay shows three colored progress bars, a reset countdown, and the current
+  balance. Right-click it to filter to one task category or return to all tasks.
+- Gain a small amount of XP in the displayed skill and confirm the bar moves
+  immediately. Confirm a matching Loot Tracker event moves the PvM or minigame
+  bar without waiting for a server refresh.
+- Refresh or cross the daily reset and confirm the local progress layer clears
+  and starts from the new server snapshot.
 - Claim Skilling, PvM, and Minigame independently. One category's cooldown must
   not block a different category.
 - A completed category button must disable after refresh.

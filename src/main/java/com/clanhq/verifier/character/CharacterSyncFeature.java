@@ -45,7 +45,7 @@ public final class CharacterSyncFeature implements ClanHQFeature
         if (!running) { return; }
         if (!consentService.confirm(panel, "character synchronization"))
         {
-            panel.showResult(true, "Character submission cancelled.");
+            panel.showCancelled();
             return;
         }
         panel.setSubmitting();
@@ -78,7 +78,14 @@ public final class CharacterSyncFeature implements ClanHQFeature
             {
                 if (!running) { return; }
                 if (result.isSuccessful()) { pending = null; }
-                panel.showResult(result.isSuccessful(), result.getMessage());
+                if (result.isSuccessful())
+                {
+                    panel.showSynced();
+                }
+                else
+                {
+                    panel.showResult(false, result.getMessage());
+                }
             }));
     }
 }

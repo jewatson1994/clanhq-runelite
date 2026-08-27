@@ -2,6 +2,7 @@ package com.clanhq.verifier.daily.transport;
 
 import com.clanhq.verifier.ClanHQVerifierConfig;
 import com.clanhq.verifier.daily.model.DailyTasksSnapshot;
+import com.google.gson.JsonArray;
 import com.clanhq.verifier.service.ApiDestinationService;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -82,6 +83,14 @@ public final class DailyTasksApiClient
 
     public CompletableFuture<DailyActionResult> claim(String category)
     {
+        return claim(category, null, null);
+    }
+
+    public CompletableFuture<DailyActionResult> claim(
+        String category,
+        String periodDate,
+        JsonArray clientProgress)
+    {
         CompletableFuture<DailyActionResult> future = new CompletableFuture<>();
         Request base = authenticatedRequest("/api/v1/daily-tasks/claim");
         if (base == null)
@@ -93,6 +102,11 @@ public final class DailyTasksApiClient
         }
         JsonObject payload = new JsonObject();
         payload.addProperty("category", category);
+        if (periodDate != null && clientProgress != null)
+        {
+            payload.addProperty("period_date", periodDate);
+            payload.add("client_progress", clientProgress);
+        }
         Request request = base.newBuilder()
             .post(RequestBody.create(JSON, payload.toString()))
             .build();

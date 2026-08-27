@@ -13,6 +13,7 @@ import net.runelite.client.ui.ColorScheme;
 
 final class OverviewPanel extends JPanel
 {
+    private final JLabel title = new JLabel("ClanHQ Overview");
     private final JLabel connection = new JLabel("Connection: Checking...");
     private final JLabel identity = new JLabel("Linked RSNs: —");
     private final JLabel balance = new JLabel();
@@ -30,7 +31,7 @@ final class OverviewPanel extends JPanel
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
         content.setBackground(ColorScheme.DARK_GRAY_COLOR);
-        content.add(new JLabel("ClanHQ Overview"));
+        content.add(title);
         content.add(Box.createRigidArea(new Dimension(0, 8)));
         content.add(new JLabel("<html>ClanHQ securely connects RuneLite to "
             + "events, Bingo, daily tasks, and character data.</html>"));
@@ -82,6 +83,7 @@ final class OverviewPanel extends JPanel
         pair.setEnabled(false);
         disconnect.setEnabled(true);
         connection.setText("Connection: Paired (" + value.getDeviceName() + ")");
+        title.setText(value.getServerName() + " Overview");
         identity.setText("Linked RSNs: " + String.join(", ", value.getRsns()));
         balance.setText(showBalance
             ? value.getCurrencyName() + ": " + value.getBalance()
@@ -97,6 +99,7 @@ final class OverviewPanel extends JPanel
         pair.setEnabled(!hasStoredPairing);
         disconnect.setEnabled(hasStoredPairing);
         connection.setText("Connection: Not available");
+        title.setText("ClanHQ Overview");
         identity.setText("Linked RSNs: —");
         balance.setText("");
         showStatus(message);
@@ -120,6 +123,7 @@ final class OverviewPanel extends JPanel
         pair.setEnabled(true);
         disconnect.setEnabled(false);
         connection.setText("Connection: Not paired");
+        title.setText("ClanHQ Overview");
         identity.setText("Linked RSNs: —");
         balance.setText("");
         showStatus(message);

@@ -71,6 +71,17 @@ public interface ClanHQVerifierConfig extends Config
         return true;
     }
 
+    @ConfigItem(
+        keyName = "dailyTasksOverlay",
+        name = "Daily tasks overlay",
+        description = "Show today's ClanHQ task progress in the game overlay",
+        section = FEATURES_SECTION,
+        position = 6)
+    default boolean dailyTasksOverlay()
+    {
+        return true;
+    }
+
     @ConfigSection(
         name = "ClanHQ connection",
         description = "Where review evidence will be submitted",
@@ -78,15 +89,9 @@ public interface ClanHQVerifierConfig extends Config
     String CONNECTION_SECTION = "connection";
 
     @ConfigSection(
-        name = "Clan event",
-        description = "Join a competition created by ClanHQ",
-        position = 1)
-    String EVENT_SECTION = "event";
-
-    @ConfigSection(
         name = "Bingo",
-        description = "Connect to a ClanHQ Bingo event",
-        position = 2)
+        description = "Connect to the active ClanHQ Bingo event",
+        position = 1)
     String BINGO_SECTION = "bingo";
 
     @ConfigItem(
@@ -144,17 +149,6 @@ public interface ClanHQVerifierConfig extends Config
         secret = true,
         position = 4)
     default String pendingInstallationToken()
-    {
-        return "";
-    }
-
-    @ConfigItem(
-        keyName = "eventCode",
-        name = "Event code",
-        description = "Code identified with a non-Bingo ClanHQ event",
-        section = EVENT_SECTION,
-        position = 0)
-    default String eventCode()
     {
         return "";
     }

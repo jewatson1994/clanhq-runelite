@@ -17,6 +17,7 @@ import net.runelite.client.ui.ColorScheme;
 final class BingoPanel extends JPanel
 {
     private static final int WRAP_WIDTH = 190;
+    private final JLabel titleLabel = new JLabel("ClanHQ Bingo");
     private final JLabel eventLabel = new JLabel("Event: Not loaded");
     private final JLabel participationLabel = new JLabel("Participation: —");
     private final JLabel teamLabel = new JLabel("Team: Unassigned");
@@ -36,7 +37,7 @@ final class BingoPanel extends JPanel
         setBackground(ColorScheme.DARK_GRAY_COLOR);
 
         JPanel header = verticalPanel();
-        header.add(new JLabel("ClanHQ Bingo"));
+        header.add(titleLabel);
         header.add(Box.createRigidArea(new Dimension(0, 6)));
         header.add(new JLabel("<html>Enter the code identified with the event. "
             + "Please reach out to Staff for support.</html>"));
@@ -90,6 +91,7 @@ final class BingoPanel extends JPanel
     {
         refreshButton.setEnabled(true);
         characterSubmitButton.setEnabled(true);
+        titleLabel.setText(manifest.getServerName() + " Bingo");
         eventLabel.setText("Event: " + manifest.getName());
         boardLabel.setText("Board: Loaded (" + manifest.getItems().size()
             + " tracked items/tasks)");
