@@ -32,6 +32,7 @@ final class EventPanel extends JPanel
     private static final Color ACTIVE_COLOR = new Color(112, 194, 130);
     private static final Color SCHEDULED_COLOR = new Color(111, 166, 224);
     private static final Color BINGO_COLOR = new Color(178, 137, 224);
+    private String serverName = "ClanHQ";
     private final JLabel titleLabel = new JLabel("ClanHQ Events");
     private final JLabel subtitleLabel = new JLabel();
     private final JLabel statusLabel = new JLabel();
@@ -88,7 +89,11 @@ final class EventPanel extends JPanel
 
     void showEvents(String serverName, List<ClanEventSummary> events)
     {
-        titleLabel.setText(serverName + " Events");
+        if (serverName != null && !serverName.trim().isEmpty())
+        {
+            this.serverName = serverName.trim();
+        }
+        titleLabel.setText(this.serverName + " Events");
         refreshButton.setEnabled(true);
         eventsPanel.removeAll();
         if (events.isEmpty())
@@ -112,7 +117,7 @@ final class EventPanel extends JPanel
 
     void showError(String message)
     {
-        titleLabel.setText("ClanHQ Events");
+        titleLabel.setText(serverName + " Events");
         refreshButton.setEnabled(true);
         eventsPanel.removeAll();
         eventsPanel.add(emptyState("Events unavailable."));

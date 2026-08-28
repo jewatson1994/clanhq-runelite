@@ -47,7 +47,12 @@ public final class ClanEventSummary
     public static ClanEventSummary fromJson(String json)
     {
         JsonObject value = new JsonParser().parse(json).getAsJsonObject();
-        if (value.get("schema_version").getAsInt() != 1)
+        // The event-list envelope carries the API schema version. Older
+        // servers did not repeat that field on every event, so accept both
+        // shapes while still rejecting an explicitly unsupported version.
+        if (value.has("schema_version")
+            && !value.get("schema_version").isJsonNull()
+            && value.get("schema_version").getAsInt() != 1)
         {
             throw new IllegalArgumentException("Unsupported event response");
         }
@@ -66,11 +71,12 @@ public final class ClanEventSummary
             LocalDate.parse(value.get("start_date").getAsString()),
             LocalDate.parse(value.get("end_date").getAsString()),
             value.get("status").getAsString(),
-            value.get("event_code").getAsString(),
+            value.has("event_code") && !value.get("event_code").isJsonNull()
+                ? value.get("event_code").getAsString() : "",
             startAt,
             endAt,
-            value.has("server_name") ? value.get("server_name").getAsString()
-                : "ClanHQ");
+            value.has("server_name") && !value.get("server_name").isJsonNull()
+                ? value.get("server_name").getAsString() : "ClanHQ");
     }
 
     public long getEventId() { return eventId; }
