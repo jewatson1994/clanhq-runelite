@@ -4,6 +4,7 @@ import com.clanhq.verifier.event.model.ClanEventSummary;
 import com.clanhq.verifier.event.model.ClanEventsSnapshot;
 import com.clanhq.verifier.event.transport.EventApiClient;
 import com.clanhq.verifier.feature.ClanHQFeature;
+import com.clanhq.verifier.task.VerificationType;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
@@ -49,7 +50,7 @@ public final class EventFeature implements ClanHQFeature
     @Override
     public String getDescription()
     {
-        return "View current ClanHQ events. Bingo linking is handled separately.";
+        return "View current ClanHQ events.";
     }
 
     @Override
@@ -104,7 +105,12 @@ public final class EventFeature implements ClanHQFeature
         Instant now = Instant.now();
         for (ClanEventSummary event : currentEvents)
         {
-            if (!event.isActive() || !event.isSkillEvent()
+            boolean skillVerification = event.getVerificationType()
+                == VerificationType.SKILL_XP
+                || (event.getVerificationType() == VerificationType.UNKNOWN
+                    && event.isSkillEvent());
+            if (!event.isActive()
+                || !skillVerification
                 || !matches(event.getTarget(), skillName)
                 || !skillSubmissionAllowed(event.getEventId(), now))
             {
@@ -126,7 +132,12 @@ public final class EventFeature implements ClanHQFeature
         }
         for (ClanEventSummary event : currentEvents)
         {
-            if (event.isActive() && event.isBossEvent()
+            boolean bossVerification = event.getVerificationType()
+                == VerificationType.NPC_KILL
+                || (event.getVerificationType() == VerificationType.UNKNOWN
+                    && event.isBossEvent());
+            if (event.isActive()
+                && bossVerification
                 && matches(event.getTarget(), sourceName))
             {
                 submitObservation(event, "BOSS_KILL", event.getTarget(), 1);

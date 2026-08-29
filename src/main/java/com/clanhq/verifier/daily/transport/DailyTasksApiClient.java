@@ -2,14 +2,15 @@ package com.clanhq.verifier.daily.transport;
 
 import com.clanhq.verifier.ClanHQVerifierConfig;
 import com.clanhq.verifier.daily.model.DailyTasksSnapshot;
+import com.clanhq.verifier.loot.ObservedDrop;
 import com.google.gson.JsonArray;
 import com.clanhq.verifier.service.ApiDestinationService;
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+import java.time.Instant;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -20,6 +21,9 @@ import okhttp3.Response;
 
 public final class DailyTasksApiClient
 {
+    /** Capabilities with an implemented RuneLite observation source. */
+    private static final String CAPABILITIES =
+        "SKILL_XP,NPC_KILL,ITEM_DROP";
     private static final MediaType JSON =
         MediaType.parse("application/json; charset=utf-8");
     private final OkHttpClient httpClient;
@@ -84,6 +88,55 @@ public final class DailyTasksApiClient
     public CompletableFuture<DailyActionResult> claim(String category)
     {
         return claim(category, null, null);
+    }
+
+    /**
+     * Submit a server-authoritative ITEM_DROP observation when the task API is
+     * enabled. This is deliberately separate from claim and does not trust
+     * client-supplied reward, target, or completion values.
+     */
+    public CompletableFuture<Boolean> submitItemDropObservation(
+        String assignmentId, ObservedDrop drop, int itemId, int quantity)
+    {
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        Request base = authenticatedRequest(
+            "/api/v1/tasks/" + normalized(assignmentId) + "/observations");
+        if (base == null || normalized(assignmentId).isEmpty()
+            || drop == null || quantity <= 0)
+        {
+            future.complete(false);
+            return future;
+        }
+        JsonObject payload = new JsonObject();
+        payload.addProperty("verification_type", "ITEM_DROP");
+        payload.addProperty("item_id", itemId);
+        payload.addProperty("quantity", quantity);
+        payload.addProperty("source_type", drop.getSourceType());
+        payload.addProperty("source_name", drop.getSourceName());
+        payload.addProperty("observed_at", drop.getObservedAt() == null
+            ? Instant.now().toString() : drop.getObservedAt().toString());
+        Request request = base.newBuilder()
+            .post(RequestBody.create(JSON, payload.toString()))
+            .build();
+        httpClient.newCall(request).enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException exception)
+            {
+                future.complete(false);
+            }
+
+            @Override
+            public void onResponse(Call call, Response response)
+                throws IOException
+            {
+                try (Response closeable = response)
+                {
+                    future.complete(response.isSuccessful());
+                }
+            }
+        });
+        return future;
     }
 
     public CompletableFuture<DailyActionResult> claim(
@@ -172,6 +225,8 @@ public final class DailyTasksApiClient
         return new Request.Builder()
             .url(baseUrl + path)
             .header("Authorization", "Bearer " + token)
+            .header("X-ClanHQ-Plugin-Version", "1")
+            .header("X-ClanHQ-Plugin-Capabilities", CAPABILITIES)
             .get()
             .build();
     }

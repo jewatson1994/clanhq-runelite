@@ -10,6 +10,7 @@ import com.clanhq.verifier.daily.transport.DailyTasksApiClient;
 import com.clanhq.verifier.event.EventFeature;
 import com.clanhq.verifier.event.transport.EventApiClient;
 import com.clanhq.verifier.feature.ClanHQFeature;
+import com.clanhq.verifier.loot.ObservedDrop;
 import com.clanhq.verifier.overview.IdentityApiClient;
 import com.clanhq.verifier.overview.OverviewFeature;
 import com.clanhq.verifier.service.ApiDestinationService;
@@ -31,6 +32,7 @@ import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.game.SkillIconManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDependency;
 import net.runelite.client.plugins.PluginDescriptor;
@@ -59,6 +61,7 @@ public final class ClanHQVerifierPlugin extends Plugin
     @Inject private OverlayManager overlayManager;
     @Inject private LocalPlayerSnapshotService snapshotService;
     @Inject private ApiDestinationService apiDestinationService;
+    @Inject private SkillIconManager skillIconManager;
     @Inject private ClanHQVerifierConfig config;
     @Inject private ConfigManager configManager;
 
@@ -156,7 +159,9 @@ public final class ClanHQVerifierPlugin extends Plugin
                 new DailyTasksApiClient(
                     httpClient, config, apiDestinationService),
                 config,
-                configManager);
+                configManager,
+                skillIconManager,
+                executor);
             enabled.add(dailyTasksFeature);
             if (config.dailyTasksOverlay())
             {
@@ -197,17 +202,20 @@ public final class ClanHQVerifierPlugin extends Plugin
     public void onLootReceived(LootReceived event)
     {
         if (client.getLocalPlayer() == null) { return; }
+        ObservedDrop observedDrop = new ObservedDrop(
+            client.getLocalPlayer().getName(),
+            event.getType().name(),
+            event.getName(),
+            event.getItems(),
+            java.time.Instant.now());
         if (bingoFeature != null)
         {
-            bingoFeature.onLoot(
-                client.getLocalPlayer().getName(),
-                event.getType().name(),
-                event.getName(),
-                event.getItems());
+            bingoFeature.onDrop(observedDrop);
         }
         if (eventFeature != null) { eventFeature.onLoot(event.getName()); }
         if (dailyTasksFeature != null)
         {
+            dailyTasksFeature.observeDrop(observedDrop);
             dailyTasksFeature.observeLoot(event.getName());
         }
     }

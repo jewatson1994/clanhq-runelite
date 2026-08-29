@@ -10,6 +10,7 @@ import com.clanhq.verifier.service.LocalPlayerSnapshotService;
 import com.clanhq.verifier.service.SubmissionConsentService;
 import com.clanhq.verifier.feature.ClanHQFeature;
 import com.clanhq.verifier.event.transport.EventApiClient;
+import com.clanhq.verifier.loot.ObservedDrop;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
@@ -230,34 +231,43 @@ public final class BingoFeature implements ClanHQFeature
     public void onLoot(String rsn, String sourceType, String sourceName,
         Collection<ItemStack> items)
     {
+        onDrop(new ObservedDrop(rsn, sourceType, sourceName, items,
+            Instant.now()));
+    }
+
+    public void onDrop(ObservedDrop observedDrop)
+    {
         BingoManifest active = manifest;
-        if (!running || active == null || rsn == null || rsn.trim().isEmpty())
+        if (!running || active == null || observedDrop == null
+            || observedDrop.getPlayer() == null
+            || observedDrop.getPlayer().trim().isEmpty())
         {
             return;
         }
-        for (ItemStack observed : items)
+        for (ItemStack observed : observedDrop.getItems())
         {
             BingoItem item = active.findItem(observed.getId()).orElse(null);
             if (item == null || observed.getQuantity() < item.getMinimumQuantity())
             {
                 continue;
             }
-            BingoDrop drop = new BingoDrop(
+            BingoDrop bingoDrop = new BingoDrop(
                 active.getEventId(),
-                rsn,
+                observedDrop.getPlayer(),
                 item,
                 observed.getQuantity(),
-                sourceType,
-                sourceName == null ? "Unknown loot source" : sourceName,
-                Instant.now());
+                observedDrop.getSourceType(),
+                observedDrop.getSourceName() == null ? "Unknown loot source"
+                    : observedDrop.getSourceName(),
+                observedDrop.getObservedAt());
             SwingUtilities.invokeLater(() -> panel.showDetected(
-                item.getName(), drop.getQuantity(), drop.getSourceName()));
+                item.getName(), bingoDrop.getQuantity(), bingoDrop.getSourceName()));
             CompletableFuture<byte[]> screenshot =
                 screenshotsEnabled.getAsBoolean()
-                    ? screenshotService.capture(drop, active.getName())
+                    ? screenshotService.capture(bingoDrop, active.getName())
                         .handle((bytes, error) -> error == null ? bytes : null)
                     : CompletableFuture.completedFuture(null);
-            screenshot.thenCompose(bytes -> apiClient.submit(drop, bytes))
+            screenshot.thenCompose(bytes -> apiClient.submit(bingoDrop, bytes))
                 .thenAccept(result ->
                 SwingUtilities.invokeLater(() ->
                 {

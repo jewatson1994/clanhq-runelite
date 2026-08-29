@@ -71,7 +71,7 @@ final class EventPanel extends JPanel
         content.add(statusLabel);
 
         JScrollPane scroll = new JScrollPane(content,
-            JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+            JScrollPane.VERTICAL_SCROLLBAR_NEVER,
             JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scroll.setBorder(null);
         scroll.setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -109,8 +109,7 @@ final class EventPanel extends JPanel
             }
         }
         showStatus(events.size() + " current event"
-            + (events.size() == 1 ? "" : "s")
-            + ". Bingo linking is handled in the Bingo tab.");
+            + (events.size() == 1 ? "" : "s") + ".");
         eventsPanel.revalidate();
         eventsPanel.repaint();
     }
@@ -167,13 +166,6 @@ final class EventPanel extends JPanel
         details.add(Box.createRigidArea(new Dimension(0, 5)));
         details.add(new JLabel(html("<b>End</b><br>"
             + formatDateTime(event.getEndAt(), event.getEndDate()))));
-        if ("BINGO".equals(event.getEventType()))
-        {
-            details.add(Box.createRigidArea(new Dimension(0, 5)));
-            JLabel bingo = new JLabel(html("<font color='#" + hex(BINGO_COLOR)
-                + ">Bingo linking is available in the Bingo tab.</font>"));
-            details.add(bingo);
-        }
         panel.add(details, BorderLayout.CENTER);
         panel.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.setMaximumSize(new Dimension(
@@ -238,12 +230,6 @@ final class EventPanel extends JPanel
     {
         return "<html><body style='width: " + WRAP_WIDTH + "px'>"
             + text + "</body></html>";
-    }
-
-    private static String hex(Color color)
-    {
-        return String.format("%02x%02x%02x",
-            color.getRed(), color.getGreen(), color.getBlue());
     }
 
     private static String escapeHtml(String text)

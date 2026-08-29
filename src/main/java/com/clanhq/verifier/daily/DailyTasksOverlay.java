@@ -3,6 +3,8 @@ package com.clanhq.verifier.daily;
 import com.clanhq.verifier.ClanHQVerifierConfig;
 import com.clanhq.verifier.daily.model.DailyTaskSummary;
 import com.clanhq.verifier.daily.model.DailyTasksSnapshot;
+import com.clanhq.verifier.loot.ObservedDrop;
+import com.clanhq.verifier.task.VerificationType;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -161,6 +163,7 @@ public final class DailyTasksOverlay extends OverlayPanel
             {
                 if (("PVM".equals(task.getCategory())
                         || "MINIGAME".equals(task.getCategory()))
+                    && task.getVerificationType() != VerificationType.ITEM_DROP
                     && mentions(task, sourceName))
                 {
                     String key = taskKey(task);
@@ -172,6 +175,47 @@ public final class DailyTasksOverlay extends OverlayPanel
                     revalidate();
                     return;
                 }
+            }
+        }
+    }
+
+    /** Apply a verified loot-tracker drop to an ITEM_DROP task. */
+    public void observeDrop(ObservedDrop drop)
+    {
+        DailyTasksSnapshot snapshot = snapshotSupplier.get();
+        if (snapshot == null || drop == null || drop.getItems() == null)
+        {
+            return;
+        }
+        synchronized (stateLock)
+        {
+            for (DailyTaskSummary task : snapshot.getTasks())
+            {
+                if (task.getVerificationType() != VerificationType.ITEM_DROP
+                    || task.getVerificationItemId() == null)
+                {
+                    continue;
+                }
+                int quantity = 0;
+                for (net.runelite.client.game.ItemStack item : drop.getItems())
+                {
+                    if (item.getId() == task.getVerificationItemId())
+                    {
+                        quantity += Math.max(0, item.getQuantity());
+                    }
+                }
+                if (quantity <= 0)
+                {
+                    continue;
+                }
+                String key = taskKey(task);
+                int progress = liveProgress.getOrDefault(key,
+                    task.getProgress());
+                liveProgress.put(key,
+                    Math.min(task.getTarget(), progress + quantity));
+                persistState();
+                revalidate();
+                return;
             }
         }
     }
@@ -400,6 +444,10 @@ public final class DailyTasksOverlay extends OverlayPanel
 
     private static String taskKey(DailyTaskSummary task)
     {
+        if (task.getId() != null && !task.getId().trim().isEmpty())
+        {
+            return "id:" + task.getId().trim();
+        }
         return task.getCategory() + ":" + task.getName();
     }
 

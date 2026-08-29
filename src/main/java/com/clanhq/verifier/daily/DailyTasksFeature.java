@@ -4,9 +4,16 @@ import com.clanhq.verifier.ClanHQVerifierConfig;
 import com.clanhq.verifier.daily.model.DailyTasksSnapshot;
 import com.clanhq.verifier.daily.transport.DailyTasksApiClient;
 import com.clanhq.verifier.feature.ClanHQFeature;
+import com.clanhq.verifier.loot.ObservedDrop;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.game.SkillIconManager;
 
 public final class DailyTasksFeature implements ClanHQFeature
 {
@@ -14,20 +21,26 @@ public final class DailyTasksFeature implements ClanHQFeature
     private final ClanHQVerifierConfig config;
     private final DailyTasksPanel panel;
     private final DailyTasksOverlay overlay;
+    private final ScheduledExecutorService executor;
+    private volatile ScheduledFuture<?> rotationRefresh;
     private volatile DailyTasksSnapshot snapshot;
     private volatile boolean running;
 
     public DailyTasksFeature(DailyTasksApiClient apiClient,
         ClanHQVerifierConfig config,
-        ConfigManager configManager)
+        ConfigManager configManager,
+        SkillIconManager skillIconManager,
+        ScheduledExecutorService executor)
     {
         this.apiClient = apiClient;
         this.config = config;
+        this.executor = executor;
         this.panel = new DailyTasksPanel(
             this::refresh,
             () -> claim("SKILLING"),
             () -> claim("MINIGAME"),
-            () -> claim("PVM"));
+            () -> claim("PVM"),
+            skillIconManager);
         this.overlay = new DailyTasksOverlay(() -> snapshot, configManager);
     }
 
@@ -65,6 +78,12 @@ public final class DailyTasksFeature implements ClanHQFeature
     public void shutDown()
     {
         running = false;
+        ScheduledFuture<?> scheduled = rotationRefresh;
+        if (scheduled != null)
+        {
+            scheduled.cancel(false);
+            rotationRefresh = null;
+        }
         snapshot = null;
         overlay.setSnapshot(null);
     }
@@ -88,7 +107,8 @@ public final class DailyTasksFeature implements ClanHQFeature
                 "Use /plugin pair in Discord, then enter the code in settings.");
             return;
         }
-        panel.setLoading("Loading today's tasks...");
+        SwingUtilities.invokeLater(() ->
+            panel.setLoading("Loading today's tasks..."));
         apiClient.fetch().thenAccept(result -> SwingUtilities.invokeLater(() ->
         {
             if (!running)
@@ -99,6 +119,7 @@ public final class DailyTasksFeature implements ClanHQFeature
                 snapshot -> {
                     this.snapshot = snapshot;
                     overlay.setSnapshot(snapshot);
+                    scheduleRotationRefresh(snapshot);
                     panel.showTasks(snapshot,
                         successMessage == null ? result.getMessage() : successMessage);
                 },
@@ -116,6 +137,7 @@ public final class DailyTasksFeature implements ClanHQFeature
         }
         panel.setLoading("Checking saved client progress for the "
             + category.toLowerCase() + " task...");
+        panel.setClaiming(category);
         apiClient.claim(
             category,
             current.getPeriodDate(),
@@ -128,6 +150,7 @@ public final class DailyTasksFeature implements ClanHQFeature
             }
             if (!result.isSuccessful())
             {
+                panel.restoreClaim(category);
                 panel.showError(result.getMessage(), true);
                 return;
             }
@@ -151,6 +174,34 @@ public final class DailyTasksFeature implements ClanHQFeature
     public void observeLoot(String sourceName)
     {
         overlay.observeLoot(sourceName);
+    }
+
+    public void observeDrop(ObservedDrop drop)
+    {
+        overlay.observeDrop(drop);
+    }
+
+    private void scheduleRotationRefresh(DailyTasksSnapshot value)
+    {
+        if (executor == null || value.getContext() == null
+            || value.getContext().getRotationEndsAt() == null)
+        {
+            return;
+        }
+        ScheduledFuture<?> previous = rotationRefresh;
+        if (previous != null)
+        {
+            previous.cancel(false);
+        }
+        long delay = Math.max(1, Duration.between(Instant.now(),
+            value.getContext().getRotationEndsAt()).toMillis());
+        rotationRefresh = executor.schedule(() ->
+        {
+            if (running)
+            {
+                refresh();
+            }
+        }, delay, TimeUnit.MILLISECONDS);
     }
 
     private static String normalized(String value)

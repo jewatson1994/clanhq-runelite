@@ -20,6 +20,9 @@ import okhttp3.Response;
 
 public final class EventApiClient
 {
+    /** Capabilities with an implemented RuneLite observation source. */
+    private static final String CAPABILITIES =
+        "SKILL_XP,NPC_KILL,ITEM_DROP";
     private static final MediaType JSON =
         MediaType.parse("application/json; charset=utf-8");
     private final OkHttpClient httpClient;
@@ -48,6 +51,8 @@ public final class EventApiClient
         Request request = new Request.Builder()
             .url(baseUrl + "/api/v1/events")
             .header("Authorization", "Bearer " + token)
+            .header("X-ClanHQ-Plugin-Version", "1")
+            .header("X-ClanHQ-Plugin-Capabilities", CAPABILITIES)
             .get()
             .build();
         httpClient.newCall(request).enqueue(new Callback()
@@ -113,6 +118,8 @@ public final class EventApiClient
         Request request = new Request.Builder()
             .url(baseUrl + "/api/v1/events/join")
             .header("Authorization", "Bearer " + token)
+            .header("X-ClanHQ-Plugin-Version", "1")
+            .header("X-ClanHQ-Plugin-Capabilities", CAPABILITIES)
             .post(RequestBody.create(JSON, payload.toString()))
             .build();
         httpClient.newCall(request).enqueue(new Callback()
@@ -180,6 +187,8 @@ public final class EventApiClient
         Request request = new Request.Builder()
             .url(baseUrl + "/api/v1/events/observations")
             .header("Authorization", "Bearer " + token)
+            .header("X-ClanHQ-Plugin-Version", "1")
+            .header("X-ClanHQ-Plugin-Capabilities", CAPABILITIES)
             .post(RequestBody.create(JSON, payload.toString()))
             .build();
         httpClient.newCall(request).enqueue(new Callback()
