@@ -41,4 +41,24 @@ public class ClanEventSummaryTest
         assertFalse(event.isBossEvent());
         assertFalse(event.isActive());
     }
+
+    @Test
+    public void parsesLegacyEventWithoutRepeatedSchemaVersion()
+    {
+        ClanEventSummary event = ClanEventSummary.fromJson("{"
+            + "\"event_id\":8,"
+            + "\"event_type\":\"BOSS_OF_THE_WEEK\","
+            + "\"name\":\"Boss of the Week\","
+            + "\"target\":\"Vorkath\","
+            + "\"start_date\":\"2026-08-21\","
+            + "\"end_date\":\"2026-08-27\","
+            + "\"status\":\"ACTIVE\","
+            + "\"event_code\":\"BOTW-ABC123\"}"
+        );
+
+        assertEquals("BOSS_OF_THE_WEEK", event.getEventType());
+        assertEquals("Vorkath", event.getTarget());
+        assertTrue(event.isBossEvent());
+        assertTrue(event.isActive());
+    }
 }

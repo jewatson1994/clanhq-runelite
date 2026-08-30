@@ -22,7 +22,13 @@ public final class ClanEventsSnapshot
     public static ClanEventsSnapshot fromJson(String json)
     {
         JsonObject root = new JsonParser().parse(json).getAsJsonObject();
-        if (root.get("schema_version").getAsInt() != 1)
+        if (!root.has("events") || !root.get("events").isJsonArray())
+        {
+            throw new IllegalArgumentException("Events response has no event list");
+        }
+        if (root.has("schema_version")
+            && !root.get("schema_version").isJsonNull()
+            && root.get("schema_version").getAsInt() != 1)
         {
             throw new IllegalArgumentException("Unsupported events response");
         }
@@ -34,7 +40,7 @@ public final class ClanEventsSnapshot
         }
         return new ClanEventsSnapshot(
             events,
-            root.has("server_name")
+            root.has("server_name") && !root.get("server_name").isJsonNull()
                 ? root.get("server_name").getAsString() : "ClanHQ");
     }
 
