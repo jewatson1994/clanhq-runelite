@@ -10,6 +10,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Graphics2D;
 import java.awt.Point;
 import java.text.NumberFormat;
 import java.time.Instant;
@@ -42,9 +43,10 @@ public final class DailyTasksOverlay extends OverlayPanel
     private static final Color ACCENT = new Color(86, 168, 255);
     private static final Color COMPLETE = new Color(67, 190, 117);
     private static final Color MUTED = new Color(185, 185, 185);
-    private static final int WIDTH = 280;
+    private static final int MIN_OVERLAY_WIDTH = 180;
 
     private final Supplier<DailyTasksSnapshot> snapshotSupplier;
+    private final ClanHQVerifierConfig config;
     private final ConfigManager configManager;
     private final Object stateLock = new Object();
     private final Map<String, Integer> liveProgress = new HashMap<>();
@@ -54,12 +56,21 @@ public final class DailyTasksOverlay extends OverlayPanel
     private volatile Instant loadedResetAt;
 
     public DailyTasksOverlay(Supplier<DailyTasksSnapshot> snapshotSupplier,
-        ConfigManager configManager)
+        ConfigManager configManager,
+        ClanHQVerifierConfig config)
     {
         this.snapshotSupplier = snapshotSupplier;
+        this.config = config;
         this.configManager = configManager;
         loadPersistedState();
         setPosition(OverlayPosition.TOP_LEFT);
+        setPreferredSize(new Dimension(config.dailyTasksOverlayWidth(), 0));
+        // Width is controlled through ClanHQ's RuneLite configuration. Keep
+        // native overlay resizing disabled so no resize hitbox can overlap
+        // normal game controls.
+        setMovable(false);
+        setResizable(false);
+        setMinimumSize(MIN_OVERLAY_WIDTH);
         setPreferredColor(ColorScheme.DARK_GRAY_COLOR);
         addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Show", "All tasks",
             entry -> selectTask(null));
@@ -69,6 +80,8 @@ public final class DailyTasksOverlay extends OverlayPanel
             entry -> selectTask("MINIGAME"));
         addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Show", "PvM task",
             entry -> selectTask("PVM"));
+        addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Show", "Drop task",
+            entry -> selectTask("DROP"));
     }
 
     /** Replace the server snapshot and preserve local progress for this period. */
@@ -221,7 +234,7 @@ public final class DailyTasksOverlay extends OverlayPanel
     }
 
     @Override
-    public Dimension render(java.awt.Graphics2D graphics)
+    public Dimension render(Graphics2D graphics)
     {
         DailyTasksSnapshot snapshot = snapshotSupplier.get();
         if (snapshot == null)
@@ -230,11 +243,12 @@ public final class DailyTasksOverlay extends OverlayPanel
         }
 
         PanelComponent panel = new PanelComponent();
-        panel.setPreferredSize(new Dimension(WIDTH, 0));
+        int width = currentWidth();
+        panel.setPreferredSize(new Dimension(width, 0));
         panel.setBackgroundColor(new Color(35, 35, 39, 238));
         panel.setGap(new Point(0, 4));
         panel.getChildren().add(TitleComponent.builder()
-            .text(snapshot.getServerName() + " Daily Tasks")
+            .text(headerTitle(snapshot))
             .color(Color.WHITE)
             .build());
         panel.getChildren().add(LineComponent.builder()
@@ -268,31 +282,30 @@ public final class DailyTasksOverlay extends OverlayPanel
         int progress = progressFor(task);
         boolean complete = task.isCompleted() || progress >= task.getTarget();
         Color color = complete ? COMPLETE : categoryColor(task.getCategory());
-        String label = titleCase(task.getCategory()) + "  "
+        String label = titleCase(task.getCategory()).toUpperCase(Locale.ROOT) + "  "
             + (complete ? "\u2713" : "\u2022");
         panel.getChildren().add(LineComponent.builder()
-            .left(label)
+            .left(label + "  " + truncate(task.getName(),
+                Math.max(12, (currentWidth() - 80) / 7)))
             .right(NUMBERS.format(progress) + "/"
                 + NUMBERS.format(task.getTarget()))
             .leftColor(color)
             .rightColor(complete ? COMPLETE : Color.WHITE)
             .build());
-        panel.getChildren().add(LineComponent.builder()
-            .left(task.getName())
-            .leftColor(Color.WHITE)
-            .build());
-
-        ProgressBarComponent bar = new ProgressBarComponent();
-        bar.setMinimum(0);
-        bar.setMaximum(Math.max(1, task.getTarget()));
-        bar.setValue(progress);
-        bar.setPreferredSize(new Dimension(WIDTH, 12));
-        bar.setForegroundColor(color);
-        bar.setBackgroundColor(new Color(70, 70, 76));
-        bar.setFontColor(Color.WHITE);
-        bar.setCenterLabel(NUMBERS.format(progress) + " / "
-            + NUMBERS.format(task.getTarget()));
-        panel.getChildren().add(bar);
+        if (task.getTarget() > 1)
+        {
+            ProgressBarComponent bar = new ProgressBarComponent();
+            bar.setMinimum(0);
+            bar.setMaximum(Math.max(1, task.getTarget()));
+            bar.setValue(progress);
+            bar.setPreferredSize(new Dimension(Math.max(1, overlayWidth()), 12));
+            bar.setForegroundColor(color);
+            bar.setBackgroundColor(new Color(70, 70, 76));
+            bar.setFontColor(Color.WHITE);
+            bar.setCenterLabel(NUMBERS.format(progress) + " / "
+                + NUMBERS.format(task.getTarget()));
+            panel.getChildren().add(bar);
+        }
     }
 
     private int progressFor(DailyTaskSummary task)
@@ -408,13 +421,53 @@ public final class DailyTasksOverlay extends OverlayPanel
         revalidate();
     }
 
+    private int overlayWidth()
+    {
+        return currentWidth() - 12;
+    }
+
+    private int currentWidth()
+    {
+        int configured = config.dailyTasksOverlayWidth();
+        return Math.max(MIN_OVERLAY_WIDTH, Math.min(500, configured));
+    }
+
+    private static String truncate(String value, int maxLength)
+    {
+        if (value == null || value.length() <= maxLength)
+        {
+            return value == null ? "" : value;
+        }
+        return maxLength <= 3 ? value.substring(0, maxLength)
+            : value.substring(0, maxLength - 3) + "...";
+    }
+
+    private static String headerTitle(DailyTasksSnapshot snapshot)
+    {
+        if (snapshot.getContext() != null
+            && snapshot.getContext().getTitle() != null
+            && !snapshot.getContext().getTitle().trim().isEmpty())
+        {
+            return snapshot.getContext().getTitle();
+        }
+        return "ClanHQ Tasks";
+    }
+
     private static String resetText(DailyTasksSnapshot snapshot)
     {
         long seconds = Math.max(0,
-            snapshot.getResetAt().getEpochSecond() - Instant.now().getEpochSecond());
+            rotationEnd(snapshot).getEpochSecond() - Instant.now().getEpochSecond());
         long hours = seconds / 3600;
         long minutes = (seconds % 3600) / 60;
         return hours + "h " + minutes + "m";
+    }
+
+    private static Instant rotationEnd(DailyTasksSnapshot snapshot)
+    {
+        return snapshot.getContext() != null
+            && snapshot.getContext().getRotationEndsAt() != null
+            ? snapshot.getContext().getRotationEndsAt()
+            : snapshot.getResetAt();
     }
 
     private static Color categoryColor(String category)

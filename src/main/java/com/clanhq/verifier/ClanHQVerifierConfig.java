@@ -4,6 +4,7 @@ import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 import net.runelite.client.config.ConfigSection;
+import net.runelite.client.config.Range;
 
 @ConfigGroup(ClanHQVerifierConfig.GROUP)
 public interface ClanHQVerifierConfig extends Config
@@ -40,7 +41,7 @@ public interface ClanHQVerifierConfig extends Config
 
     @ConfigItem(
         keyName = "dailyTasksEnabled",
-        name = "Daily Tasks",
+        name = "Tasks",
         description = "View and claim ClanHQ currency daily tasks",
         section = FEATURES_SECTION,
         position = 3)
@@ -61,23 +62,35 @@ public interface ClanHQVerifierConfig extends Config
     }
 
     @ConfigItem(
-        keyName = "showDripDropsBalance",
-        name = "Show currency balance",
-        description = "Show your private configured currency balance on Overview",
-        section = FEATURES_SECTION,
-        position = 5)
-    default boolean showCurrencyBalance()
-    {
-        return true;
-    }
-
-    @ConfigItem(
         keyName = "dailyTasksOverlay",
-        name = "Daily tasks overlay",
+        name = "Task Overlay",
         description = "Show today's ClanHQ task progress in the game overlay",
         section = FEATURES_SECTION,
         position = 6)
     default boolean dailyTasksOverlay()
+    {
+        return true;
+    }
+
+    @Range(min = 180, max = 500)
+    @ConfigItem(
+        keyName = "dailyTasksOverlayWidth",
+        name = "Tasks overlay width",
+        description = "Width of the in-game ClanHQ Tasks overlay in pixels",
+        section = FEATURES_SECTION,
+        position = 7)
+    default int dailyTasksOverlayWidth()
+    {
+        return 280;
+    }
+
+    @ConfigItem(
+        keyName = "gearAdvisorEnabled",
+        name = "Gear Advisor",
+        description = "Build personalized OSRS loadouts from your verified Character Sync data",
+        section = FEATURES_SECTION,
+        position = 8)
+    default boolean gearAdvisorEnabled()
     {
         return true;
     }

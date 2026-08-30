@@ -12,7 +12,10 @@ import java.awt.image.BufferedImage;
 import java.text.NumberFormat;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+import java.util.function.Consumer;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -29,26 +32,30 @@ final class DailyTasksPanel extends JPanel
 {
     // Leaves room for the task icon and card padding in the narrow sidebar.
     private static final int CONTENT_WIDTH = 180;
+    private static final Color DAILY_GREEN = new Color(0x70C090);
+    private static final Color DRIP_RUSH_BLUE = new Color(0x6FA8DC);
+    private static final Color DROP_RUSH_RED = new Color(0xD95C5C);
     private static final DateTimeFormatter RESET_FORMAT =
         DateTimeFormatter.ofPattern("MMM d, h:mm a")
             .withZone(ZoneId.systemDefault());
     private static final NumberFormat NUMBERS =
         NumberFormat.getIntegerInstance(Locale.US);
 
-    private String serverName = "ClanHQ";
-    private final JLabel titleLabel = new JLabel("ClanHQ Tasks");
-    private final JLabel summaryLabel = new JLabel("0 / 3 Complete");
+    private final JLabel titleLabel = new JLabel("Tasks");
+    private final JLabel summaryLabel = new JLabel("0 / 0 Complete");
     private final JLabel statusLabel = new JLabel();
     private final JLabel resetLabel = new JLabel();
     private final JButton refreshButton = new JButton("Refresh Tasks");
-    private final TaskCard skillingCard;
-    private final TaskCard minigameCard;
-    private final TaskCard pvmCard;
+    private final JPanel taskCards = new JPanel();
+    private final List<TaskCard> cards = new ArrayList<>();
+    private final Consumer<String> claimAction;
+    private final SkillIconManager skillIconManager;
 
-    DailyTasksPanel(Runnable refreshAction, Runnable skillingAction,
-        Runnable minigameAction, Runnable pvmAction,
+    DailyTasksPanel(Runnable refreshAction, Consumer<String> claimAction,
         SkillIconManager skillIconManager)
     {
+        this.claimAction = claimAction;
+        this.skillIconManager = skillIconManager;
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -58,6 +65,9 @@ final class DailyTasksPanel extends JPanel
         content.setBackground(ColorScheme.DARK_GRAY_COLOR);
         titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 16f));
         titleLabel.setForeground(Color.WHITE);
+        titleLabel.setAlignmentX(LEFT_ALIGNMENT);
+        titleLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE,
+            titleLabel.getPreferredSize().height));
         content.add(titleLabel);
         content.add(Box.createRigidArea(new Dimension(0, 5)));
         summaryLabel.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
@@ -74,17 +84,10 @@ final class DailyTasksPanel extends JPanel
         content.add(statusLabel);
         content.add(Box.createRigidArea(new Dimension(0, 6)));
 
-        skillingCard = new TaskCard("Claim Skilling Task", skillingAction,
-            "SKILLING", skillIconManager);
-        minigameCard = new TaskCard("Claim Minigame Task", minigameAction,
-            "MINIGAME", skillIconManager);
-        pvmCard = new TaskCard("Claim PvM Task", pvmAction,
-            "PVM", skillIconManager);
-        content.add(skillingCard);
-        content.add(Box.createRigidArea(new Dimension(0, 6)));
-        content.add(minigameCard);
-        content.add(Box.createRigidArea(new Dimension(0, 6)));
-        content.add(pvmCard);
+        taskCards.setLayout(new BoxLayout(taskCards, BoxLayout.Y_AXIS));
+        taskCards.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        taskCards.setAlignmentX(LEFT_ALIGNMENT);
+        content.add(taskCards);
         add(content, BorderLayout.NORTH);
         showUnpaired("Pair this installation from Overview.");
     }
@@ -106,50 +109,58 @@ final class DailyTasksPanel extends JPanel
 
     void showTasks(DailyTasksSnapshot snapshot, String message)
     {
-        serverName = snapshot.getServerName();
         String contextTitle = snapshot.getContext() == null
-            ? "Tasks" : snapshot.getContext().getTitle();
+            ? "DAILY" : snapshot.getContext().getTitle();
+        String contextType = snapshot.getContext() == null
+            ? "daily" : snapshot.getContext().getType();
         if (isLegacyDailyTaskContext(snapshot))
         {
-            contextTitle = "Tasks";
+            contextTitle = "DAILY";
+            contextType = "daily";
         }
         refreshButton.setEnabled(true);
         setClaimButtons(true);
         clearTasks();
-        updateTitle(contextTitle.isEmpty() ? "Tasks" : contextTitle);
+        updateTitle(contextTitle.isEmpty() ? "DAILY" : contextTitle,
+            contextType);
         int completed = 0;
         int claimed = 0;
         int earned = 0;
         boolean unsupported = false;
         for (DailyTaskSummary task : snapshot.getTasks())
         {
-            TaskCard card = cardFor(task.getCategory());
-            if (card != null)
+            TaskCard card = new TaskCard("Claim Task",
+                () -> claimAction.accept(task.getCategory()), task.getCategory(),
+                skillIconManager);
+            cards.add(card);
+            taskCards.add(card);
+            if (taskCards.getComponentCount() > 1)
             {
-                card.showTask(
-                    task,
-                    snapshot.getCurrencyName(),
-                    snapshot.getCurrencySymbol());
-                card.setEnabled(!task.isCompleted());
-                if (task.getProgress() >= task.getTarget()) completed++;
-                if (task.isCompleted())
-                {
-                    claimed++;
-                    earned += Math.max(0, task.getAwarded());
-                }
+                taskCards.add(Box.createRigidArea(new Dimension(0, 6)),
+                    taskCards.getComponentCount() - 1);
+            }
+            card.showTask(task, snapshot.getCurrencyName(),
+                snapshot.getCurrencySymbol());
+            card.setEnabled(!task.isCompleted());
+            if (task.getProgress() >= task.getTarget()) completed++;
+            if (task.isCompleted())
+            {
+                claimed++;
+                earned += Math.max(0, task.getAwarded());
             }
             if (requiresNewerPlugin(snapshot, task))
             {
                 unsupported = true;
             }
         }
-        String summary = completed + " / 3 Complete"
+        int taskCount = snapshot.getTasks().size();
+        String summary = completed + " / " + taskCount + " Complete"
             + (claimed > 0 ? "   •   " + claimed + " Claimed" : "")
             + (earned > 0 ? "<br>" + NUMBERS.format(earned) + " 💧 earned" : "");
         summaryLabel.setText("<html><body style='width: " + CONTENT_WIDTH
             + "px'>" + summary + "</body></html>");
         resetLabel.setText("Resets at: "
-            + RESET_FORMAT.format(snapshot.getResetAt()));
+            + RESET_FORMAT.format(rotationEnd(snapshot)));
         showStatus(unsupported
             ? "A task requires a newer ClanHQ plugin."
             : (isNormalLoadMessage(message) ? "" : message));
@@ -171,40 +182,46 @@ final class DailyTasksPanel extends JPanel
 
     void setClaiming(String category)
     {
-        cardFor(category).setClaiming();
+        TaskCard card = cardFor(category);
+        if (card != null)
+        {
+            card.setClaiming();
+        }
     }
 
     void restoreClaim(String category)
     {
-        cardFor(category).restoreClaim();
+        TaskCard card = cardFor(category);
+        if (card != null)
+        {
+            card.restoreClaim();
+        }
     }
 
     private TaskCard cardFor(String category)
     {
-        if ("SKILLING".equals(category))
+        for (TaskCard card : cards)
         {
-            return skillingCard;
+            if (category != null && card.category.equals(category))
+            {
+                return card;
+            }
         }
-        if ("MINIGAME".equals(category))
-        {
-            return minigameCard;
-        }
-        return "PVM".equals(category) ? pvmCard : null;
+        return null;
     }
 
     private void clearTasks()
     {
-        updateTitle("Tasks");
-        summaryLabel.setText("0 / 3 Complete");
-        skillingCard.clear();
-        minigameCard.clear();
-        pvmCard.clear();
+        updateTitle("DAILY", "daily");
+        summaryLabel.setText("0 / 0 Complete");
+        cards.clear();
+        taskCards.removeAll();
         resetLabel.setText("");
     }
 
     private void updateTitle()
     {
-        updateTitle("Tasks");
+        updateTitle("DAILY", "daily");
     }
 
     /**
@@ -238,11 +255,29 @@ final class DailyTasksPanel extends JPanel
             || "daily_tasks".equalsIgnoreCase(type);
     }
 
+    private static java.time.Instant rotationEnd(DailyTasksSnapshot snapshot)
+    {
+        return snapshot.getContext() != null
+            && snapshot.getContext().getRotationEndsAt() != null
+            ? snapshot.getContext().getRotationEndsAt()
+            : snapshot.getResetAt();
+    }
+
+    private void updateTitle(String contextTitle, String contextType)
+    {
+        Color color = "DROP_RUSH".equalsIgnoreCase(contextType)
+            ? DROP_RUSH_RED
+            : ("DRIP_RUSH".equalsIgnoreCase(contextType)
+                ? DRIP_RUSH_BLUE : DAILY_GREEN);
+        titleLabel.setForeground(color);
+        titleLabel.setText("<html><div style='width: " + CONTENT_WIDTH
+            + "px'><b>" + escapeHtml(contextTitle.toUpperCase(Locale.ROOT))
+            + "</b></div></html>");
+    }
+
     private void updateTitle(String contextTitle)
     {
-        titleLabel.setText("<html><b>" + escapeHtml(serverName.toUpperCase(Locale.ROOT))
-            + "</b><br><font size='-1'>" + escapeHtml(contextTitle)
-            + "</font></html>");
+        updateTitle(contextTitle, "daily");
     }
 
     private void showStatus(String message)
@@ -258,9 +293,10 @@ final class DailyTasksPanel extends JPanel
 
     private void setClaimButtons(boolean enabled)
     {
-        skillingCard.setEnabled(enabled);
-        minigameCard.setEnabled(enabled);
-        pvmCard.setEnabled(enabled);
+        for (TaskCard card : cards)
+        {
+            card.setEnabled(enabled);
+        }
     }
 
     private static String html(String text)
@@ -436,6 +472,10 @@ final class DailyTasksPanel extends JPanel
             if (category.equals("PVM"))
             {
                 return "⚔";
+            }
+            if (category.equals("DROP"))
+            {
+                return "⬇";
             }
             return category.equals("SKILLING") ? "⚒" : "🎮";
         }

@@ -1,14 +1,19 @@
 package com.clanhq.verifier.daily;
 
 import com.clanhq.verifier.ClanHQVerifierConfig;
+import com.clanhq.verifier.daily.model.DailyTaskSummary;
 import com.clanhq.verifier.daily.model.DailyTasksSnapshot;
 import com.clanhq.verifier.daily.transport.DailyTasksApiClient;
 import com.clanhq.verifier.feature.ClanHQFeature;
 import com.clanhq.verifier.loot.ObservedDrop;
+import com.clanhq.verifier.task.VerificationType;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -22,26 +27,29 @@ public final class DailyTasksFeature implements ClanHQFeature
     private final DailyTasksPanel panel;
     private final DailyTasksOverlay overlay;
     private final ScheduledExecutorService executor;
+    private final Runnable overviewChanged;
     private volatile ScheduledFuture<?> rotationRefresh;
     private volatile DailyTasksSnapshot snapshot;
+    private volatile CompletableFuture<Void> pendingDropObservations =
+        CompletableFuture.completedFuture(null);
     private volatile boolean running;
 
     public DailyTasksFeature(DailyTasksApiClient apiClient,
         ClanHQVerifierConfig config,
         ConfigManager configManager,
         SkillIconManager skillIconManager,
-        ScheduledExecutorService executor)
+        ScheduledExecutorService executor,
+        Runnable overviewChanged)
     {
         this.apiClient = apiClient;
         this.config = config;
         this.executor = executor;
+        this.overviewChanged = overviewChanged;
         this.panel = new DailyTasksPanel(
             this::refresh,
-            () -> claim("SKILLING"),
-            () -> claim("MINIGAME"),
-            () -> claim("PVM"),
+            this::claim,
             skillIconManager);
-        this.overlay = new DailyTasksOverlay(() -> snapshot, configManager);
+        this.overlay = new DailyTasksOverlay(() -> snapshot, configManager, config);
     }
 
     @Override
@@ -118,6 +126,7 @@ public final class DailyTasksFeature implements ClanHQFeature
             result.getSnapshot().ifPresentOrElse(
                 snapshot -> {
                     this.snapshot = snapshot;
+                    overviewChanged.run();
                     overlay.setSnapshot(snapshot);
                     scheduleRotationRefresh(snapshot);
                     panel.showTasks(snapshot,
@@ -138,10 +147,12 @@ public final class DailyTasksFeature implements ClanHQFeature
         panel.setLoading("Checking saved client progress for the "
             + category.toLowerCase() + " task...");
         panel.setClaiming(category);
-        apiClient.claim(
-            category,
-            current.getPeriodDate(),
-            overlay.buildClientProgress(null))
+        CompletableFuture<Void> observations = pendingDropObservations;
+        observations.handle((ignored, error) -> null)
+            .thenCompose(ignored -> apiClient.claim(
+                category,
+                current.getPeriodDate(),
+                overlay.buildClientProgress(null)))
             .thenAccept(result -> SwingUtilities.invokeLater(() ->
         {
             if (!running)
@@ -176,9 +187,60 @@ public final class DailyTasksFeature implements ClanHQFeature
         overlay.observeLoot(sourceName);
     }
 
+    public DailyTasksSnapshot getSnapshot()
+    {
+        return snapshot;
+    }
+
     public void observeDrop(ObservedDrop drop)
     {
         overlay.observeDrop(drop);
+        DailyTasksSnapshot current = snapshot;
+        if (current == null || drop == null || drop.getItems() == null
+            || !isGenericTaskContext(current))
+        {
+            return;
+        }
+        List<CompletableFuture<Boolean>> submissions = new ArrayList<>();
+        for (DailyTaskSummary task : current.getTasks())
+        {
+            if (task.getVerificationType() != VerificationType.ITEM_DROP
+                || task.getVerificationItemId() == null
+                || task.getId() == null || task.getId().trim().isEmpty())
+            {
+                continue;
+            }
+            int quantity = 0;
+            for (net.runelite.client.game.ItemStack item : drop.getItems())
+            {
+                if (item.getId() == task.getVerificationItemId())
+                {
+                    quantity += Math.max(0, item.getQuantity());
+                }
+            }
+            if (quantity > 0)
+            {
+                submissions.add(apiClient.submitItemDropObservation(task.getId(),
+                    drop, task.getVerificationItemId(), quantity));
+            }
+        }
+        if (!submissions.isEmpty())
+        {
+            pendingDropObservations = CompletableFuture.allOf(
+                submissions.toArray(new CompletableFuture<?>[0]));
+        }
+    }
+
+    private static boolean isGenericTaskContext(DailyTasksSnapshot value)
+    {
+        if (value.getContext() == null)
+        {
+            return false;
+        }
+        String type = value.getContext().getType();
+        return type != null && !type.trim().isEmpty()
+            && !"daily".equalsIgnoreCase(type)
+            && !"daily_tasks".equalsIgnoreCase(type);
     }
 
     private void scheduleRotationRefresh(DailyTasksSnapshot value)

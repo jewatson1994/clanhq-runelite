@@ -32,6 +32,7 @@ public final class BingoFeature implements ClanHQFeature
     private final SubmissionConsentService consentService;
     private final EventApiClient eventApiClient;
     private final Supplier<String> rsnSupplier;
+    private final Runnable overviewChanged;
     private volatile BingoManifest manifest;
     private volatile boolean running;
     private volatile BingoCharacterSubmission pendingCharacterSubmission;
@@ -44,7 +45,8 @@ public final class BingoFeature implements ClanHQFeature
         ClientThread clientThread,
         SubmissionConsentService consentService,
         EventApiClient eventApiClient,
-        Supplier<String> rsnSupplier)
+        Supplier<String> rsnSupplier,
+        Runnable overviewChanged)
     {
         this.apiClient = apiClient;
         this.screenshotService = screenshotService;
@@ -54,6 +56,7 @@ public final class BingoFeature implements ClanHQFeature
         this.consentService = consentService;
         this.eventApiClient = eventApiClient;
         this.rsnSupplier = rsnSupplier;
+        this.overviewChanged = overviewChanged;
         this.panel = new BingoPanel(
             this::refreshManifest,
             this::submitCharacter);
@@ -122,6 +125,7 @@ public final class BingoFeature implements ClanHQFeature
                         pendingCharacterSubmission = null;
                     }
                     manifest = value;
+                    overviewChanged.run();
                     panel.showManifest(value);
                     if (value.getCharacterCheck().canSubmit()
                         && !"FINAL".equals(
@@ -233,6 +237,11 @@ public final class BingoFeature implements ClanHQFeature
     {
         onDrop(new ObservedDrop(rsn, sourceType, sourceName, items,
             Instant.now()));
+    }
+
+    public BingoManifest getManifest()
+    {
+        return manifest;
     }
 
     public void onDrop(ObservedDrop observedDrop)

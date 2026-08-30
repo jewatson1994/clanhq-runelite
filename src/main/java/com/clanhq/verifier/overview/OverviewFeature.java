@@ -2,10 +2,13 @@ package com.clanhq.verifier.overview;
 
 import com.clanhq.verifier.ClanHQVerifierConfig;
 import com.clanhq.verifier.feature.ClanHQFeature;
+import com.clanhq.verifier.bingo.model.BingoManifest;
+import com.clanhq.verifier.daily.model.DailyTasksSnapshot;
 import java.security.SecureRandom;
 import java.util.Base64;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
+import java.util.function.Supplier;
 import net.runelite.client.config.ConfigManager;
 
 public final class OverviewFeature implements ClanHQFeature
@@ -14,14 +17,24 @@ public final class OverviewFeature implements ClanHQFeature
     private final ClanHQVerifierConfig config;
     private final ConfigManager configManager;
     private final OverviewPanel panel;
+    private final Supplier<DailyTasksSnapshot> taskSnapshot;
+    private final Supplier<BingoManifest> bingoManifest;
+    private final Supplier<String> currentRsn;
+    private volatile IdentitySnapshot identity;
     private volatile boolean running;
 
     public OverviewFeature(IdentityApiClient apiClient,
-        ClanHQVerifierConfig config, ConfigManager configManager)
+        ClanHQVerifierConfig config, ConfigManager configManager,
+        Supplier<DailyTasksSnapshot> taskSnapshot,
+        Supplier<BingoManifest> bingoManifest,
+        Supplier<String> currentRsn)
     {
         this.apiClient = apiClient;
         this.config = config;
         this.configManager = configManager;
+        this.taskSnapshot = taskSnapshot;
+        this.bingoManifest = bingoManifest;
+        this.currentRsn = currentRsn;
         this.panel = new OverviewPanel(
             this::pair, this::refresh, this::disconnect);
     }
@@ -41,7 +54,11 @@ public final class OverviewFeature implements ClanHQFeature
         refresh();
     }
 
-    public void shutDown() { running = false; }
+    public void shutDown()
+    {
+        running = false;
+        identity = null;
+    }
 
     public void refresh()
     {
@@ -53,11 +70,23 @@ public final class OverviewFeature implements ClanHQFeature
         {
             if (!running) { return; }
             result.getIdentity().ifPresentOrElse(
-                value -> panel.showIdentity(value,
-                    config.showCurrencyBalance()),
+                value -> {
+                    identity = value;
+                    panel.showIdentity(value, taskSnapshot.get(),
+                        bingoManifest.get(), currentRsn.get());
+                },
                 () -> panel.showError(
                     result.getMessage(), hasStoredPairing));
         }));
+    }
+
+    public void refreshSummary()
+    {
+        IdentitySnapshot value = identity;
+        if (running && value != null)
+        {
+            panel.updateToday(taskSnapshot.get(), bingoManifest.get());
+        }
     }
 
     public void pair()

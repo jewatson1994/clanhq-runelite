@@ -38,6 +38,9 @@ final class BingoPanel extends JPanel
 
         JPanel header = verticalPanel();
         header.add(titleLabel);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        titleLabel.setMaximumSize(new Dimension(Integer.MAX_VALUE,
+            titleLabel.getPreferredSize().height));
         header.add(Box.createRigidArea(new Dimension(0, 6)));
         header.add(new JLabel("<html>Enter the code identified with the event. "
             + "Please reach out to Staff for support.</html>"));
@@ -91,7 +94,7 @@ final class BingoPanel extends JPanel
     {
         refreshButton.setEnabled(true);
         characterSubmitButton.setEnabled(true);
-        titleLabel.setText(manifest.getServerName() + " Bingo");
+        titleLabel.setText("Bingo");
         eventLabel.setText("Event: " + manifest.getName());
         boardLabel.setText("Board: Loaded (" + manifest.getItems().size()
             + " tracked items/tasks)");

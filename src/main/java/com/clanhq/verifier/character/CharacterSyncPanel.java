@@ -6,8 +6,10 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JSeparator;
 import net.runelite.client.ui.ColorScheme;
 
 final class CharacterSyncPanel extends JPanel
@@ -73,5 +75,20 @@ final class CharacterSyncPanel extends JPanel
             + message.replace("&", "&amp;").replace("<", "&lt;")
                 .replace(">", "&gt;")
             + "</body></html>");
+    }
+    void addBelow(JComponent component)
+    {
+        JPanel section = new JPanel();
+        section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
+        section.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        JSeparator divider = new JSeparator();
+        divider.setAlignmentX(LEFT_ALIGNMENT);
+        section.add(divider);
+        section.add(Box.createRigidArea(new Dimension(0, 6)));
+        component.setAlignmentX(LEFT_ALIGNMENT);
+        section.add(component);
+        add(section, BorderLayout.CENTER);
+        revalidate();
+        repaint();
     }
 }

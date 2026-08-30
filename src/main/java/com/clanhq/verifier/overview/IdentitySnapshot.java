@@ -16,9 +16,16 @@ public final class IdentitySnapshot
     private final String currencyName;
     private final String currencySymbol;
     private final String serverName;
+    private final int todayEarned;
+    private final int weekEarned;
+    private final int monthEarned;
+    private final int allTimeEarned;
+    private final int allTimeRank;
 
     private IdentitySnapshot(String deviceName, List<String> rsns, int balance,
-        String currencyName, String currencySymbol, String serverName)
+        String currencyName, String currencySymbol, String serverName,
+        int todayEarned, int weekEarned, int monthEarned, int allTimeEarned,
+        int allTimeRank)
     {
         this.deviceName = deviceName;
         this.rsns = Collections.unmodifiableList(new ArrayList<>(rsns));
@@ -26,6 +33,11 @@ public final class IdentitySnapshot
         this.currencyName = currencyName;
         this.currencySymbol = currencySymbol;
         this.serverName = serverName;
+        this.todayEarned = todayEarned;
+        this.weekEarned = weekEarned;
+        this.monthEarned = monthEarned;
+        this.allTimeEarned = allTimeEarned;
+        this.allTimeRank = allTimeRank;
     }
 
     public static IdentitySnapshot fromJson(String json)
@@ -48,7 +60,13 @@ public final class IdentitySnapshot
             root.has("currency_symbol")
                 ? root.get("currency_symbol").getAsString() : "",
             root.has("server_name") ? root.get("server_name").getAsString()
-                : "ClanHQ");
+                : "ClanHQ",
+            root.has("today_earned") ? root.get("today_earned").getAsInt() : 0,
+            root.has("week_earned") ? root.get("week_earned").getAsInt() : 0,
+            root.has("month_earned") ? root.get("month_earned").getAsInt() : 0,
+            root.has("all_time_earned") ? root.get("all_time_earned").getAsInt() : 0,
+            root.has("all_time_rank") && !root.get("all_time_rank").isJsonNull()
+                ? root.get("all_time_rank").getAsInt() : 0);
     }
 
     public String getDeviceName() { return deviceName; }
@@ -57,4 +75,9 @@ public final class IdentitySnapshot
     public String getCurrencyName() { return currencyName; }
     public String getCurrencySymbol() { return currencySymbol; }
     public String getServerName() { return serverName; }
+    public int getTodayEarned() { return todayEarned; }
+    public int getWeekEarned() { return weekEarned; }
+    public int getMonthEarned() { return monthEarned; }
+    public int getAllTimeEarned() { return allTimeEarned; }
+    public int getAllTimeRank() { return allTimeRank; }
 }
