@@ -10,8 +10,6 @@ import com.clanhq.verifier.daily.transport.DailyTasksApiClient;
 import com.clanhq.verifier.event.EventFeature;
 import com.clanhq.verifier.event.transport.EventApiClient;
 import com.clanhq.verifier.feature.ClanHQFeature;
-import com.clanhq.verifier.gear.GearAdvisorApiClient;
-import com.clanhq.verifier.gear.GearAdvisorFeature;
 import com.clanhq.verifier.overview.IdentityApiClient;
 import com.clanhq.verifier.overview.OverviewFeature;
 import com.clanhq.verifier.service.ApiDestinationService;
@@ -24,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 import java.util.concurrent.ScheduledExecutorService;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
@@ -37,7 +34,6 @@ import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
-import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SkillIconManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDependency;
@@ -53,8 +49,8 @@ import okhttp3.OkHttpClient;
 
 @PluginDescriptor(
     name = "ClanHQ",
-    description = "Clan tools for character sync, events, Bingo, daily tasks, and Gear Advisor",
-    tags = {"clan", "events", "bingo", "daily", "gear", "verification"})
+    description = "Clan tools for character sync, events, Bingo, and daily tasks",
+    tags = {"clan", "events", "bingo", "daily", "verification"})
 @PluginDependency(LootTrackerPlugin.class)
 public final class ClanHQVerifierPlugin extends Plugin
 {
@@ -67,7 +63,6 @@ public final class ClanHQVerifierPlugin extends Plugin
     @Inject private OverlayManager overlayManager;
     @Inject private LocalPlayerSnapshotService snapshotService;
     @Inject private ApiDestinationService apiDestinationService;
-    @Inject private ItemManager itemManager;
     @Inject private SkillIconManager skillIconManager;
     @Inject private ClanHQVerifierConfig config;
     @Inject private ConfigManager configManager;
@@ -77,7 +72,6 @@ public final class ClanHQVerifierPlugin extends Plugin
     private EventFeature eventFeature;
     private DailyTasksFeature dailyTasksFeature;
     private OverviewFeature overviewFeature;
-    private GearAdvisorFeature gearAdvisorFeature;
     private volatile String loggedInRsn;
     private List<ClanHQFeature> features = Collections.emptyList();
     private NavigationButton navigationButton;
@@ -111,8 +105,7 @@ public final class ClanHQVerifierPlugin extends Plugin
         if ("bingoEnabled".equals(event.getKey())
             || "eventsEnabled".equals(event.getKey())
             || "dailyTasksEnabled".equals(event.getKey())
-            || "dailyTasksOverlay".equals(event.getKey())
-            || "gearAdvisorEnabled".equals(event.getKey()))
+            || "dailyTasksOverlay".equals(event.getKey()))
         {
             SwingUtilities.invokeLater(this::rebuildFeatures);
             return;
@@ -184,19 +177,8 @@ public final class ClanHQVerifierPlugin extends Plugin
                 overlayManager.add(dailyTasksFeature.getOverlay());
             }
         }
-        if (config.gearAdvisorEnabled())
-        {
-            gearAdvisorFeature = new GearAdvisorFeature(
-                new GearAdvisorApiClient(httpClient, config, apiDestinationService),
-                itemManager);
-            enabled.add(gearAdvisorFeature);
-            characterSyncFeature.addBelow(gearAdvisorFeature.getPanel());
-        }
         features = enabled;
-        List<ClanHQFeature> navigationFeatures = enabled.stream()
-            .filter(feature -> !"gear".equals(feature.getId()))
-            .collect(Collectors.toList());
-        shellPanel = new ClanHQPanel(navigationFeatures);
+        shellPanel = new ClanHQPanel(enabled);
         features.forEach(ClanHQFeature::startUp);
         navigationButton = NavigationButton.builder()
             .tooltip("ClanHQ")
@@ -218,7 +200,6 @@ public final class ClanHQVerifierPlugin extends Plugin
         bingoFeature = null;
         eventFeature = null;
         dailyTasksFeature = null;
-        gearAdvisorFeature = null;
         if (navigationButton != null)
         {
             clientToolbar.removeNavigation(navigationButton);
