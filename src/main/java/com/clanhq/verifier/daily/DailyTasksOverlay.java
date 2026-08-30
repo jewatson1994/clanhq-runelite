@@ -287,12 +287,12 @@ public final class DailyTasksOverlay extends OverlayPanel
         panel.getChildren().add(LineComponent.builder()
             .left(label + "  " + truncate(task.getName(),
                 Math.max(12, (currentWidth() - 80) / 7)))
-            .right(NUMBERS.format(progress) + "/"
+            .right(isSkilling(task.getCategory()) ? "" : NUMBERS.format(progress) + "/"
                 + NUMBERS.format(task.getTarget()))
             .leftColor(color)
             .rightColor(complete ? COMPLETE : Color.WHITE)
             .build());
-        if (task.getTarget() > 1)
+        if (isSkilling(task.getCategory()) && task.getTarget() > 1)
         {
             ProgressBarComponent bar = new ProgressBarComponent();
             bar.setMinimum(0);
@@ -481,6 +481,11 @@ public final class DailyTasksOverlay extends OverlayPanel
             return new Color(174, 126, 236);
         }
         return new Color(239, 111, 111);
+    }
+
+    private static boolean isSkilling(String category)
+    {
+        return category != null && "SKILLING".equalsIgnoreCase(category.trim());
     }
 
     private static boolean mentions(DailyTaskSummary task, String value)
