@@ -37,6 +37,7 @@ public final class CharacterSyncFeature implements ClanHQFeature
     }
     public String getDescription() { return "Synchronize complete character item data."; }
     public JComponent getPanel() { return panel; }
+    public void addBelow(JComponent component) { panel.addBelow(component); }
     public void startUp() { running = true; }
     public void shutDown() { running = false; pending = null; }
 
