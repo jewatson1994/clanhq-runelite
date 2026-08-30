@@ -285,7 +285,7 @@ public final class DailyTasksOverlay extends OverlayPanel
         String label = titleCase(task.getCategory()).toUpperCase(Locale.ROOT) + "  "
             + (complete ? "\u2713" : "\u2022");
         panel.getChildren().add(LineComponent.builder()
-            .left(label + "  " + truncate(task.getName(),
+            .left(label + "  " + truncate(displayTaskName(task),
                 Math.max(12, (currentWidth() - 80) / 7)))
             .right(isSkilling(task.getCategory()) ? "" : NUMBERS.format(progress) + "/"
                 + NUMBERS.format(task.getTarget()))
@@ -306,6 +306,17 @@ public final class DailyTasksOverlay extends OverlayPanel
                 + NUMBERS.format(task.getTarget()));
             panel.getChildren().add(bar);
         }
+    }
+
+    private static String displayTaskName(DailyTaskSummary task)
+    {
+        String name = task.getName();
+        if (isSkilling(task.getCategory()) && name != null
+            && name.matches("(?i).*\\s+training$"))
+        {
+            return name.replaceFirst("(?i)\\s+training$", "");
+        }
+        return name;
     }
 
     private int progressFor(DailyTaskSummary task)
