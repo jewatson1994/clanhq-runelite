@@ -123,9 +123,6 @@ final class DailyTasksPanel extends JPanel
         clearTasks();
         updateTitle(contextTitle.isEmpty() ? "DAILY" : contextTitle,
             contextType);
-        int completed = 0;
-        int claimed = 0;
-        int earned = 0;
         boolean unsupported = false;
         for (DailyTaskSummary task : snapshot.getTasks())
         {
@@ -142,28 +139,35 @@ final class DailyTasksPanel extends JPanel
             card.showTask(task, snapshot.getCurrencyName(),
                 snapshot.getCurrencySymbol());
             card.setEnabled(!task.isCompleted());
-            if (task.getProgress() >= task.getTarget()) completed++;
-            if (task.isCompleted())
-            {
-                claimed++;
-                earned += Math.max(0, task.getAwarded());
-            }
             if (requiresNewerPlugin(snapshot, task))
             {
                 unsupported = true;
             }
         }
-        int taskCount = snapshot.getTasks().size();
-        String summary = completed + " / " + taskCount + " Complete"
-            + (claimed > 0 ? "   •   " + claimed + " Claimed" : "")
-            + (earned > 0 ? "<br>" + NUMBERS.format(earned) + " 💧 earned" : "");
-        summaryLabel.setText("<html><body style='width: " + CONTENT_WIDTH
-            + "px'>" + summary + "</body></html>");
+        updateSummary();
         resetLabel.setText("Resets at: "
             + RESET_FORMAT.format(rotationEnd(snapshot)));
         showStatus(unsupported
             ? "A task requires a newer ClanHQ plugin."
             : (isNormalLoadMessage(message) ? "" : message));
+        revalidate();
+        repaint();
+    }
+
+    /**
+     * Update the rendered progress for a task from the local RuneLite event
+     * stream. The server snapshot remains authoritative for claim state; this
+     * only keeps the panel in step with the live overlay between refreshes.
+     */
+    void updateLiveProgress(String category, int progress)
+    {
+        TaskCard card = cardFor(category);
+        if (card == null)
+        {
+            return;
+        }
+        card.updateLiveProgress(progress);
+        updateSummary();
         revalidate();
         repaint();
     }
@@ -217,6 +221,30 @@ final class DailyTasksPanel extends JPanel
         cards.clear();
         taskCards.removeAll();
         resetLabel.setText("");
+    }
+
+    private void updateSummary()
+    {
+        int completed = 0;
+        int claimed = 0;
+        int earned = 0;
+        for (TaskCard card : cards)
+        {
+            if (card.isCompleteForSummary())
+            {
+                completed++;
+            }
+            if (card.isServerCompleted())
+            {
+                claimed++;
+                earned += Math.max(0, card.getAwarded());
+            }
+        }
+        String summary = completed + " / " + cards.size() + " Complete"
+            + (claimed > 0 ? "   •   " + claimed + " Claimed" : "")
+            + (earned > 0 ? "<br>" + NUMBERS.format(earned) + " 💧 earned" : "");
+        summaryLabel.setText("<html><body style='width: " + CONTENT_WIDTH
+            + "px'>" + summary + "</body></html>");
     }
 
     private void updateTitle()
@@ -323,6 +351,10 @@ final class DailyTasksPanel extends JPanel
         private final String category;
         private final SkillIconManager skillIconManager;
         private final JProgressBar progress = new JProgressBar();
+        private int target = 1;
+        private int currentProgress;
+        private int awarded;
+        private boolean serverCompleted;
 
         private TaskCard(String buttonText, Runnable action, String category,
             SkillIconManager skillIconManager)
@@ -377,9 +409,12 @@ final class DailyTasksPanel extends JPanel
             String currencySymbol)
         {
             updateIcon(task);
-            int target = Math.max(1, task.getTarget());
+            target = Math.max(1, task.getTarget());
+            currentProgress = Math.min(target, Math.max(0, task.getProgress()));
+            awarded = task.getAwarded();
+            serverCompleted = task.isCompleted();
             progress.setMaximum(target);
-            progress.setValue(Math.min(target, Math.max(0, task.getProgress())));
+            progress.setValue(currentProgress);
             progress.setForeground(task.isCompleted()
                 ? new Color(0x70C090) : new Color(0xC88A3D));
             claimText = "Claim " + NUMBERS.format(task.getReward())
@@ -394,8 +429,8 @@ final class DailyTasksPanel extends JPanel
                 .append("<font color='#B8B8B8'>")
                 .append(escapeHtml(task.getDescription()
                     .replace(" experience", " XP"))).append("</font></body></html>");
-            progressValue.setText(compact(task.getProgress()) + " / "
-                + compact(task.getTarget()));
+            progressValue.setText(compact(currentProgress) + " / "
+                + compact(target));
             reward.setText(NUMBERS.format(task.getReward())
                 + (currencySymbol.isEmpty() ? " " + currencyName
                     : " " + currencySymbol));
@@ -417,6 +452,35 @@ final class DailyTasksPanel extends JPanel
             repaint();
         }
 
+        private void updateLiveProgress(int value)
+        {
+            currentProgress = Math.max(currentProgress,
+                Math.min(target, Math.max(0, value)));
+            progress.setValue(currentProgress);
+            if (currentProgress >= target)
+            {
+                progress.setForeground(DAILY_GREEN);
+            }
+            progressValue.setText(compact(currentProgress) + " / "
+                + compact(target));
+            repaint();
+        }
+
+        private boolean isCompleteForSummary()
+        {
+            return serverCompleted || currentProgress >= target;
+        }
+
+        private boolean isServerCompleted()
+        {
+            return serverCompleted;
+        }
+
+        private int getAwarded()
+        {
+            return awarded;
+        }
+
         private void setClaiming()
         {
             claimButton.setText("Claiming...");
@@ -436,6 +500,10 @@ final class DailyTasksPanel extends JPanel
             icon.setIcon(null);
             icon.setText(defaultIcon());
             progress.setValue(0);
+            target = 1;
+            currentProgress = 0;
+            awarded = 0;
+            serverCompleted = false;
             progressValue.setText("");
             reward.setText("");
             claimed.setText("");

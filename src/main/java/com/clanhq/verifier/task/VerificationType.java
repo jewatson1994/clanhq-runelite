@@ -8,6 +8,7 @@ public enum VerificationType
     ITEM_DROP,
     CLUE_COMPLETE,
     MINIGAME_SCORE,
+    ACTIVITY_TELEMETRY,
     UNKNOWN;
 
     public static VerificationType from(String value)

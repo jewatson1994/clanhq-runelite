@@ -51,6 +51,16 @@ public final class IdentitySnapshot
         }
         JsonElement balanceValue = root.has("currency_balance")
             ? root.get("currency_balance") : root.get("dripdrops_balance");
+        int allTimeEarned = root.has("all_time_earned")
+            ? root.get("all_time_earned").getAsInt() : 0;
+        // Older ClanHQ API builds did not expose the earned-total field.  A
+        // paired wallet with a positive balance should not render a misleading
+        // zero while that server is being upgraded.
+        if (allTimeEarned == 0 && balanceValue != null
+            && balanceValue.getAsInt() > 0)
+        {
+            allTimeEarned = balanceValue.getAsInt();
+        }
         return new IdentitySnapshot(
             root.get("device_name").getAsString(),
             rsns,
@@ -64,7 +74,7 @@ public final class IdentitySnapshot
             root.has("today_earned") ? root.get("today_earned").getAsInt() : 0,
             root.has("week_earned") ? root.get("week_earned").getAsInt() : 0,
             root.has("month_earned") ? root.get("month_earned").getAsInt() : 0,
-            root.has("all_time_earned") ? root.get("all_time_earned").getAsInt() : 0,
+            allTimeEarned,
             root.has("all_time_rank") && !root.get("all_time_rank").isJsonNull()
                 ? root.get("all_time_rank").getAsInt() : 0);
     }

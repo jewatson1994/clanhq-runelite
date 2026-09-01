@@ -139,7 +139,8 @@ public final class DailyTasksSnapshot
             case MINIGAME_SCORE:
             case ITEM_DROP:
             case CLUE_COMPLETE:
-                return "MINIGAME";
+            case ACTIVITY_TELEMETRY:
+                return "ACTIVITIES";
             default:
                 return "UNKNOWN";
         }

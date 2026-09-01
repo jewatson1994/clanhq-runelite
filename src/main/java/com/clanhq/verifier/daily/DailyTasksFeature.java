@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -49,7 +50,9 @@ public final class DailyTasksFeature implements ClanHQFeature
             this::refresh,
             this::claim,
             skillIconManager);
-        this.overlay = new DailyTasksOverlay(() -> snapshot, configManager, config);
+        this.overlay = new DailyTasksOverlay(() -> snapshot, configManager, config,
+            (category, progress) -> SwingUtilities.invokeLater(() ->
+                panel.updateLiveProgress(category, progress)));
     }
 
     @Override
@@ -131,6 +134,7 @@ public final class DailyTasksFeature implements ClanHQFeature
                     scheduleRotationRefresh(snapshot);
                     panel.showTasks(snapshot,
                         successMessage == null ? result.getMessage() : successMessage);
+                    overlay.publishLiveProgress();
                 },
                 () -> panel.showError(result.getMessage(), true));
         }));
@@ -185,6 +189,18 @@ public final class DailyTasksFeature implements ClanHQFeature
     public void observeLoot(String sourceName)
     {
         overlay.observeLoot(sourceName);
+    }
+
+    /** Forward a recognized gameplay event without coupling the plugin to task state. */
+    public void observeActivity(String rsn, String activity, int quantity,
+        Map<String, String> metadata)
+    {
+        if (!running || normalized(rsn).isEmpty()
+            || normalized(activity).isEmpty() || quantity <= 0)
+        {
+            return;
+        }
+        apiClient.submitActivity(rsn, activity, quantity, metadata);
     }
 
     public DailyTasksSnapshot getSnapshot()
