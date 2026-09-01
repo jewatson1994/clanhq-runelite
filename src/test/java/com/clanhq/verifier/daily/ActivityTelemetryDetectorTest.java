@@ -45,6 +45,46 @@ public final class ActivityTelemetryDetectorTest
     }
 
     @Test
+    public void recognizesRuneLiteBarbarianAssaultDurationMessage()
+    {
+        detector.onChatMessage("---- Wave: 10");
+        detector.onChatMessage("Wave 10 duration: 4:29");
+
+        assertEquals(Arrays.asList("barbarian_assault_wave"), activities());
+        assertEquals("10", observations.get(0).metadata.get("wave"));
+    }
+
+    @Test
+    public void waveInterfaceDoesNotDoubleCountDurationAnnouncement()
+    {
+        detector.onChatMessage("---- Wave: 10");
+        detector.onBarbarianAssaultWaveCompleted();
+        detector.onChatMessage("Wave 10 duration: 4:29");
+
+        assertEquals(1, observations.size());
+    }
+
+    @Test
+    public void waveInterfaceCountsWithoutDurationChatSetting()
+    {
+        detector.onChatMessage("---- Wave: 4");
+        detector.onBarbarianAssaultWaveCompleted();
+
+        assertEquals(Arrays.asList("barbarian_assault_wave"), activities());
+        assertEquals("4", observations.get(0).metadata.get("wave"));
+    }
+
+    @Test
+    public void sessionResetAllowsTheNextWaveCompletion()
+    {
+        detector.onBarbarianAssaultWaveCompleted();
+        detector.resetSession(1_000, 0, 0, 0);
+        detector.onBarbarianAssaultWaveCompleted();
+
+        assertEquals(2, observations.size());
+    }
+
+    @Test
     public void countsAllJagexBackedCompletionCounterDeltas()
     {
         List<String> counterActivities = Arrays.asList(

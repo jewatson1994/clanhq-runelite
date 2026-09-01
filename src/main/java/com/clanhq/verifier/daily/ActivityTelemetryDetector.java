@@ -7,6 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /** Converts gameplay signals into generic telemetry, without task logic. */
@@ -21,6 +22,10 @@ public final class ActivityTelemetryDetector
 
     private static final Map<String, Pattern> CHAT_COMPLETIONS;
     private static final Set<String> SUPPORTED_ACTIVITIES;
+    private static final Pattern BARBARIAN_ASSAULT_WAVE_START = Pattern.compile(
+        "^----\\s*Wave:\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern BARBARIAN_ASSAULT_WAVE_DURATION = Pattern.compile(
+        "^Wave\\s+(\\d+)\\s+duration\\s*:", Pattern.CASE_INSENSITIVE);
 
     static
     {
@@ -44,6 +49,8 @@ public final class ActivityTelemetryDetector
     private int lastTitheSackAmount = -1;
     private int lastBasicWyrmProgress = -1;
     private int lastAdvancedWyrmProgress = -1;
+    private String barbarianAssaultWave;
+    private boolean barbarianAssaultWaveCompleted;
     private final Map<String, Integer> completionCounters = new HashMap<>();
 
     public ActivityTelemetryDetector(DailyTasksFeature feature,
@@ -71,12 +78,28 @@ public final class ActivityTelemetryDetector
         lastTitheSackAmount = titheSackAmount;
         lastBasicWyrmProgress = basicWyrmProgress;
         lastAdvancedWyrmProgress = advancedWyrmProgress;
+        barbarianAssaultWave = null;
+        barbarianAssaultWaveCompleted = false;
     }
 
     public void onChatMessage(String message)
     {
         if (message == null)
         {
+            return;
+        }
+        Matcher waveStart = BARBARIAN_ASSAULT_WAVE_START.matcher(message);
+        if (waveStart.find())
+        {
+            barbarianAssaultWave = waveStart.group(1);
+            barbarianAssaultWaveCompleted = false;
+            return;
+        }
+        Matcher waveDuration = BARBARIAN_ASSAULT_WAVE_DURATION.matcher(message);
+        if (waveDuration.find())
+        {
+            onBarbarianAssaultWaveCompleted(
+                waveDuration.group(1), message);
             return;
         }
         for (Map.Entry<String, Pattern> entry : CHAT_COMPLETIONS.entrySet())
@@ -88,6 +111,34 @@ public final class ActivityTelemetryDetector
                 return;
             }
         }
+    }
+
+    /** Record the wave-complete interface independently of chat settings. */
+    public void onBarbarianAssaultWaveCompleted()
+    {
+        onBarbarianAssaultWaveCompleted(null, "wave_complete_interface");
+    }
+
+    private void onBarbarianAssaultWaveCompleted(String wave, String signal)
+    {
+        if (barbarianAssaultWaveCompleted
+            && (wave == null || barbarianAssaultWave == null
+                || wave.equals(barbarianAssaultWave)))
+        {
+            return;
+        }
+        if (wave != null)
+        {
+            barbarianAssaultWave = wave;
+        }
+        barbarianAssaultWaveCompleted = true;
+        Map<String, String> metadata = new LinkedHashMap<>();
+        metadata.put("signal", signal);
+        if (barbarianAssaultWave != null)
+        {
+            metadata.put("wave", barbarianAssaultWave);
+        }
+        emit("barbarian_assault_wave", 1, metadata);
     }
 
     /** Seed a monotonic Jagex activity counter without recording progress. */

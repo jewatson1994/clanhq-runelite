@@ -36,6 +36,8 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.VarbitChanged;
+import net.runelite.api.events.WidgetLoaded;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
@@ -272,12 +274,23 @@ public final class ClanHQVerifierPlugin extends Plugin
         if (activityTelemetryDetector == null
             || (event.getType() != ChatMessageType.GAMEMESSAGE
                 && event.getType() != ChatMessageType.SPAM
-                && event.getType() != ChatMessageType.MESBOX))
+                && event.getType() != ChatMessageType.MESBOX
+                && event.getType() != ChatMessageType.CONSOLE))
         {
             return;
         }
         activityTelemetryDetector.onChatMessage(
             Text.removeTags(event.getMessage()));
+    }
+
+    @Subscribe
+    public void onWidgetLoaded(WidgetLoaded event)
+    {
+        if (activityTelemetryDetector != null
+            && event.getGroupId() == InterfaceID.BARBASSAULT_WAVECOMPLETE)
+        {
+            activityTelemetryDetector.onBarbarianAssaultWaveCompleted();
+        }
     }
 
     @Subscribe
