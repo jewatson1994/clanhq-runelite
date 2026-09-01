@@ -11,6 +11,8 @@ import com.google.gson.JsonParser;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.time.Instant;
+import java.util.Map;
+import java.util.UUID;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -23,7 +25,7 @@ public final class DailyTasksApiClient
 {
     /** Capabilities with an implemented RuneLite observation source. */
     private static final String CAPABILITIES =
-        "SKILL_XP,NPC_KILL,ITEM_DROP";
+        "SKILL_XP,NPC_KILL,ITEM_DROP,ACTIVITY_TELEMETRY";
     private static final MediaType JSON =
         MediaType.parse("application/json; charset=utf-8");
     private final OkHttpClient httpClient;
@@ -115,6 +117,55 @@ public final class DailyTasksApiClient
         payload.addProperty("source_name", drop.getSourceName());
         payload.addProperty("observed_at", drop.getObservedAt() == null
             ? Instant.now().toString() : drop.getObservedAt().toString());
+        Request request = base.newBuilder()
+            .post(RequestBody.create(JSON, payload.toString()))
+            .build();
+        httpClient.newCall(request).enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException exception)
+            {
+                future.complete(false);
+            }
+
+            @Override
+            public void onResponse(Call call, Response response)
+                throws IOException
+            {
+                try (Response closeable = response)
+                {
+                    future.complete(response.isSuccessful());
+                }
+            }
+        });
+        return future;
+    }
+
+    /** Submit generic gameplay telemetry; the server decides task matching. */
+    public CompletableFuture<Boolean> submitActivity(
+        String rsn, String activity, int quantity, Map<String, String> metadata)
+    {
+        CompletableFuture<Boolean> future = new CompletableFuture<>();
+        Request base = authenticatedRequest("/api/v1/activities");
+        if (base == null || normalized(rsn).isEmpty()
+            || normalized(activity).isEmpty() || quantity <= 0)
+        {
+            future.complete(false);
+            return future;
+        }
+        JsonObject payload = new JsonObject();
+        payload.addProperty("schema_version", 1);
+        payload.addProperty("event_id", UUID.randomUUID().toString());
+        payload.addProperty("rsn", rsn.trim());
+        payload.addProperty("activity", activity.trim());
+        payload.addProperty("quantity", quantity);
+        JsonObject values = new JsonObject();
+        if (metadata != null)
+        {
+            metadata.forEach((key, value) -> values.addProperty(key, value));
+        }
+        payload.add("metadata", values);
+        payload.addProperty("observed_at", Instant.now().toString());
         Request request = base.newBuilder()
             .post(RequestBody.create(JSON, payload.toString()))
             .build();
