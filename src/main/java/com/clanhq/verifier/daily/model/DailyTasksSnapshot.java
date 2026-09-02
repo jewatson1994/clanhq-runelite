@@ -90,6 +90,12 @@ public final class DailyTasksSnapshot
             String category = value.has("category")
                 ? value.get("category").getAsString()
                 : categoryFor(VerificationType.from(verificationName));
+            // MINIGAME is a persisted/API compatibility value only.  Never
+            // expose it in the current overlay or panel UI.
+            if ("MINIGAME".equalsIgnoreCase(category.trim()))
+            {
+                category = "ACTIVITIES";
+            }
             tasks.add(new DailyTaskSummary(
                 value.has("id") && !value.get("id").isJsonNull()
                     ? value.get("id").getAsString() : null,
@@ -139,7 +145,8 @@ public final class DailyTasksSnapshot
             case MINIGAME_SCORE:
             case ITEM_DROP:
             case CLUE_COMPLETE:
-                return "MINIGAME";
+            case ACTIVITY_TELEMETRY:
+                return "ACTIVITIES";
             default:
                 return "UNKNOWN";
         }

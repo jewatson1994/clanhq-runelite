@@ -20,6 +20,13 @@ same server-side WOM verification, linked-RSN policy, cooldown, placement, and
 idempotent configured-currency ledger as Discord. Overview can show the linked RSNs and
 private wallet balance; the balance can be hidden in settings.
 
+When Daily Tasks is enabled, the plugin also recognizes supported activity
+completion signals from the logged-in player's game messages, dialogue,
+experience, and RuneLite counters. It sends the RSN, activity identifier,
+quantity, timestamp, and limited signal metadata to the configured ClanHQ
+server. The server decides whether the observation matches the active task;
+the plugin does not award currency itself.
+
 Pairing remains valid while the Discord identity owns at least one active
 ClanHQ member. ClanHQ rejects and revokes installations after the last linked
 member becomes inactive, archived, or banned.

@@ -84,17 +84,6 @@ public interface ClanHQVerifierConfig extends Config
         return 280;
     }
 
-    @ConfigItem(
-        keyName = "gearAdvisorEnabled",
-        name = "Gear Advisor",
-        description = "Build personalized OSRS loadouts from your verified Character Sync data",
-        section = FEATURES_SECTION,
-        position = 8)
-    default boolean gearAdvisorEnabled()
-    {
-        return true;
-    }
-
     @ConfigSection(
         name = "ClanHQ connection",
         description = "Where review evidence will be submitted",

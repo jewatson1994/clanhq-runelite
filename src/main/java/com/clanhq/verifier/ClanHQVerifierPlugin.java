@@ -6,6 +6,8 @@ import com.clanhq.verifier.bingo.transport.BingoApiClient;
 import com.clanhq.verifier.character.CharacterSyncApiClient;
 import com.clanhq.verifier.character.CharacterSyncFeature;
 import com.clanhq.verifier.daily.DailyTasksFeature;
+import com.clanhq.verifier.daily.ActivityTelemetryDetector;
+import com.clanhq.verifier.daily.ActivityTelemetryTestFeature;
 import com.clanhq.verifier.daily.transport.DailyTasksApiClient;
 import com.clanhq.verifier.event.EventFeature;
 import com.clanhq.verifier.event.transport.EventApiClient;
@@ -17,6 +19,7 @@ import com.clanhq.verifier.service.LocalPlayerSnapshotService;
 import com.clanhq.verifier.service.SubmissionConsentService;
 import com.clanhq.verifier.loot.ObservedDrop;
 import com.google.inject.Provides;
+import com.google.inject.name.Named;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,11 +28,21 @@ import java.util.Objects;
 import java.util.concurrent.ScheduledExecutorService;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
+import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
+import net.runelite.api.Skill;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.StatChanged;
+import net.runelite.api.events.VarbitChanged;
+import net.runelite.api.events.WidgetLoaded;
+import net.runelite.api.gameval.InterfaceID;
+import net.runelite.api.gameval.VarbitID;
+import net.runelite.api.gameval.VarPlayerID;
+import net.runelite.api.widgets.Widget;
+import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -54,7 +67,10 @@ import okhttp3.OkHttpClient;
 @PluginDependency(LootTrackerPlugin.class)
 public final class ClanHQVerifierPlugin extends Plugin
 {
+    private static final int TRAWLER_BASELINE_DELAY_TICKS = 2;
+
     @Inject private ClientThread clientThread;
+    @Inject @Named("developerMode") private boolean developerMode;
     @Inject private Client client;
     @Inject private OkHttpClient httpClient;
     @Inject private DrawManager drawManager;
@@ -71,8 +87,12 @@ public final class ClanHQVerifierPlugin extends Plugin
     private BingoFeature bingoFeature;
     private EventFeature eventFeature;
     private DailyTasksFeature dailyTasksFeature;
+    private ActivityTelemetryDetector activityTelemetryDetector;
     private OverviewFeature overviewFeature;
     private volatile String loggedInRsn;
+    private String lastActivityDialogueText;
+    private boolean trawlerCompletionCounterReady;
+    private int trawlerBaselineTicksRemaining;
     private List<ClanHQFeature> features = Collections.emptyList();
     private NavigationButton navigationButton;
 
@@ -171,7 +191,16 @@ public final class ClanHQVerifierPlugin extends Plugin
                 skillIconManager,
                 executor,
                 () -> { if (overviewFeature != null) overviewFeature.refreshSummary(); });
+            activityTelemetryDetector = new ActivityTelemetryDetector(
+                dailyTasksFeature, this::currentRsn);
+            resetTrawlerCompletionBaseline();
+            clientThread.invoke(this::initializeActivityTelemetry);
             enabled.add(dailyTasksFeature);
+            if (developerMode)
+            {
+                enabled.add(new ActivityTelemetryTestFeature(
+                    activityTelemetryDetector));
+            }
             if (config.dailyTasksOverlay())
             {
                 overlayManager.add(dailyTasksFeature.getOverlay());
@@ -200,6 +229,8 @@ public final class ClanHQVerifierPlugin extends Plugin
         bingoFeature = null;
         eventFeature = null;
         dailyTasksFeature = null;
+        activityTelemetryDetector = null;
+        resetTrawlerCompletionBaseline();
         if (navigationButton != null)
         {
             clientToolbar.removeNavigation(navigationButton);
@@ -242,6 +273,13 @@ public final class ClanHQVerifierPlugin extends Plugin
             dailyTasksFeature.observeSkillExperience(
                 event.getSkill().getName(), event.getXp());
         }
+        if (activityTelemetryDetector != null
+            && event.getSkill() == Skill.AGILITY
+            && client.getLocalPlayer() != null)
+        {
+            activityTelemetryDetector.onAgilityExperience(
+                event.getXp(), client.getLocalPlayer().getWorldLocation());
+        }
     }
 
     @Subscribe
@@ -250,12 +288,58 @@ public final class ClanHQVerifierPlugin extends Plugin
         if (event.getGameState() != GameState.LOGGED_IN)
         {
             loggedInRsn = null;
+            resetTrawlerCompletionBaseline();
             return;
         }
         loggedInRsn = currentRsn();
+        resetTrawlerCompletionBaseline();
+        initializeActivityTelemetry();
         if (overviewFeature != null) { overviewFeature.refresh(); }
         if (eventFeature != null) { eventFeature.refresh(); }
         if (bingoFeature != null) { bingoFeature.refreshManifest(); }
+    }
+
+    @Subscribe
+    public void onChatMessage(ChatMessage event)
+    {
+        if (activityTelemetryDetector != null
+            && (event.getType() == ChatMessageType.GAMEMESSAGE
+                || event.getType() == ChatMessageType.SPAM))
+        {
+            activityTelemetryDetector.onChatMessage(event.getMessage());
+        }
+    }
+
+    @Subscribe
+    public void onVarbitChanged(VarbitChanged event)
+    {
+        if (activityTelemetryDetector == null)
+        {
+            return;
+        }
+        if (event.getVarbitId() == VarbitID.HOSIDIUS_TITHE_SCORE)
+        {
+            activityTelemetryDetector.onTitheScoreChanged(event.getValue());
+        }
+        else if (event.getVarbitId()
+            == VarbitID.VARLAMORE_WYRM_AGILITY_BASIC_PROGRESS)
+        {
+            activityTelemetryDetector.onWyrmBasicProgress(event.getValue());
+        }
+        else if (event.getVarbitId()
+            == VarbitID.VARLAMORE_WYRM_AGILITY_ADVANCED_PROGRESS)
+        {
+            activityTelemetryDetector.onWyrmAdvancedProgress(event.getValue());
+        }
+        else if (event.getVarbitId()
+            == VarbitID.COLLECTION_MINIGAMES_TRAWLER_COMPLETED)
+        {
+            if (trawlerCompletionCounterReady)
+            {
+                activityTelemetryDetector.onTrawlerGamesCompletedChanged(
+                    event.getValue());
+            }
+        }
     }
 
     /**
@@ -278,12 +362,77 @@ public final class ClanHQVerifierPlugin extends Plugin
                 overviewFeature.refresh();
             }
         }
+        initializeTrawlerCompletionBaseline();
+        detectActivityDialogue();
+    }
+
+    private void resetTrawlerCompletionBaseline()
+    {
+        trawlerCompletionCounterReady = false;
+        trawlerBaselineTicksRemaining = TRAWLER_BASELINE_DELAY_TICKS;
+    }
+
+    private void initializeTrawlerCompletionBaseline()
+    {
+        // Account varbits briefly read as zero while login data is loading.
+        // Wait two ticks so the lifetime total becomes a baseline, not progress.
+        if (activityTelemetryDetector == null
+            || trawlerCompletionCounterReady
+            || --trawlerBaselineTicksRemaining > 0)
+        {
+            return;
+        }
+        activityTelemetryDetector.initializeTrawlerCompletionCounter(
+            client.getVarbitValue(
+                VarbitID.COLLECTION_MINIGAMES_TRAWLER_COMPLETED));
+        trawlerCompletionCounterReady = true;
+    }
+
+    private void detectActivityDialogue()
+    {
+        if (activityTelemetryDetector == null)
+        {
+            lastActivityDialogueText = null;
+            return;
+        }
+        Widget dialogueText = client.getWidget(WidgetInfo.DIALOG_NPC_TEXT);
+        if (dialogueText == null || dialogueText.isHidden()
+            || dialogueText.getText() == null
+            || dialogueText.getText().trim().isEmpty())
+        {
+            lastActivityDialogueText = null;
+            return;
+        }
+        String currentText = dialogueText.getText();
+        if (!currentText.equals(lastActivityDialogueText))
+        {
+            lastActivityDialogueText = currentText;
+            activityTelemetryDetector.onPestControlDialogue(currentText);
+        }
     }
 
     private String currentRsn()
     {
         return client.getLocalPlayer() == null
             ? null : client.getLocalPlayer().getName();
+    }
+
+    private void initializeActivityTelemetry()
+    {
+        if (activityTelemetryDetector == null
+            || client.getGameState() != GameState.LOGGED_IN)
+        {
+            return;
+        }
+        activityTelemetryDetector.initializeGameState(
+            client.getSkillExperience(Skill.AGILITY),
+            client.getVarbitValue(VarbitID.HOSIDIUS_TITHE_SCORE),
+            client.getVarpValue(
+                VarPlayerID.GIANTS_FOUNDRY_REWARD_SHOP_POINTS),
+            client.getVarbitValue(
+                VarbitID.VARLAMORE_WYRM_AGILITY_BASIC_PROGRESS),
+            client.getVarbitValue(
+                VarbitID.VARLAMORE_WYRM_AGILITY_ADVANCED_PROGRESS));
     }
 
     private static BufferedImage createIcon()

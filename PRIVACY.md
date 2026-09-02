@@ -38,6 +38,13 @@ the installation token; RuneLite retains the token in a secret configuration
 field. Daily-task requests identify the linked Discord wallet through that
 token and do not send bank contents.
 
+When Daily Tasks is enabled, recognized activity completions send the logged-in
+RSN, activity identifier, quantity, observation time, and limited signal
+metadata to the configured ClanHQ server. Signal metadata may contain the
+matching game-message or dialogue text, or an agility course name. It does not
+include public, private, clan, or friends-chat conversations. The server
+determines whether an observation matches the currently assigned task.
+
 The Overview module can disconnect the current device. ClanHQ revokes the
 server-side token before RuneLite removes the local pairing. ClanHQ also
 automatically revokes all installations after the linked Discord identity no

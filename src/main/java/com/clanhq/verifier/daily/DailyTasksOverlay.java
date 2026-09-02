@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import net.runelite.api.MenuAction;
 import net.runelite.client.ui.ColorScheme;
@@ -48,6 +49,7 @@ public final class DailyTasksOverlay extends OverlayPanel
     private final Supplier<DailyTasksSnapshot> snapshotSupplier;
     private final ClanHQVerifierConfig config;
     private final ConfigManager configManager;
+    private final BiConsumer<String, Integer> liveProgressListener;
     private final Object stateLock = new Object();
     private final Map<String, Integer> liveProgress = new HashMap<>();
     private final Map<String, Integer> skillBaselines = new HashMap<>();
@@ -59,9 +61,19 @@ public final class DailyTasksOverlay extends OverlayPanel
         ConfigManager configManager,
         ClanHQVerifierConfig config)
     {
+        this(snapshotSupplier, configManager, config, (category, progress) -> { });
+    }
+
+    public DailyTasksOverlay(Supplier<DailyTasksSnapshot> snapshotSupplier,
+        ConfigManager configManager,
+        ClanHQVerifierConfig config,
+        BiConsumer<String, Integer> liveProgressListener)
+    {
         this.snapshotSupplier = snapshotSupplier;
         this.config = config;
         this.configManager = configManager;
+        this.liveProgressListener = liveProgressListener == null
+            ? (category, progress) -> { } : liveProgressListener;
         loadPersistedState();
         setPosition(OverlayPosition.TOP_LEFT);
         setPreferredSize(new Dimension(config.dailyTasksOverlayWidth(), 0));
@@ -76,8 +88,8 @@ public final class DailyTasksOverlay extends OverlayPanel
             entry -> selectTask(null));
         addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Show", "Skilling task",
             entry -> selectTask("SKILLING"));
-        addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Show", "Minigame task",
-            entry -> selectTask("MINIGAME"));
+        addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Show", "Activities task",
+            entry -> selectTask("ACTIVITIES"));
         addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Show", "PvM task",
             entry -> selectTask("PVM"));
         addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Show", "Drop task",
@@ -110,8 +122,13 @@ public final class DailyTasksOverlay extends OverlayPanel
                         {
                             if (mentions(task, skill))
                             {
-                                skillBaselines.putIfAbsent(key, Math.max(0,
-                                    experience - task.getProgress()));
+                                int baseline = skillBaselines.computeIfAbsent(key,
+                                    ignored -> Math.max(0,
+                                        experience - task.getProgress()));
+                                int progress = Math.min(task.getTarget(),
+                                    Math.max(task.getProgress(), experience - baseline));
+                                liveProgress.put(key, Math.max(
+                                    liveProgress.getOrDefault(key, 0), progress));
                             }
                         });
                     }
@@ -154,15 +171,17 @@ public final class DailyTasksOverlay extends OverlayPanel
                 int baseline = skillBaselines.computeIfAbsent(key,
                     ignored -> Math.max(0, experience - task.getProgress()));
                 int progress = Math.max(task.getProgress(), experience - baseline);
-                liveProgress.put(key, Math.min(task.getTarget(), progress));
+                int live = Math.min(task.getTarget(), progress);
+                liveProgress.put(key, live);
                 persistState();
                 revalidate();
+                liveProgressListener.accept(task.getCategory(), live);
                 return;
             }
         }
     }
 
-    /** Apply a local loot-tracker event to the matching PvM/minigame task. */
+    /** Apply a local loot-tracker event to the matching PvM/activities task. */
     public void observeLoot(String sourceName)
     {
         DailyTasksSnapshot snapshot = snapshotSupplier.get();
@@ -175,17 +194,18 @@ public final class DailyTasksOverlay extends OverlayPanel
             for (DailyTaskSummary task : snapshot.getTasks())
             {
                 if (("PVM".equals(task.getCategory())
-                        || "MINIGAME".equals(task.getCategory()))
+                        || isActivities(task.getCategory()))
                     && task.getVerificationType() != VerificationType.ITEM_DROP
                     && mentions(task, sourceName))
                 {
                     String key = taskKey(task);
                     int progress = liveProgress.getOrDefault(key,
                         task.getProgress());
-                    liveProgress.put(key,
-                        Math.min(task.getTarget(), progress + 1));
+                    int live = Math.min(task.getTarget(), progress + 1);
+                    liveProgress.put(key, live);
                     persistState();
                     revalidate();
+                    liveProgressListener.accept(task.getCategory(), live);
                     return;
                 }
             }
@@ -224,12 +244,31 @@ public final class DailyTasksOverlay extends OverlayPanel
                 String key = taskKey(task);
                 int progress = liveProgress.getOrDefault(key,
                     task.getProgress());
-                liveProgress.put(key,
-                    Math.min(task.getTarget(), progress + quantity));
+                int live = Math.min(task.getTarget(), progress + quantity);
+                liveProgress.put(key, live);
                 persistState();
                 revalidate();
+                liveProgressListener.accept(task.getCategory(), live);
                 return;
             }
+        }
+    }
+
+    /**
+     * Push the current local progress to consumers after a fresh snapshot is
+     * rendered. This also covers progress restored from the persisted local
+     * state before the next in-game event arrives.
+     */
+    public void publishLiveProgress()
+    {
+        DailyTasksSnapshot snapshot = snapshotSupplier.get();
+        if (snapshot == null)
+        {
+            return;
+        }
+        for (DailyTaskSummary task : snapshot.getTasks())
+        {
+            liveProgressListener.accept(task.getCategory(), progressFor(task));
         }
     }
 
@@ -487,7 +526,7 @@ public final class DailyTasksOverlay extends OverlayPanel
         {
             return new Color(219, 174, 76);
         }
-        if ("MINIGAME".equals(category))
+        if (isActivities(category))
         {
             return new Color(174, 126, 236);
         }
@@ -497,6 +536,13 @@ public final class DailyTasksOverlay extends OverlayPanel
     private static boolean isSkilling(String category)
     {
         return category != null && "SKILLING".equalsIgnoreCase(category.trim());
+    }
+
+    private static boolean isActivities(String category)
+    {
+        return category != null
+            && ("ACTIVITIES".equalsIgnoreCase(category.trim())
+                || "MINIGAME".equalsIgnoreCase(category.trim()));
     }
 
     private static boolean mentions(DailyTaskSummary task, String value)
