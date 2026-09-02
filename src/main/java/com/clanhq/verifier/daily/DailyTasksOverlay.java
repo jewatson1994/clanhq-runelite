@@ -120,7 +120,7 @@ public final class DailyTasksOverlay extends OverlayPanel
                     {
                         latestSkillExperience.forEach((skill, experience) ->
                         {
-                            if (mentions(task, skill))
+                            if (DailyTaskSkillMatcher.matches(task, skill))
                             {
                                 int baseline = skillBaselines.computeIfAbsent(key,
                                     ignored -> Math.max(0,
@@ -163,7 +163,7 @@ public final class DailyTasksOverlay extends OverlayPanel
             for (DailyTaskSummary task : snapshot.getTasks())
             {
                 if (!"SKILLING".equals(task.getCategory())
-                    || !mentions(task, skillName))
+                    || !DailyTaskSkillMatcher.matches(task, skillName))
                 {
                     continue;
                 }

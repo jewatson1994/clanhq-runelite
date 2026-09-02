@@ -520,7 +520,7 @@ final class DailyTasksPanel extends JPanel
                 icon.setIcon(null);
                 return;
             }
-            Skill skill = findSkill(task.getName());
+            Skill skill = DailyTaskSkillMatcher.findTaskSkill(task);
             BufferedImage image = skill == null
                 ? null : skillIconManager.getSkillImage(skill);
             if (image == null)
@@ -561,21 +561,6 @@ final class DailyTasksPanel extends JPanel
                     .replace(".0K", "K");
             }
             return NUMBERS.format(value);
-        }
-
-        private static Skill findSkill(String taskName)
-        {
-            String normalized = taskName == null ? ""
-                : taskName.toLowerCase(Locale.ROOT);
-            for (Skill skill : Skill.values())
-            {
-                String name = skill.getName().toLowerCase(Locale.ROOT);
-                if (normalized.contains(name))
-                {
-                    return skill;
-                }
-            }
-            return null;
         }
 
         @Override
