@@ -38,7 +38,7 @@ import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.WidgetInfo;
+import net.runelite.api.widgets.ComponentID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
@@ -360,7 +360,7 @@ public final class ClanHQVerifierPlugin extends Plugin
             lastActivityDialogueText = null;
             return;
         }
-        Widget dialogueText = client.getWidget(WidgetInfo.DIALOG_NPC_TEXT);
+        Widget dialogueText = client.getWidget(ComponentID.DIALOG_NPC_TEXT);
         if (dialogueText == null || dialogueText.isHidden()
             || dialogueText.getText() == null
             || dialogueText.getText().trim().isEmpty())
