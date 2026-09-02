@@ -200,17 +200,7 @@ public final class DailyTasksFeature implements ClanHQFeature
         {
             return;
         }
-        apiClient.submitActivity(rsn, activity, quantity, metadata)
-            .thenAccept(accepted ->
-            {
-                // Activity progress is server-authoritative. Pull the updated
-                // snapshot after the server records it so the overlay and the
-                // side panel advance without a manual refresh.
-                if (accepted)
-                {
-                    refresh();
-                }
-            });
+        apiClient.submitActivity(rsn, activity, quantity, metadata);
     }
 
     public DailyTasksSnapshot getSnapshot()

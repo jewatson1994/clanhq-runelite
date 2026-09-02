@@ -51,12 +51,14 @@ public final class IdentitySnapshot
         }
         JsonElement balanceValue = root.has("currency_balance")
             ? root.get("currency_balance") : root.get("dripdrops_balance");
-        int allTimeEarned = root.has("all_time_earned")
+        boolean hasAllTimeEarned = root.has("all_time_earned")
+            && !root.get("all_time_earned").isJsonNull();
+        int allTimeEarned = hasAllTimeEarned
             ? root.get("all_time_earned").getAsInt() : 0;
         // Older ClanHQ API builds did not expose the earned-total field.  A
         // paired wallet with a positive balance should not render a misleading
         // zero while that server is being upgraded.
-        if (allTimeEarned == 0 && balanceValue != null
+        if (!hasAllTimeEarned && balanceValue != null
             && balanceValue.getAsInt() > 0)
         {
             allTimeEarned = balanceValue.getAsInt();
