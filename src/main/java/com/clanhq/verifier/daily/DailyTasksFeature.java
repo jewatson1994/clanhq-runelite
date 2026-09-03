@@ -18,6 +18,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.game.SkillIconManager;
 
@@ -34,6 +35,7 @@ public final class DailyTasksFeature implements ClanHQFeature
     private volatile CompletableFuture<Void> pendingDropObservations =
         CompletableFuture.completedFuture(null);
     private volatile boolean running;
+    private final AtomicBoolean refreshInFlight = new AtomicBoolean();
 
     public DailyTasksFeature(DailyTasksApiClient apiClient,
         ClanHQVerifierConfig config,
@@ -118,10 +120,15 @@ public final class DailyTasksFeature implements ClanHQFeature
                 "Use /plugin pair in Discord, then enter the code in settings.");
             return;
         }
+        if (!refreshInFlight.compareAndSet(false, true))
+        {
+            return;
+        }
         SwingUtilities.invokeLater(() ->
             panel.setLoading("Loading today's tasks..."));
         apiClient.fetch().thenAccept(result -> SwingUtilities.invokeLater(() ->
         {
+            refreshInFlight.set(false);
             if (!running)
             {
                 return;

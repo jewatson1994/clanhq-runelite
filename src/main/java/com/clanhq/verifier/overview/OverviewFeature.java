@@ -9,6 +9,7 @@ import java.util.Base64;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
 import java.util.function.Supplier;
+import java.util.concurrent.atomic.AtomicBoolean;
 import net.runelite.client.config.ConfigManager;
 
 public final class OverviewFeature implements ClanHQFeature
@@ -22,6 +23,7 @@ public final class OverviewFeature implements ClanHQFeature
     private final Supplier<String> currentRsn;
     private volatile IdentitySnapshot identity;
     private volatile boolean running;
+    private final AtomicBoolean refreshInFlight = new AtomicBoolean();
 
     public OverviewFeature(IdentityApiClient apiClient,
         ClanHQVerifierConfig config, ConfigManager configManager,
@@ -62,12 +64,13 @@ public final class OverviewFeature implements ClanHQFeature
 
     public void refresh()
     {
-        if (!running) { return; }
+        if (!running || !refreshInFlight.compareAndSet(false, true)) { return; }
         boolean hasStoredPairing = !normalized(
             config.installationToken()).isEmpty();
         panel.setLoading(hasStoredPairing);
         apiClient.fetch().thenAccept(result -> SwingUtilities.invokeLater(() ->
         {
+            refreshInFlight.set(false);
             if (!running) { return; }
             result.getIdentity().ifPresentOrElse(
                 value -> {
