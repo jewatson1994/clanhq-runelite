@@ -145,8 +145,7 @@ final class DailyTasksPanel extends JPanel
             }
         }
         updateSummary();
-        resetLabel.setText("Resets at: "
-            + RESET_FORMAT.format(rotationEnd(snapshot)));
+        resetLabel.setText(resetText(snapshot));
         showStatus(unsupported
             ? "A task requires a newer ClanHQ plugin."
             : (isNormalLoadMessage(message) ? "" : message));
@@ -281,6 +280,19 @@ final class DailyTasksPanel extends JPanel
         return type == null || type.trim().isEmpty()
             || "daily".equalsIgnoreCase(type)
             || "daily_tasks".equalsIgnoreCase(type);
+    }
+
+    static String resetText(DailyTasksSnapshot snapshot)
+    {
+        String nextReset = RESET_FORMAT.format(rotationEnd(snapshot));
+        String type = snapshot.getContext() == null ? "" : snapshot.getContext().getType();
+        if ("DROP_RUSH".equalsIgnoreCase(type) || "DRIP_RUSH".equalsIgnoreCase(type))
+        {
+            String end = snapshot.getContext().getEndsAt() == null ? ""
+                : "<br>Rush ends: " + RESET_FORMAT.format(snapshot.getContext().getEndsAt());
+            return "<html>Tasks reset: " + nextReset + end + "</html>";
+        }
+        return "Resets at: " + nextReset;
     }
 
     private static java.time.Instant rotationEnd(DailyTasksSnapshot snapshot)
