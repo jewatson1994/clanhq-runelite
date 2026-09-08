@@ -382,6 +382,10 @@ public final class DailyTasksOverlay extends OverlayPanel
                 continue;
             }
             JsonObject value = new JsonObject();
+            if (task.getId() != null && !task.getId().trim().isEmpty())
+            {
+                value.addProperty("id", task.getId());
+            }
             value.addProperty("category", task.getCategory());
             value.addProperty("name", task.getName());
             value.addProperty("target", task.getTarget());
