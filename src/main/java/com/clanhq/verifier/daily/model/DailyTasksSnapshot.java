@@ -87,6 +87,15 @@ public final class DailyTasksSnapshot
             Integer verificationItemId = verification.has("item_id")
                 && !verification.get("item_id").isJsonNull()
                     ? verification.get("item_id").getAsInt() : null;
+            List<Integer> verificationItemIds = new ArrayList<>();
+            String itemIdsKey = verification.has("item_ids") ? "item_ids" : "acceptable_item_ids";
+            if (verification.has(itemIdsKey) && verification.get(itemIdsKey).isJsonArray())
+            {
+                for (JsonElement item : verification.getAsJsonArray(itemIdsKey))
+                {
+                    verificationItemIds.add(item.getAsInt());
+                }
+            }
             String category = value.has("category")
                 ? value.get("category").getAsString()
                 : categoryFor(VerificationType.from(verificationName));
@@ -109,7 +118,10 @@ public final class DailyTasksSnapshot
                 awarded,
                 value.has("placement") && !value.get("placement").isJsonNull()
                     ? value.get("placement").getAsInt() : null,
-                VerificationType.from(verificationName), verificationItemId));
+                VerificationType.from(verificationName), verificationItemId,
+                verificationItemIds,
+                value.has("tier") ? value.get("tier").getAsString() : "EASY",
+                value.has("task_type") ? value.get("task_type").getAsString() : "NORMAL"));
         }
         return new DailyTasksSnapshot(
             periodDate,

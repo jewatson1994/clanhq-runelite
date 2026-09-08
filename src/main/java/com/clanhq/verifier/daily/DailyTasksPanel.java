@@ -126,7 +126,7 @@ final class DailyTasksPanel extends JPanel
         boolean unsupported = false;
         for (DailyTaskSummary task : snapshot.getTasks())
         {
-            TaskCard card = new TaskCard("Claim Task",
+            TaskCard card = new TaskCard(task.getId(), "Claim Task",
                 () -> claimAction.accept(task.getCategory()), task.getCategory(),
                 skillIconManager);
             cards.add(card);
@@ -159,9 +159,9 @@ final class DailyTasksPanel extends JPanel
      * stream. The server snapshot remains authoritative for claim state; this
      * only keeps the panel in step with the live overlay between refreshes.
      */
-    void updateLiveProgress(String category, int progress)
+    void updateLiveProgress(String assignmentId, int progress)
     {
-        TaskCard card = cardFor(category);
+        TaskCard card = cardForAssignment(assignmentId);
         if (card == null)
         {
             return;
@@ -186,7 +186,7 @@ final class DailyTasksPanel extends JPanel
 
     void setClaiming(String category)
     {
-        TaskCard card = cardFor(category);
+        TaskCard card = cardForCategory(category);
         if (card != null)
         {
             card.setClaiming();
@@ -195,18 +195,34 @@ final class DailyTasksPanel extends JPanel
 
     void restoreClaim(String category)
     {
-        TaskCard card = cardFor(category);
+        TaskCard card = cardForCategory(category);
         if (card != null)
         {
             card.restoreClaim();
         }
     }
 
-    private TaskCard cardFor(String category)
+    private TaskCard cardForCategory(String category)
     {
         for (TaskCard card : cards)
         {
             if (category != null && card.category.equals(category))
+            {
+                return card;
+            }
+        }
+        return null;
+    }
+
+    private TaskCard cardForAssignment(String assignmentId)
+    {
+        if (assignmentId == null)
+        {
+            return null;
+        }
+        for (TaskCard card : cards)
+        {
+            if (assignmentId.equals(card.assignmentId))
             {
                 return card;
             }
@@ -342,6 +358,7 @@ final class DailyTasksPanel extends JPanel
 
     private static final class TaskCard extends JPanel
     {
+        private final String assignmentId;
         private final JButton claimButton;
         private final JLabel details = new JLabel();
         private final JLabel progressValue = new JLabel();
@@ -356,9 +373,10 @@ final class DailyTasksPanel extends JPanel
         private int awarded;
         private boolean serverCompleted;
 
-        private TaskCard(String buttonText, Runnable action, String category,
+        private TaskCard(String assignmentId, String buttonText, Runnable action, String category,
             SkillIconManager skillIconManager)
         {
+            this.assignmentId = assignmentId;
             this.category = category;
             this.skillIconManager = skillIconManager;
             setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
@@ -425,6 +443,9 @@ final class DailyTasksPanel extends JPanel
             claimButton.setVisible(!task.isCompleted());
             StringBuilder value = new StringBuilder("<html><body style='width: ")
                 .append(CONTENT_WIDTH).append("px'>")
+                .append(task.isDailyDrop() ? "<b>DAILY DROP</b> • " : "")
+                .append("<font color='#B8B8B8'>[")
+                .append(escapeHtml(task.getTier())).append("]</font><br>")
                 .append("<b>").append(escapeHtml(task.getName())).append("</b><br>")
                 .append("<font color='#B8B8B8'>")
                 .append(escapeHtml(task.getDescription()
