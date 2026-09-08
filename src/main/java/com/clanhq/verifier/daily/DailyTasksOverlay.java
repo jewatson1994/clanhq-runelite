@@ -187,7 +187,7 @@ public final class DailyTasksOverlay extends OverlayPanel
                 liveProgress.put(key, live);
                 persistState();
                 revalidate();
-                liveProgressListener.accept(task.getCategory(), live);
+                liveProgressListener.accept(task.getId(), live);
                 return;
             }
         }
@@ -217,7 +217,7 @@ public final class DailyTasksOverlay extends OverlayPanel
                     liveProgress.put(key, live);
                     persistState();
                     revalidate();
-                    liveProgressListener.accept(task.getCategory(), live);
+                    liveProgressListener.accept(task.getId(), live);
                     return;
                 }
             }
@@ -228,7 +228,9 @@ public final class DailyTasksOverlay extends OverlayPanel
     public void observeDrop(ObservedDrop drop)
     {
         DailyTasksSnapshot snapshot = snapshotSupplier.get();
-        if (snapshot == null || drop == null || drop.getItems() == null)
+        Map<String, ItemDropMatcher.Match> matches = ItemDropMatcher.findMatches(
+            snapshot, drop, itemManager);
+        if (matches.isEmpty())
         {
             return;
         }
@@ -236,34 +238,19 @@ public final class DailyTasksOverlay extends OverlayPanel
         {
             for (DailyTaskSummary task : snapshot.getTasks())
             {
-                if (task.getVerificationType() != VerificationType.ITEM_DROP
-                    || task.getVerificationItemId() == null)
-                {
-                    continue;
-                }
-                int quantity = 0;
-                for (net.runelite.client.game.ItemStack item : drop.getItems())
-                {
-                    int observedItemId = itemManager == null
-                        ? item.getId() : itemManager.canonicalize(item.getId());
-                    if (observedItemId == task.getVerificationItemId())
-                    {
-                        quantity += Math.max(0, item.getQuantity());
-                    }
-                }
-                if (quantity <= 0)
+                ItemDropMatcher.Match match = matches.get(task.getId());
+                if (match == null)
                 {
                     continue;
                 }
                 String key = taskKey(task);
                 int progress = liveProgress.getOrDefault(key,
                     task.getProgress());
-                int live = Math.min(task.getTarget(), progress + quantity);
+                int live = Math.min(task.getTarget(), progress + match.getQuantity());
                 liveProgress.put(key, live);
                 persistState();
                 revalidate();
-                liveProgressListener.accept(task.getCategory(), live);
-                return;
+                liveProgressListener.accept(task.getId(), live);
             }
         }
     }
@@ -282,7 +269,7 @@ public final class DailyTasksOverlay extends OverlayPanel
         }
         for (DailyTaskSummary task : snapshot.getTasks())
         {
-            liveProgressListener.accept(task.getCategory(), progressFor(task));
+            liveProgressListener.accept(task.getId(), progressFor(task));
         }
     }
 
@@ -335,7 +322,9 @@ public final class DailyTasksOverlay extends OverlayPanel
         int progress = progressFor(task);
         boolean complete = task.isCompleted() || progress >= task.getTarget();
         Color color = complete ? COMPLETE : categoryColor(task.getCategory());
-        String label = titleCase(task.getCategory()).toUpperCase(Locale.ROOT) + "  "
+        String label = (task.isDailyDrop() ? "DAILY DROP " : "")
+            + (task.getTier() == null ? "" : task.getTier() + " ")
+            + titleCase(task.getCategory()).toUpperCase(Locale.ROOT) + "  "
             + (complete ? "\u2713" : "\u2022");
         panel.getChildren().add(LineComponent.builder()
             .left(label + "  " + truncate(displayTaskName(task),

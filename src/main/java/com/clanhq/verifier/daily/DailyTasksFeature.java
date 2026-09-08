@@ -68,8 +68,8 @@ public final class DailyTasksFeature implements ClanHQFeature
             this::claim,
             skillIconManager);
         this.overlay = new DailyTasksOverlay(() -> snapshot, configManager, config,
-            (category, progress) -> SwingUtilities.invokeLater(() ->
-                panel.updateLiveProgress(category, progress)), itemManager);
+            (assignmentId, progress) -> SwingUtilities.invokeLater(() ->
+                panel.updateLiveProgress(assignmentId, progress)), itemManager);
     }
 
     @Override
@@ -232,57 +232,30 @@ public final class DailyTasksFeature implements ClanHQFeature
 
     public void observeDrop(ObservedDrop drop)
     {
-        overlay.observeDrop(drop);
         DailyTasksSnapshot current = snapshot;
-        if (current == null || drop == null || drop.getItems() == null
-            || !isGenericTaskContext(current))
+        Map<String, ItemDropMatcher.Match> matches = ItemDropMatcher.findMatches(
+            current, drop, itemManager);
+        overlay.observeDrop(drop);
+        if (matches.isEmpty())
         {
             return;
         }
         List<CompletableFuture<Boolean>> submissions = new ArrayList<>();
         for (DailyTaskSummary task : current.getTasks())
         {
-            if (task.getVerificationType() != VerificationType.ITEM_DROP
-                || task.getVerificationItemId() == null
-                || task.getId() == null || task.getId().trim().isEmpty())
+            ItemDropMatcher.Match match = matches.get(task.getId());
+            if (match == null)
             {
                 continue;
             }
-            int quantity = 0;
-            int canonicalItemId = -1;
-            for (net.runelite.client.game.ItemStack item : drop.getItems())
-            {
-                int observedItemId = itemManager == null
-                    ? item.getId() : itemManager.canonicalize(item.getId());
-                if (observedItemId == task.getVerificationItemId())
-                {
-                    canonicalItemId = observedItemId;
-                    quantity += Math.max(0, item.getQuantity());
-                }
-            }
-            if (quantity > 0)
-            {
-                submissions.add(apiClient.submitItemDropObservation(task.getId(),
-                    drop, canonicalItemId, quantity));
-            }
+            submissions.add(apiClient.submitItemDropObservation(task.getId(),
+                drop, match.getCanonicalItemId(), match.getQuantity()));
         }
         if (!submissions.isEmpty())
         {
             pendingDropObservations = CompletableFuture.allOf(
                 submissions.toArray(new CompletableFuture<?>[0]));
         }
-    }
-
-    private static boolean isGenericTaskContext(DailyTasksSnapshot value)
-    {
-        if (value.getContext() == null)
-        {
-            return false;
-        }
-        String type = value.getContext().getType();
-        return type != null && !type.trim().isEmpty()
-            && !"daily".equalsIgnoreCase(type)
-            && !"daily_tasks".equalsIgnoreCase(type);
     }
 
     private void scheduleRotationRefresh(DailyTasksSnapshot value)
