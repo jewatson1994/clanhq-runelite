@@ -43,6 +43,7 @@ import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SkillIconManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDependency;
@@ -76,6 +77,7 @@ public final class ClanHQVerifierPlugin extends Plugin
     @Inject private SkillIconManager skillIconManager;
     @Inject private ClanHQVerifierConfig config;
     @Inject private ConfigManager configManager;
+    @Inject private ItemManager itemManager;
 
     private ClanHQPanel shellPanel;
     private BingoFeature bingoFeature;
@@ -182,7 +184,8 @@ public final class ClanHQVerifierPlugin extends Plugin
                 configManager,
                 skillIconManager,
                 executor,
-                () -> { if (overviewFeature != null) overviewFeature.refreshSummary(); });
+                () -> { if (overviewFeature != null) overviewFeature.refreshSummary(); },
+                itemManager);
             activityTelemetryDetector = new ActivityTelemetryDetector(
                 dailyTasksFeature, this::currentRsn);
             clientThread.invokeLater(this::resetActivityTelemetry);
