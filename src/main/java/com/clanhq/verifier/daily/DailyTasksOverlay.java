@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import net.runelite.api.MenuAction;
+import net.runelite.client.game.ItemManager;
 import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -50,6 +51,7 @@ public final class DailyTasksOverlay extends OverlayPanel
     private final ClanHQVerifierConfig config;
     private final ConfigManager configManager;
     private final BiConsumer<String, Integer> liveProgressListener;
+    private final ItemManager itemManager;
     private final Object stateLock = new Object();
     private final Map<String, Integer> liveProgress = new HashMap<>();
     private final Map<String, Integer> skillBaselines = new HashMap<>();
@@ -69,11 +71,21 @@ public final class DailyTasksOverlay extends OverlayPanel
         ClanHQVerifierConfig config,
         BiConsumer<String, Integer> liveProgressListener)
     {
+        this(snapshotSupplier, configManager, config, liveProgressListener, null);
+    }
+
+    public DailyTasksOverlay(Supplier<DailyTasksSnapshot> snapshotSupplier,
+        ConfigManager configManager,
+        ClanHQVerifierConfig config,
+        BiConsumer<String, Integer> liveProgressListener,
+        ItemManager itemManager)
+    {
         this.snapshotSupplier = snapshotSupplier;
         this.config = config;
         this.configManager = configManager;
         this.liveProgressListener = liveProgressListener == null
             ? (category, progress) -> { } : liveProgressListener;
+        this.itemManager = itemManager;
         loadPersistedState();
         setPosition(OverlayPosition.TOP_LEFT);
         setPreferredSize(new Dimension(config.dailyTasksOverlayWidth(), 0));
@@ -232,7 +244,9 @@ public final class DailyTasksOverlay extends OverlayPanel
                 int quantity = 0;
                 for (net.runelite.client.game.ItemStack item : drop.getItems())
                 {
-                    if (item.getId() == task.getVerificationItemId())
+                    int observedItemId = itemManager == null
+                        ? item.getId() : itemManager.canonicalize(item.getId());
+                    if (observedItemId == task.getVerificationItemId())
                     {
                         quantity += Math.max(0, item.getQuantity());
                     }

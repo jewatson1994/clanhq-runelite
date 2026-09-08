@@ -20,6 +20,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SkillIconManager;
 
 public final class DailyTasksFeature implements ClanHQFeature
@@ -30,6 +31,7 @@ public final class DailyTasksFeature implements ClanHQFeature
     private final DailyTasksOverlay overlay;
     private final ScheduledExecutorService executor;
     private final Runnable overviewChanged;
+    private final ItemManager itemManager;
     private volatile ScheduledFuture<?> rotationRefresh;
     private volatile DailyTasksSnapshot snapshot;
     private volatile CompletableFuture<Void> pendingDropObservations =
@@ -44,17 +46,30 @@ public final class DailyTasksFeature implements ClanHQFeature
         ScheduledExecutorService executor,
         Runnable overviewChanged)
     {
+        this(apiClient, config, configManager, skillIconManager, executor,
+            overviewChanged, null);
+    }
+
+    public DailyTasksFeature(DailyTasksApiClient apiClient,
+        ClanHQVerifierConfig config,
+        ConfigManager configManager,
+        SkillIconManager skillIconManager,
+        ScheduledExecutorService executor,
+        Runnable overviewChanged,
+        ItemManager itemManager)
+    {
         this.apiClient = apiClient;
         this.config = config;
         this.executor = executor;
         this.overviewChanged = overviewChanged;
+        this.itemManager = itemManager;
         this.panel = new DailyTasksPanel(
             this::refresh,
             this::claim,
             skillIconManager);
         this.overlay = new DailyTasksOverlay(() -> snapshot, configManager, config,
             (category, progress) -> SwingUtilities.invokeLater(() ->
-                panel.updateLiveProgress(category, progress)));
+                panel.updateLiveProgress(category, progress)), itemManager);
     }
 
     @Override
@@ -234,17 +249,21 @@ public final class DailyTasksFeature implements ClanHQFeature
                 continue;
             }
             int quantity = 0;
+            int canonicalItemId = -1;
             for (net.runelite.client.game.ItemStack item : drop.getItems())
             {
-                if (item.getId() == task.getVerificationItemId())
+                int observedItemId = itemManager == null
+                    ? item.getId() : itemManager.canonicalize(item.getId());
+                if (observedItemId == task.getVerificationItemId())
                 {
+                    canonicalItemId = observedItemId;
                     quantity += Math.max(0, item.getQuantity());
                 }
             }
             if (quantity > 0)
             {
                 submissions.add(apiClient.submitItemDropObservation(task.getId(),
-                    drop, task.getVerificationItemId(), quantity));
+                    drop, canonicalItemId, quantity));
             }
         }
         if (!submissions.isEmpty())
