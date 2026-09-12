@@ -58,11 +58,13 @@ final class DailyTaskInfoBox extends InfoBox
     {
         String name = task.getName() == null ? "" : task.getName();
         String category = titleCase(task.getCategory());
-        String tier = titleCase(task.getTier());
+        String tier = task.isDailyDrop() && task.getTier() != null
+            && !task.getTier().trim().isEmpty() ? titleCase(task.getTier()) : "";
         String status = task.isCompleted() || progress >= task.getTarget()
             ? "Complete" : NUMBERS.format(progress) + " / "
                 + NUMBERS.format(task.getTarget());
-        return tier + " " + category + " - " + name + " - " + status;
+        String prefix = tier.isEmpty() ? category : tier + " " + category;
+        return prefix + " - " + name + " - " + status;
     }
 
     private static String compact(int value)

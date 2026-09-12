@@ -105,6 +105,14 @@ public final class DailyTasksSnapshot
             {
                 category = "ACTIVITIES";
             }
+            else if ("DAILY_DROP".equalsIgnoreCase(category.trim()))
+            {
+                category = "DROP";
+            }
+            String taskType = value.has("task_type")
+                ? value.get("task_type").getAsString() : "NORMAL";
+            String tier = value.has("tier") && !value.get("tier").isJsonNull()
+                ? value.get("tier").getAsString() : null;
             tasks.add(new DailyTaskSummary(
                 value.has("id") && !value.get("id").isJsonNull()
                     ? value.get("id").getAsString() : null,
@@ -120,8 +128,8 @@ public final class DailyTasksSnapshot
                     ? value.get("placement").getAsInt() : null,
                 VerificationType.from(verificationName), verificationItemId,
                 verificationItemIds,
-                value.has("tier") ? value.get("tier").getAsString() : "EASY",
-                value.has("task_type") ? value.get("task_type").getAsString() : "NORMAL"));
+                tier,
+                taskType));
         }
         return new DailyTasksSnapshot(
             periodDate,

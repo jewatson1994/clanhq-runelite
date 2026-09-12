@@ -455,10 +455,17 @@ final class DailyTasksPanel extends JPanel
             claimButton.setVisible(!task.isCompleted());
             StringBuilder value = new StringBuilder("<html><body style='width: ")
                 .append(CONTENT_WIDTH).append("px'>")
-                .append(task.isDailyDrop() ? "<b>DAILY DROP</b> • " : "")
-                .append("<font color='#B8B8B8'>[")
-                .append(escapeHtml(task.getTier())).append("]</font><br>")
-                .append("<b>").append(escapeHtml(task.getName())).append("</b><br>")
+                .append(task.isDailyDrop() ? "<b>DAILY DROP</b> • " : "");
+            if (task.isDailyDrop() && hasTier(task))
+            {
+                value.append("<font color='#B8B8B8'>[")
+                    .append(escapeHtml(task.getTier())).append("]</font><br>");
+            }
+            else
+            {
+                value.append("<br>");
+            }
+            value.append("<b>").append(escapeHtml(task.getName())).append("</b><br>")
                 .append("<font color='#B8B8B8'>")
                 .append(escapeHtml(task.getDescription()
                     .replace(" experience", " XP"))).append("</font></body></html>");
@@ -483,6 +490,11 @@ final class DailyTasksPanel extends JPanel
             details.setText(value.toString());
             revalidate();
             repaint();
+        }
+
+        private static boolean hasTier(DailyTaskSummary task)
+        {
+            return task.getTier() != null && !task.getTier().trim().isEmpty();
         }
 
         private void updateLiveProgress(int value)

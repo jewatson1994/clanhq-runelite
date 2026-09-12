@@ -4,6 +4,8 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class DailyTasksSnapshotTest
 {
@@ -25,5 +27,25 @@ public class DailyTasksSnapshotTest
         assertEquals(4, snapshot.getTasks().get(0).getProgress());
         assertEquals(125, snapshot.getBalance());
         assertFalse(snapshot.getTasks().get(0).isCompleted());
+        assertNull(snapshot.getTasks().get(0).getTier());
+    }
+
+    @Test
+    public void parsesFourthDailyDropWithoutGivingNormalTasksATier()
+    {
+        DailyTasksSnapshot snapshot = DailyTasksSnapshot.fromJson(
+            "{\"reset_at\":\"2026-07-19T09:00:00Z\",\"tasks\":["
+                + "{\"category\":\"SKILLING\",\"name\":\"Mining\",\"target\":1},"
+                + "{\"category\":\"PVM\",\"name\":\"Boss\",\"target\":1},"
+                + "{\"category\":\"ACTIVITIES\",\"name\":\"Games\",\"target\":1},"
+                + "{\"category\":\"DROP\",\"task_type\":\"DAILY_DROP\","
+                + "\"tier\":\"HARD\",\"name\":\"Dragon bones\",\"target\":10,"
+                + "\"verification\":{\"type\":\"ITEM_DROP\",\"item_id\":1003}}]}"
+        );
+
+        assertEquals(4, snapshot.getTasks().size());
+        assertNull(snapshot.getTasks().get(0).getTier());
+        assertEquals("HARD", snapshot.getTasks().get(3).getTier());
+        assertTrue(snapshot.getTasks().get(3).isDailyDrop());
     }
 }

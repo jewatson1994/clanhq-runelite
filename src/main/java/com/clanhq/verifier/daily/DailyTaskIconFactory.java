@@ -42,6 +42,14 @@ final class DailyTaskIconFactory
                 return image;
             }
         }
+        if (spriteManager != null && "DROP".equalsIgnoreCase(category))
+        {
+            BufferedImage image = spriteManager.getSprite(SpriteID.TAB_INVENTORY, 0);
+            if (image != null)
+            {
+                return image;
+            }
+        }
         if (skillIconManager != null && "SKILLING".equalsIgnoreCase(category))
         {
             Skill skill = findSkill(task.getName());
@@ -122,6 +130,10 @@ final class DailyTaskIconFactory
         else if ("PVM".equalsIgnoreCase(category))
         {
             spriteId = SpriteID.TAB_COMBAT;
+        }
+        else if ("DROP".equalsIgnoreCase(category))
+        {
+            spriteId = SpriteID.TAB_INVENTORY;
         }
         else
         {

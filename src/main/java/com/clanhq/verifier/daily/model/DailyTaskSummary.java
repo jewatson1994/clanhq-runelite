@@ -28,7 +28,7 @@ public final class DailyTaskSummary
         Integer placement)
     {
         this(null, category, name, description, target, progress, reward,
-            completed, awarded, placement, VerificationType.UNKNOWN, null, null, "EASY", "NORMAL");
+            completed, awarded, placement, VerificationType.UNKNOWN, null, null, null, "NORMAL");
     }
 
     public DailyTaskSummary(String category, String name, String description,
@@ -36,7 +36,7 @@ public final class DailyTaskSummary
         Integer placement, VerificationType verificationType)
     {
         this(null, category, name, description, target, progress, reward,
-            completed, awarded, placement, verificationType, null, null, "EASY", "NORMAL");
+            completed, awarded, placement, verificationType, null, null, null, "NORMAL");
     }
 
     public DailyTaskSummary(String id, String category, String name,
@@ -46,7 +46,7 @@ public final class DailyTaskSummary
         Integer verificationItemId)
     {
         this(id, category, name, description, target, progress, reward, completed,
-            awarded, placement, verificationType, verificationItemId, null, "EASY", "NORMAL");
+            awarded, placement, verificationType, verificationItemId, null, null, "NORMAL");
     }
 
     public DailyTaskSummary(String id, String category, String name, String description,
@@ -73,7 +73,7 @@ public final class DailyTaskSummary
             ids.add(verificationItemId);
         }
         this.verificationItemIds = Collections.unmodifiableList(ids);
-        this.tier = tier == null ? "EASY" : tier;
+        this.tier = tier;
         this.taskType = taskType == null ? "NORMAL" : taskType;
     }
 

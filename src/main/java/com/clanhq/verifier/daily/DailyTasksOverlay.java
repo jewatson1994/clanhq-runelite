@@ -358,7 +358,8 @@ public final class DailyTasksOverlay extends OverlayPanel
     {
         int progress = progressFor(task);
         boolean complete = task.isCompleted() || progress >= task.getTarget();
-        Color color = complete ? COMPLETE : difficultyColor(task.getTier());
+        Color color = complete ? COMPLETE
+            : task.isDailyDrop() ? difficultyColor(task.getTier()) : Color.WHITE;
         String label = (task.isDailyDrop() ? "DAILY DROP " : "")
             + (complete ? "\u2713" : "\u2022");
         LineComponent taskLine = LineComponent.builder()
