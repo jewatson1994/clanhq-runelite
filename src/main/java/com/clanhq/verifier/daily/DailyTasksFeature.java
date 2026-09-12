@@ -12,8 +12,11 @@ import javax.swing.SwingUtilities;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -22,6 +25,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SkillIconManager;
+import net.runelite.client.game.SpriteManager;
+import net.runelite.client.plugins.Plugin;
+import net.runelite.client.ui.overlay.infobox.InfoBoxManager;
 
 public final class DailyTasksFeature implements ClanHQFeature
 {
@@ -32,6 +38,11 @@ public final class DailyTasksFeature implements ClanHQFeature
     private final ScheduledExecutorService executor;
     private final Runnable overviewChanged;
     private final ItemManager itemManager;
+    private final SkillIconManager skillIconManager;
+    private final SpriteManager spriteManager;
+    private final Plugin plugin;
+    private final InfoBoxManager infoBoxManager;
+    private final Map<String, DailyTaskInfoBox> infoBoxes = new HashMap<>();
     private volatile ScheduledFuture<?> rotationRefresh;
     private volatile DailyTasksSnapshot snapshot;
     private volatile CompletableFuture<Void> pendingDropObservations =
@@ -47,7 +58,7 @@ public final class DailyTasksFeature implements ClanHQFeature
         Runnable overviewChanged)
     {
         this(apiClient, config, configManager, skillIconManager, executor,
-            overviewChanged, null);
+            overviewChanged, null, null, null, null);
     }
 
     public DailyTasksFeature(DailyTasksApiClient apiClient,
@@ -58,18 +69,41 @@ public final class DailyTasksFeature implements ClanHQFeature
         Runnable overviewChanged,
         ItemManager itemManager)
     {
+        this(apiClient, config, configManager, skillIconManager, executor,
+            overviewChanged, itemManager, null, null, null);
+    }
+
+    public DailyTasksFeature(DailyTasksApiClient apiClient,
+        ClanHQVerifierConfig config,
+        ConfigManager configManager,
+        SkillIconManager skillIconManager,
+        ScheduledExecutorService executor,
+        Runnable overviewChanged,
+        ItemManager itemManager,
+        Plugin plugin,
+        InfoBoxManager infoBoxManager,
+        SpriteManager spriteManager)
+    {
         this.apiClient = apiClient;
         this.config = config;
         this.executor = executor;
         this.overviewChanged = overviewChanged;
         this.itemManager = itemManager;
+        this.skillIconManager = skillIconManager;
+        this.spriteManager = spriteManager;
+        this.plugin = plugin;
+        this.infoBoxManager = infoBoxManager;
         this.panel = new DailyTasksPanel(
             this::refresh,
             this::claim,
             skillIconManager);
-        this.overlay = new DailyTasksOverlay(() -> snapshot, configManager, config,
+        this.overlay = new DailyTasksOverlay(() -> snapshot, configManager,
             (assignmentId, progress) -> SwingUtilities.invokeLater(() ->
-                panel.updateLiveProgress(assignmentId, progress)), itemManager);
+            {
+                panel.updateLiveProgress(assignmentId, progress);
+                updateInfoBoxes(snapshot);
+            }), itemManager,
+            config::dailyTasksOverlayOpacity, skillIconManager, spriteManager);
     }
 
     @Override
@@ -114,6 +148,7 @@ public final class DailyTasksFeature implements ClanHQFeature
         }
         snapshot = null;
         overlay.setSnapshot(null);
+        clearInfoBoxes();
     }
 
     public void refresh()
@@ -131,6 +166,7 @@ public final class DailyTasksFeature implements ClanHQFeature
         {
             snapshot = null;
             overlay.clearPersistedState();
+            clearInfoBoxes();
             panel.showUnpaired(
                 "Use /plugin pair in Discord, then enter the code in settings.");
             return;
@@ -153,6 +189,7 @@ public final class DailyTasksFeature implements ClanHQFeature
                     this.snapshot = snapshot;
                     overviewChanged.run();
                     overlay.setSnapshot(snapshot);
+                    updateInfoBoxes(snapshot);
                     scheduleRotationRefresh(snapshot);
                     panel.showTasks(snapshot,
                         successMessage == null ? result.getMessage() : successMessage);
@@ -211,6 +248,60 @@ public final class DailyTasksFeature implements ClanHQFeature
     public void observeLoot(String sourceName)
     {
         overlay.observeLoot(sourceName);
+    }
+
+    private void updateInfoBoxes(DailyTasksSnapshot value)
+    {
+        if (infoBoxManager == null || plugin == null
+            || !config.dailyTasksOverlay()
+            || config.dailyTasksDisplayMode()
+                != ClanHQVerifierConfig.DailyTasksDisplayMode.INFO_BOXES
+            || value == null)
+        {
+            clearInfoBoxes();
+            return;
+        }
+
+        Set<String> activeKeys = new HashSet<>();
+        for (DailyTaskSummary task : value.getTasks())
+        {
+            String key = task.getId() == null
+                ? task.getCategory() + ":" + task.getName() : task.getId();
+            activeKeys.add(key);
+            DailyTaskInfoBox infoBox = infoBoxes.get(key);
+            if (infoBox == null)
+            {
+                infoBox = new DailyTaskInfoBox(task, overlay.progressFor(task),
+                    plugin, itemManager, skillIconManager, spriteManager,
+                    infoBoxManager);
+                infoBoxes.put(key, infoBox);
+                infoBoxManager.addInfoBox(infoBox);
+            }
+            else
+            {
+                infoBox.update(task, overlay.progressFor(task));
+            }
+        }
+
+        infoBoxes.entrySet().removeIf(entry ->
+        {
+            if (activeKeys.contains(entry.getKey()))
+            {
+                return false;
+            }
+            infoBoxManager.removeInfoBox(entry.getValue());
+            return true;
+        });
+    }
+
+    private void clearInfoBoxes()
+    {
+        if (infoBoxManager == null)
+        {
+            return;
+        }
+        infoBoxes.values().forEach(infoBoxManager::removeInfoBox);
+        infoBoxes.clear();
     }
 
     /** Forward a recognized gameplay event without coupling the plugin to task state. */

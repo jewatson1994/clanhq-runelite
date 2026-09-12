@@ -22,12 +22,15 @@ public final class BingoManifest
     private final Map<Integer, BingoItem> itemsById;
     private final BingoCharacterCheckStatus characterCheck;
     private final String serverName;
+    private final String siteUrl;
+    private final boolean joined;
+    private final String teamName;
 
     public BingoManifest(String eventId, String name, Instant startsAt,
         Instant endsAt, List<BingoItem> items)
     {
         this(eventId, name, startsAt, endsAt, items,
-            BingoCharacterCheckStatus.empty(), "ClanHQ");
+            BingoCharacterCheckStatus.empty(), "ClanHQ", null, false, null);
     }
 
     public BingoManifest(String eventId, String name, Instant startsAt,
@@ -41,6 +44,25 @@ public final class BingoManifest
         Instant endsAt, List<BingoItem> items,
         BingoCharacterCheckStatus characterCheck, String serverName)
     {
+        this(eventId, name, startsAt, endsAt, items, characterCheck,
+            serverName, null, false, null);
+    }
+
+    public BingoManifest(String eventId, String name, Instant startsAt,
+        Instant endsAt, List<BingoItem> items,
+        BingoCharacterCheckStatus characterCheck, String serverName,
+        boolean joined, String teamName)
+    {
+        this(eventId, name, startsAt, endsAt, items, characterCheck,
+            serverName, null, joined, teamName);
+    }
+
+    public BingoManifest(String eventId, String name, Instant startsAt,
+        Instant endsAt, List<BingoItem> items,
+        BingoCharacterCheckStatus characterCheck, String serverName,
+        String siteUrl,
+        boolean joined, String teamName)
+    {
         this.eventId = eventId;
         this.name = name;
         this.startsAt = startsAt;
@@ -49,6 +71,11 @@ public final class BingoManifest
         this.characterCheck = characterCheck;
         this.serverName = serverName == null || serverName.trim().isEmpty()
             ? "ClanHQ" : serverName.trim();
+        this.siteUrl = siteUrl == null || siteUrl.trim().isEmpty()
+            ? null : siteUrl.trim();
+        this.joined = joined;
+        this.teamName = teamName == null || teamName.trim().isEmpty()
+            ? null : teamName.trim();
         Map<Integer, BingoItem> indexed = new LinkedHashMap<>();
         for (BingoItem item : items)
         {
@@ -92,6 +119,17 @@ public final class BingoManifest
                 optionalNullableText(check, "baseline_captured_at"),
                 optionalNullableText(check, "final_captured_at"));
         }
+        boolean joined = false;
+        String teamName = null;
+        if (root.has("participation")
+            && root.get("participation").isJsonObject())
+        {
+            JsonObject participation = root.getAsJsonObject("participation");
+            joined = participation.has("joined")
+                && participation.get("joined").isJsonPrimitive()
+                && participation.get("joined").getAsBoolean();
+            teamName = optionalNullableText(participation, "team");
+        }
         return new BingoManifest(
             text(root, "event_id"),
             text(root, "name"),
@@ -100,7 +138,10 @@ public final class BingoManifest
             items,
             characterCheck,
             root.has("server_name") ? root.get("server_name").getAsString()
-                : "ClanHQ");
+                : "ClanHQ",
+            optionalNullableText(root, "site_url"),
+            joined,
+            teamName);
     }
 
     private static String text(JsonObject value, String key)
@@ -184,6 +225,21 @@ public final class BingoManifest
     public String getServerName()
     {
         return serverName;
+    }
+
+    public String getSiteUrl()
+    {
+        return siteUrl;
+    }
+
+    public boolean isJoined()
+    {
+        return joined;
+    }
+
+    public String getTeamName()
+    {
+        return teamName;
     }
 
     public Optional<BingoItem> findItem(int itemId)

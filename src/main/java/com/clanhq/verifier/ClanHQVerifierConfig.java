@@ -11,6 +11,12 @@ public interface ClanHQVerifierConfig extends Config
 {
     String GROUP = "clanhqVerifier";
 
+    enum DailyTasksDisplayMode
+    {
+        OVERLAY,
+        INFO_BOXES
+    }
+
     @ConfigSection(
         name = "Features",
         description = "ClanHQ tools available in the side panel",
@@ -62,49 +68,66 @@ public interface ClanHQVerifierConfig extends Config
     }
 
     @ConfigItem(
-        keyName = "dailyTasksOverlay",
-        name = "Task Overlay",
-        description = "Show today's ClanHQ task progress in the game overlay",
-        section = FEATURES_SECTION,
-        position = 6)
-    default boolean dailyTasksOverlay()
-    {
-        return true;
-    }
-
-    @Range(min = 180, max = 500)
-    @ConfigItem(
-        keyName = "dailyTasksOverlayWidth",
-        name = "Tasks overlay width",
-        description = "Width of the in-game ClanHQ Tasks overlay in pixels",
-        section = FEATURES_SECTION,
-        position = 7)
-    default int dailyTasksOverlayWidth()
-    {
-        return 280;
-    }
-
-    @ConfigItem(
         keyName = "gearAdvisorEnabled",
         name = "Gear Advisor",
         description = "Build personalized OSRS loadouts from your verified Character Sync data",
         section = FEATURES_SECTION,
-        position = 8)
+        position = 5)
     default boolean gearAdvisorEnabled()
     {
         return true;
     }
 
     @ConfigSection(
+        name = "Task overlay",
+        description = "Customize the in-game daily task display",
+        position = 0)
+    String TASK_OVERLAY_SECTION = "taskOverlay";
+
+    @ConfigItem(
+        keyName = "dailyTasksOverlay",
+        name = "Show overlay",
+        description = "Show today's ClanHQ task progress in the game overlay",
+        section = TASK_OVERLAY_SECTION,
+        position = 0)
+    default boolean dailyTasksOverlay()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "dailyTasksDisplayMode",
+        name = "Display mode",
+        description = "Choose between the compact task overlay and RuneLite info boxes",
+        section = TASK_OVERLAY_SECTION,
+        position = 1)
+    default DailyTasksDisplayMode dailyTasksDisplayMode()
+    {
+        return DailyTasksDisplayMode.OVERLAY;
+    }
+
+    @Range(min = 0, max = 255)
+    @ConfigItem(
+        keyName = "dailyTasksOverlayOpacity",
+        name = "Opacity",
+        description = "Background opacity (0 is transparent, 255 is opaque)",
+        section = TASK_OVERLAY_SECTION,
+        position = 2)
+    default int dailyTasksOverlayOpacity()
+    {
+        return 220;
+    }
+
+    @ConfigSection(
         name = "ClanHQ connection",
         description = "Where review evidence will be submitted",
-        position = 0)
+        position = 1)
     String CONNECTION_SECTION = "connection";
 
     @ConfigSection(
         name = "Bingo",
         description = "Connect to the active ClanHQ Bingo event",
-        position = 1)
+        position = 2)
     String BINGO_SECTION = "bingo";
 
     @ConfigItem(
@@ -166,14 +189,4 @@ public interface ClanHQVerifierConfig extends Config
         return "";
     }
 
-    @ConfigItem(
-        keyName = "bingoEventCode",
-        name = "Event code",
-        description = "Code identified with the Bingo event; contact staff for support",
-        section = BINGO_SECTION,
-        position = 0)
-    default String bingoEventCode()
-    {
-        return "";
-    }
 }

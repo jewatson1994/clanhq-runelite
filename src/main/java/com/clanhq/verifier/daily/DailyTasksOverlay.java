@@ -4,6 +4,7 @@ import com.clanhq.verifier.ClanHQVerifierConfig;
 import com.clanhq.verifier.daily.model.DailyTaskSummary;
 import com.clanhq.verifier.daily.model.DailyTasksSnapshot;
 import com.clanhq.verifier.loot.ObservedDrop;
+import com.clanhq.verifier.task.DropTier;
 import com.clanhq.verifier.task.VerificationType;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -18,15 +19,20 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 import net.runelite.api.MenuAction;
 import net.runelite.client.game.ItemManager;
-import net.runelite.client.ui.ColorScheme;
+import net.runelite.client.game.SkillIconManager;
+import net.runelite.client.game.SpriteManager;
 import net.runelite.client.ui.overlay.OverlayPanel;
 import net.runelite.client.ui.overlay.OverlayPosition;
+import net.runelite.client.ui.overlay.components.ComponentOrientation;
+import net.runelite.client.ui.overlay.components.ImageComponent;
 import net.runelite.client.ui.overlay.components.LineComponent;
 import net.runelite.client.ui.overlay.components.PanelComponent;
 import net.runelite.client.ui.overlay.components.ProgressBarComponent;
+import net.runelite.client.ui.overlay.components.SplitComponent;
 import net.runelite.client.ui.overlay.components.TitleComponent;
 import net.runelite.client.config.ConfigManager;
 
@@ -45,13 +51,21 @@ public final class DailyTasksOverlay extends OverlayPanel
     private static final Color ACCENT = new Color(86, 168, 255);
     private static final Color COMPLETE = new Color(67, 190, 117);
     private static final Color MUTED = new Color(185, 185, 185);
-    private static final int MIN_OVERLAY_WIDTH = 180;
+    private static final Color EASY = Color.WHITE;
+    private static final Color MEDIUM = new Color(255, 165, 0);
+    private static final Color HARD = new Color(220, 92, 92);
+    private static final int DEFAULT_OVERLAY_OPACITY = 220;
+    private static final int DEFAULT_OVERLAY_WIDTH = 280;
+    private static final int MIN_OVERLAY_SIZE = 180;
+    private static final int DIFFICULTY_ICON_SIZE = 15;
 
     private final Supplier<DailyTasksSnapshot> snapshotSupplier;
-    private final ClanHQVerifierConfig config;
     private final ConfigManager configManager;
     private final BiConsumer<String, Integer> liveProgressListener;
     private final ItemManager itemManager;
+    private final IntSupplier opacitySupplier;
+    private final SkillIconManager skillIconManager;
+    private final SpriteManager spriteManager;
     private final Object stateLock = new Object();
     private final Map<String, Integer> liveProgress = new HashMap<>();
     private final Map<String, Integer> skillBaselines = new HashMap<>();
@@ -60,42 +74,62 @@ public final class DailyTasksOverlay extends OverlayPanel
     private volatile Instant loadedResetAt;
 
     public DailyTasksOverlay(Supplier<DailyTasksSnapshot> snapshotSupplier,
-        ConfigManager configManager,
-        ClanHQVerifierConfig config)
+        ConfigManager configManager)
     {
-        this(snapshotSupplier, configManager, config, (category, progress) -> { });
+        this(snapshotSupplier, configManager, (category, progress) -> { });
     }
 
     public DailyTasksOverlay(Supplier<DailyTasksSnapshot> snapshotSupplier,
         ConfigManager configManager,
-        ClanHQVerifierConfig config,
         BiConsumer<String, Integer> liveProgressListener)
     {
-        this(snapshotSupplier, configManager, config, liveProgressListener, null);
+        this(snapshotSupplier, configManager, liveProgressListener, null);
     }
 
     public DailyTasksOverlay(Supplier<DailyTasksSnapshot> snapshotSupplier,
         ConfigManager configManager,
-        ClanHQVerifierConfig config,
         BiConsumer<String, Integer> liveProgressListener,
         ItemManager itemManager)
     {
+        this(snapshotSupplier, configManager, liveProgressListener, itemManager,
+            () -> DEFAULT_OVERLAY_OPACITY);
+    }
+
+    public DailyTasksOverlay(Supplier<DailyTasksSnapshot> snapshotSupplier,
+        ConfigManager configManager,
+        BiConsumer<String, Integer> liveProgressListener,
+        ItemManager itemManager,
+        IntSupplier opacitySupplier)
+    {
+        this(snapshotSupplier, configManager, liveProgressListener, itemManager,
+            opacitySupplier, null, null);
+    }
+
+    public DailyTasksOverlay(Supplier<DailyTasksSnapshot> snapshotSupplier,
+        ConfigManager configManager,
+        BiConsumer<String, Integer> liveProgressListener,
+        ItemManager itemManager,
+        IntSupplier opacitySupplier,
+        SkillIconManager skillIconManager,
+        SpriteManager spriteManager)
+    {
         this.snapshotSupplier = snapshotSupplier;
-        this.config = config;
         this.configManager = configManager;
         this.liveProgressListener = liveProgressListener == null
             ? (category, progress) -> { } : liveProgressListener;
         this.itemManager = itemManager;
+        this.opacitySupplier = opacitySupplier == null
+            ? () -> DEFAULT_OVERLAY_OPACITY : opacitySupplier;
+        this.skillIconManager = skillIconManager;
+        this.spriteManager = spriteManager;
         loadPersistedState();
         setPosition(OverlayPosition.TOP_LEFT);
-        setPreferredSize(new Dimension(config.dailyTasksOverlayWidth(), 0));
-        // Width is controlled through ClanHQ's RuneLite configuration. Keep
-        // native overlay resizing disabled so no resize hitbox can overlap
-        // normal game controls.
-        setMovable(false);
-        setResizable(false);
-        setMinimumSize(MIN_OVERLAY_WIDTH);
-        setPreferredColor(ColorScheme.DARK_GRAY_COLOR);
+        // OverlayManager loads persisted bounds after construction. This
+        // preferred width is only the first-run default.
+        setPreferredSize(new Dimension(DEFAULT_OVERLAY_WIDTH, 0));
+        setMovable(true);
+        setResizable(true);
+        setMinimumSize(MIN_OVERLAY_SIZE);
         addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Show", "All tasks",
             entry -> selectTask(null));
         addMenuEntry(MenuAction.RUNELITE_OVERLAY, "Show", "Skilling task",
@@ -282,10 +316,8 @@ public final class DailyTasksOverlay extends OverlayPanel
             return null;
         }
 
-        PanelComponent panel = new PanelComponent();
-        int width = currentWidth();
-        panel.setPreferredSize(new Dimension(width, 0));
-        panel.setBackgroundColor(new Color(35, 35, 39, 238));
+        PanelComponent panel = getPanelComponent();
+        panel.setBackgroundColor(new Color(35, 35, 39, opacity()));
         panel.setGap(new Point(0, 4));
         panel.getChildren().add(TitleComponent.builder()
             .text(headerTitle(snapshot))
@@ -314,25 +346,37 @@ public final class DailyTasksOverlay extends OverlayPanel
             .leftColor(Color.WHITE)
             .rightColor(ACCENT)
             .build());
-        return panel.render(graphics);
+        return super.render(graphics);
+    }
+
+    private int opacity()
+    {
+        return Math.max(0, Math.min(255, opacitySupplier.getAsInt()));
     }
 
     private void addTask(PanelComponent panel, DailyTaskSummary task)
     {
         int progress = progressFor(task);
         boolean complete = task.isCompleted() || progress >= task.getTarget();
-        Color color = complete ? COMPLETE : categoryColor(task.getCategory());
+        Color color = complete ? COMPLETE : difficultyColor(task.getTier());
         String label = (task.isDailyDrop() ? "DAILY DROP " : "")
-            + (task.getTier() == null ? "" : task.getTier() + " ")
-            + titleCase(task.getCategory()).toUpperCase(Locale.ROOT) + "  "
             + (complete ? "\u2713" : "\u2022");
-        panel.getChildren().add(LineComponent.builder()
-            .left(label + "  " + truncate(displayTaskName(task),
-                Math.max(12, (currentWidth() - 80) / 7)))
+        LineComponent taskLine = LineComponent.builder()
+            .left(label + "  " + displayTaskName(task))
             .right(isSkilling(task.getCategory()) ? "" : NUMBERS.format(progress) + "/"
                 + NUMBERS.format(task.getTarget()))
             .leftColor(color)
-            .rightColor(complete ? COMPLETE : Color.WHITE)
+            .rightColor(color)
+            .build();
+        ImageComponent categoryIcon = new ImageComponent(DailyTaskIconFactory.get(
+            task, itemManager, skillIconManager, spriteManager));
+        categoryIcon.setPreferredSize(new Dimension(DIFFICULTY_ICON_SIZE,
+            DIFFICULTY_ICON_SIZE));
+        panel.getChildren().add(SplitComponent.builder()
+            .first(categoryIcon)
+            .second(taskLine)
+            .orientation(ComponentOrientation.HORIZONTAL)
+            .gap(new Point(4, 0))
             .build());
         if (isSkilling(task.getCategory()) && task.getTarget() > 1)
         {
@@ -340,7 +384,7 @@ public final class DailyTasksOverlay extends OverlayPanel
             bar.setMinimum(0);
             bar.setMaximum(Math.max(1, task.getTarget()));
             bar.setValue(progress);
-            bar.setPreferredSize(new Dimension(Math.max(1, overlayWidth()), 12));
+            bar.setPreferredSize(new Dimension(0, 12));
             bar.setForegroundColor(color);
             bar.setBackgroundColor(new Color(70, 70, 76));
             bar.setFontColor(Color.WHITE);
@@ -361,7 +405,7 @@ public final class DailyTasksOverlay extends OverlayPanel
         return name;
     }
 
-    private int progressFor(DailyTaskSummary task)
+    int progressFor(DailyTaskSummary task)
     {
         synchronized (stateLock)
         {
@@ -478,27 +522,6 @@ public final class DailyTasksOverlay extends OverlayPanel
         revalidate();
     }
 
-    private int overlayWidth()
-    {
-        return currentWidth() - 12;
-    }
-
-    private int currentWidth()
-    {
-        int configured = config.dailyTasksOverlayWidth();
-        return Math.max(MIN_OVERLAY_WIDTH, Math.min(500, configured));
-    }
-
-    private static String truncate(String value, int maxLength)
-    {
-        if (value == null || value.length() <= maxLength)
-        {
-            return value == null ? "" : value;
-        }
-        return maxLength <= 3 ? value.substring(0, maxLength)
-            : value.substring(0, maxLength - 3) + "...";
-    }
-
     private static String headerTitle(DailyTasksSnapshot snapshot)
     {
         if (snapshot.getContext() != null
@@ -527,17 +550,11 @@ public final class DailyTasksOverlay extends OverlayPanel
             : snapshot.getResetAt();
     }
 
-    private static Color categoryColor(String category)
+    private static Color difficultyColor(String tier)
     {
-        if ("SKILLING".equals(category))
-        {
-            return new Color(219, 174, 76);
-        }
-        if (isActivities(category))
-        {
-            return new Color(174, 126, 236);
-        }
-        return new Color(239, 111, 111);
+        DropTier dropTier = DropTier.from(tier);
+        return dropTier == DropTier.HARD ? HARD
+            : dropTier == DropTier.MEDIUM ? MEDIUM : EASY;
     }
 
     private static boolean isSkilling(String category)
@@ -579,14 +596,4 @@ public final class DailyTasksOverlay extends OverlayPanel
             .trim().toLowerCase(Locale.ENGLISH);
     }
 
-    private static String titleCase(String value)
-    {
-        if (value == null || value.isEmpty())
-        {
-            return "Task";
-        }
-        String normalized = value.toLowerCase(Locale.ROOT);
-        return Character.toUpperCase(normalized.charAt(0))
-            + normalized.substring(1);
-    }
 }

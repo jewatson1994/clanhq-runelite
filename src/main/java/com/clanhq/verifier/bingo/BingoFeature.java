@@ -9,13 +9,11 @@ import com.clanhq.verifier.bingo.service.BingoScreenshotService;
 import com.clanhq.verifier.service.LocalPlayerSnapshotService;
 import com.clanhq.verifier.service.SubmissionConsentService;
 import com.clanhq.verifier.feature.ClanHQFeature;
-import com.clanhq.verifier.event.transport.EventApiClient;
 import com.clanhq.verifier.loot.ObservedDrop;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
 import net.runelite.client.game.ItemStack;
@@ -30,8 +28,6 @@ public final class BingoFeature implements ClanHQFeature
     private final LocalPlayerSnapshotService snapshotService;
     private final ClientThread clientThread;
     private final SubmissionConsentService consentService;
-    private final EventApiClient eventApiClient;
-    private final Supplier<String> rsnSupplier;
     private final Runnable overviewChanged;
     private volatile BingoManifest manifest;
     private volatile boolean running;
@@ -44,8 +40,6 @@ public final class BingoFeature implements ClanHQFeature
         LocalPlayerSnapshotService snapshotService,
         ClientThread clientThread,
         SubmissionConsentService consentService,
-        EventApiClient eventApiClient,
-        Supplier<String> rsnSupplier,
         Runnable overviewChanged)
     {
         this.apiClient = apiClient;
@@ -54,12 +48,8 @@ public final class BingoFeature implements ClanHQFeature
         this.snapshotService = snapshotService;
         this.clientThread = clientThread;
         this.consentService = consentService;
-        this.eventApiClient = eventApiClient;
-        this.rsnSupplier = rsnSupplier;
         this.overviewChanged = overviewChanged;
-        this.panel = new BingoPanel(
-            this::refreshManifest,
-            this::submitCharacter);
+        this.panel = new BingoPanel(this::refreshManifest);
     }
 
     @Override
@@ -127,39 +117,12 @@ public final class BingoFeature implements ClanHQFeature
                     manifest = value;
                     overviewChanged.run();
                     panel.showManifest(value);
-                    if (value.getCharacterCheck().canSubmit()
-                        && !"FINAL".equals(
-                            value.getCharacterCheck().getNextPhase()))
-                    {
-                        joinBingo(value);
-                    }
                 }, () ->
                 {
                     manifest = null;
-                    panel.showManifestError(result.getMessage());
+                    panel.showManifestError(result.getMessage(),
+                        result.getSiteUrl().orElse(null));
                 });
-            }));
-    }
-
-    private void joinBingo(BingoManifest active)
-    {
-        String rsn = rsnSupplier.get();
-        if (rsn == null || rsn.trim().isEmpty())
-        {
-            panel.showParticipation(false, null,
-                "Log in to join this Bingo event.");
-            return;
-        }
-        eventApiClient.joinEventCode(active.getEventId(), rsn)
-            .thenAccept(result -> SwingUtilities.invokeLater(() ->
-            {
-                if (running)
-                {
-                    panel.showParticipation(
-                        result.isJoined(),
-                        result.getTeamName(),
-                        result.getMessage());
-                }
             }));
     }
 

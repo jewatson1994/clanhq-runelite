@@ -31,4 +31,26 @@ public class BingoManifestTest
             manifest.getCharacterCheck().getButtonLabel());
         assertTrue(manifest.getCharacterCheck().canSubmit());
     }
+
+    @Test
+    public void parsesParticipationStatus()
+    {
+        BingoManifest manifest = BingoManifest.fromJson("{"
+            + "\"schema_version\":1,"
+            + "\"event_id\":\"BINGO-TEST\","
+            + "\"name\":\"Test Bingo\","
+            + "\"starts_at\":\"2026-07-19T00:00:00Z\","
+            + "\"ends_at\":\"2026-07-20T00:00:00Z\","
+            + "\"site_url\":\"https://dripdropbingo.xyz\","
+            + "\"items\":[{\"item_id\":12934,"
+            + "\"name\":\"Zulrah's scales\","
+            + "\"minimum_quantity\":100,\"points\":5}],"
+            + "\"participation\":{\"joined\":true,"
+            + "\"team\":\"Emerald\"}}"
+        );
+
+        assertTrue(manifest.isJoined());
+        assertEquals("Emerald", manifest.getTeamName());
+        assertEquals("https://dripdropbingo.xyz", manifest.getSiteUrl());
+    }
 }
