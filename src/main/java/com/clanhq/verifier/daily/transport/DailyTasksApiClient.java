@@ -9,6 +9,12 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.IOException;
+import java.io.EOFException;
+import java.io.InterruptedIOException;
+import java.net.ConnectException;
+import java.net.SocketException;
+import java.net.UnknownHostException;
+import javax.net.ssl.SSLException;
 import java.util.concurrent.CompletableFuture;
 import java.time.Instant;
 import java.util.Map;
@@ -230,7 +236,9 @@ public final class DailyTasksApiClient
             public void onFailure(Call call, IOException exception)
             {
                 future.complete(new DailyActionResult(
-                    false, failureMessage, 0, "Currency", ""));
+                    false, failureMessage + " " + transportFailure(exception, call.isCanceled())
+                        + " Refresh daily tasks before trying Claim again; the outcome is unconfirmed.",
+                    0, "Currency", ""));
             }
 
             @Override
@@ -302,6 +310,36 @@ public final class DailyTasksApiClient
                 .get("awarded").getAsInt();
         }
         return total;
+    }
+
+    static String transportFailure(IOException exception, boolean cancelled)
+    {
+        if (cancelled)
+        {
+            return "The request was cancelled [CANCELLED].";
+        }
+        if (exception instanceof UnknownHostException)
+        {
+            return "The server address could not be resolved [DNS_FAILURE].";
+        }
+        if (exception instanceof SSLException)
+        {
+            return "A secure connection could not be established [TLS_FAILURE].";
+        }
+        if (exception instanceof ConnectException)
+        {
+            return "A connection to the server could not be established [CONNECT_FAILURE].";
+        }
+        if (exception instanceof InterruptedIOException)
+        {
+            return "The request timed out or was interrupted [TIMEOUT_OR_INTERRUPTED].";
+        }
+        if (exception instanceof SocketException || exception instanceof EOFException)
+        {
+            return "The connection closed before a response arrived [CONNECTION_LOST].";
+        }
+        // Do not expose exception messages: they can contain URLs or credentials.
+        return "A network I/O error prevented a response [NETWORK_IO].";
     }
 
     private static String responseMessage(String body, int status)
