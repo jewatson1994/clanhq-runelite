@@ -22,6 +22,8 @@ public final class BingoManifest
     private final Map<Integer, BingoItem> itemsById;
     private final BingoCharacterCheckStatus characterCheck;
     private final String serverName;
+    private final String eventPassword;
+    private final String challengePassword;
 
     public BingoManifest(String eventId, String name, Instant startsAt,
         Instant endsAt, List<BingoItem> items)
@@ -41,6 +43,15 @@ public final class BingoManifest
         Instant endsAt, List<BingoItem> items,
         BingoCharacterCheckStatus characterCheck, String serverName)
     {
+        this(eventId, name, startsAt, endsAt, items, characterCheck,
+            serverName, null, null);
+    }
+
+    public BingoManifest(String eventId, String name, Instant startsAt,
+        Instant endsAt, List<BingoItem> items,
+        BingoCharacterCheckStatus characterCheck, String serverName,
+        String eventPassword, String challengePassword)
+    {
         this.eventId = eventId;
         this.name = name;
         this.startsAt = startsAt;
@@ -49,6 +60,11 @@ public final class BingoManifest
         this.characterCheck = characterCheck;
         this.serverName = serverName == null || serverName.trim().isEmpty()
             ? "ClanHQ" : serverName.trim();
+        this.eventPassword = eventPassword == null || eventPassword.trim().isEmpty()
+            ? null : eventPassword.trim();
+        this.challengePassword = challengePassword == null
+            || challengePassword.trim().isEmpty()
+            ? null : challengePassword.trim();
         Map<Integer, BingoItem> indexed = new LinkedHashMap<>();
         for (BingoItem item : items)
         {
@@ -100,7 +116,9 @@ public final class BingoManifest
             items,
             characterCheck,
             root.has("server_name") ? root.get("server_name").getAsString()
-                : "ClanHQ");
+                : "ClanHQ",
+            optionalNullableText(root, "event_password"),
+            optionalNullableText(root, "challenge_password"));
     }
 
     private static String text(JsonObject value, String key)
@@ -184,6 +202,25 @@ public final class BingoManifest
     public String getServerName()
     {
         return serverName;
+    }
+
+    /**
+     * Clan-wide Bingo event password set by the event organizer, if any.
+     * When present, this overrides each player's local overlay config
+     * value; see {@link com.clanhq.verifier.bingo.BingoPasswordResolver}.
+     */
+    public String getEventPassword()
+    {
+        return eventPassword;
+    }
+
+    /**
+     * Clan-wide Bingo challenge password set by the event organizer, if
+     * any. Same override semantics as {@link #getEventPassword()}.
+     */
+    public String getChallengePassword()
+    {
+        return challengePassword;
     }
 
     public Optional<BingoItem> findItem(int itemId)

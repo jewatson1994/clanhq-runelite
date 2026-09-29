@@ -1,5 +1,6 @@
 package com.clanhq.verifier;
 
+import java.awt.Color;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
@@ -95,6 +96,72 @@ public interface ClanHQVerifierConfig extends Config
         description = "Connect to the active ClanHQ Bingo event",
         position = 1)
     String BINGO_SECTION = "bingo";
+
+    @ConfigItem(
+        keyName = "bingoPasswordOverlay",
+        name = "Display Overlay",
+        description = "Show the Bingo event/challenge password overlay above your character",
+        section = BINGO_SECTION,
+        position = 0)
+    default boolean bingoPasswordOverlay()
+    {
+        return false;
+    }
+
+    @ConfigItem(
+        keyName = "bingoPasswordOverlayDateTime",
+        name = "Date & Time",
+        description = "Also show the current date and time in the password overlay",
+        section = BINGO_SECTION,
+        position = 1)
+    default boolean bingoPasswordOverlayDateTime()
+    {
+        return false;
+    }
+
+    @ConfigItem(
+        keyName = "bingoEventPassword",
+        name = "Event Password",
+        description = "Shown in the overlay unless your clan has set one for the active Bingo event",
+        section = BINGO_SECTION,
+        position = 2)
+    default String bingoEventPassword()
+    {
+        return "";
+    }
+
+    @ConfigItem(
+        keyName = "bingoChallengePassword",
+        name = "Challenge Password",
+        description = "Shown in the overlay unless your clan has set one for the active Bingo event",
+        section = BINGO_SECTION,
+        position = 3)
+    default String bingoChallengePassword()
+    {
+        return "";
+    }
+
+    @ConfigItem(
+        keyName = "bingoEventPasswordColor",
+        name = "Event Password Color",
+        description = "Colors below must be different",
+        section = BINGO_SECTION,
+        position = 4)
+    default Color bingoEventPasswordColor()
+    {
+        return Color.GREEN;
+    }
+
+    @ConfigItem(
+        keyName = "bingoChallengePasswordColor",
+        name = "Challenge Password Color",
+        description = "Colors below must be different",
+        section = BINGO_SECTION,
+        position = 5)
+    default Color bingoChallengePasswordColor()
+    {
+        return Color.WHITE;
+    }
 
     @ConfigItem(
         keyName = "apiBaseUrl",

@@ -1,6 +1,7 @@
 package com.clanhq.verifier;
 
 import com.clanhq.verifier.bingo.BingoFeature;
+import com.clanhq.verifier.bingo.BingoPasswordOverlay;
 import com.clanhq.verifier.bingo.service.BingoScreenshotService;
 import com.clanhq.verifier.bingo.transport.BingoApiClient;
 import com.clanhq.verifier.character.CharacterSyncApiClient;
@@ -45,10 +46,8 @@ import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.game.SkillIconManager;
 import net.runelite.client.plugins.Plugin;
-import net.runelite.client.plugins.PluginDependency;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.loottracker.LootReceived;
-import net.runelite.client.plugins.loottracker.LootTrackerPlugin;
 import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.DrawManager;
 import net.runelite.client.ui.NavigationButton;
@@ -61,7 +60,13 @@ import okhttp3.OkHttpClient;
     name = "ClanHQ",
     description = "Clan tools for character sync, events, Bingo, and daily tasks",
     tags = {"clan", "events", "bingo", "daily", "verification"})
-@PluginDependency(LootTrackerPlugin.class)
+// RuneLite 1.13 rejects @PluginDependency on a plugin that exposes no
+// injectable services - LootTrackerPlugin doesn't, and this plugin never
+// injected it, only subscribed to its LootReceived event below. Other
+// plugin-hub authors hit the exact "Plugin dependency LootTrackerPlugin
+// does not expose any services" failure this same way and the confirmed
+// fix was simply dropping the annotation; @Subscribe onLootReceived below
+// still fires without it.
 public final class ClanHQVerifierPlugin extends Plugin
 {
     @Inject private ClientThread clientThread;
@@ -79,6 +84,7 @@ public final class ClanHQVerifierPlugin extends Plugin
 
     private ClanHQPanel shellPanel;
     private BingoFeature bingoFeature;
+    private BingoPasswordOverlay bingoPasswordOverlay;
     private EventFeature eventFeature;
     private DailyTasksFeature dailyTasksFeature;
     private ActivityTelemetryDetector activityTelemetryDetector;
@@ -117,7 +123,8 @@ public final class ClanHQVerifierPlugin extends Plugin
         if ("bingoEnabled".equals(event.getKey())
             || "eventsEnabled".equals(event.getKey())
             || "dailyTasksEnabled".equals(event.getKey())
-            || "dailyTasksOverlay".equals(event.getKey()))
+            || "dailyTasksOverlay".equals(event.getKey())
+            || "bingoPasswordOverlay".equals(event.getKey()))
         {
             SwingUtilities.invokeLater(this::rebuildFeatures);
             return;
@@ -172,6 +179,17 @@ public final class ClanHQVerifierPlugin extends Plugin
                 this::currentRsn,
                 () -> { if (overviewFeature != null) overviewFeature.refreshSummary(); });
             enabled.add(bingoFeature);
+            if (config.bingoPasswordOverlay())
+            {
+                bingoPasswordOverlay = new BingoPasswordOverlay(
+                    () -> bingoFeature == null ? null : bingoFeature.getManifest(),
+                    config::bingoEventPassword,
+                    config::bingoChallengePassword,
+                    config::bingoEventPasswordColor,
+                    config::bingoChallengePasswordColor,
+                    config::bingoPasswordOverlayDateTime);
+                overlayManager.add(bingoPasswordOverlay);
+            }
         }
         if (config.dailyTasksEnabled())
         {
@@ -208,6 +226,11 @@ public final class ClanHQVerifierPlugin extends Plugin
         if (dailyTasksFeature != null)
         {
             overlayManager.remove(dailyTasksFeature.getOverlay());
+        }
+        if (bingoPasswordOverlay != null)
+        {
+            overlayManager.remove(bingoPasswordOverlay);
+            bingoPasswordOverlay = null;
         }
         features.forEach(ClanHQFeature::shutDown);
         features = Collections.emptyList();
