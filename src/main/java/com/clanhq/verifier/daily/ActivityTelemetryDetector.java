@@ -22,12 +22,10 @@ public final class ActivityTelemetryDetector
 
     private static final Map<String, Pattern> CHAT_COMPLETIONS;
     private static final Set<String> SUPPORTED_ACTIVITIES;
-    private static final Pattern PEST_CONTROL_COMPLETION = Pattern.compile(
-        "^congratulations! you managed to destroy all the portals! "
-            + "we(?:'|’)?ve awarded you [\\d,]+ void knight "
-            + "commendation points?\\. please also accept these coins "
-            + "as a reward\\.$",
-        Pattern.CASE_INSENSITIVE);
+    private static final Pattern BARBARIAN_ASSAULT_WAVE_START = Pattern.compile(
+        "^----\\s*Wave:\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern BARBARIAN_ASSAULT_WAVE_DURATION = Pattern.compile(
+        "^Wave\\s+(\\d+)\\s+duration\\s*:", Pattern.CASE_INSENSITIVE);
     /**
      * Sent immediately on turning a Mahogany Homes contract in, e.g.
      * "You have completed 554 contracts with a total of 197 points."
@@ -42,7 +40,8 @@ public final class ActivityTelemetryDetector
      * same absolute, ever-increasing completed-contracts count the varbit
      * does, so it is routed through the same onCompletionCounter
      * delta/baseline tracking as a second, timelier signal for this one
-     * activity.
+     * activity - mirroring the existing chat+widget dual signal already
+     * used for barbarian_assault_wave below.
      */
     private static final Pattern MAHOGANY_HOMES_CONTRACTS_COMPLETED = Pattern.compile(
         "^You have completed ([\\d,]+) contracts? with a total of",
@@ -52,7 +51,7 @@ public final class ActivityTelemetryDetector
     {
         Map<String, Pattern> patterns = new LinkedHashMap<>();
         patterns.put("barbarian_assault_wave", Pattern.compile(
-            "^wave\\s+\\d+\\s+duration\\s*:", Pattern.CASE_INSENSITIVE));
+            "wave (?:complete|completed)", Pattern.CASE_INSENSITIVE));
         CHAT_COMPLETIONS = Collections.unmodifiableMap(patterns);
 
         Set<String> supported = new LinkedHashSet<>();
@@ -70,6 +69,8 @@ public final class ActivityTelemetryDetector
     private int lastTitheSackAmount = -1;
     private int lastBasicWyrmProgress = -1;
     private int lastAdvancedWyrmProgress = -1;
+    private String barbarianAssaultWave;
+    private boolean barbarianAssaultWaveCompleted;
     private final Map<String, Integer> completionCounters = new HashMap<>();
 
     public ActivityTelemetryDetector(DailyTasksFeature feature,
@@ -97,12 +98,28 @@ public final class ActivityTelemetryDetector
         lastTitheSackAmount = titheSackAmount;
         lastBasicWyrmProgress = basicWyrmProgress;
         lastAdvancedWyrmProgress = advancedWyrmProgress;
+        barbarianAssaultWave = null;
+        barbarianAssaultWaveCompleted = false;
     }
 
     public void onChatMessage(String message)
     {
         if (message == null)
         {
+            return;
+        }
+        Matcher waveStart = BARBARIAN_ASSAULT_WAVE_START.matcher(message);
+        if (waveStart.find())
+        {
+            barbarianAssaultWave = waveStart.group(1);
+            barbarianAssaultWaveCompleted = false;
+            return;
+        }
+        Matcher waveDuration = BARBARIAN_ASSAULT_WAVE_DURATION.matcher(message);
+        if (waveDuration.find())
+        {
+            onBarbarianAssaultWaveCompleted(
+                waveDuration.group(1), message);
             return;
         }
         Matcher mahoganyHomesContracts =
@@ -123,28 +140,32 @@ public final class ActivityTelemetryDetector
         }
     }
 
-    public void onPestControlDialogue(String message)
+    /** Record the wave-complete interface independently of chat settings. */
+    public void onBarbarianAssaultWaveCompleted()
     {
-        String normalized = normalizeMessage(message);
-        if (normalized != null
-            && PEST_CONTROL_COMPLETION.matcher(normalized).matches())
-        {
-            emit("pest_control_game", 1,
-                Collections.singletonMap("signal", normalized));
-        }
+        onBarbarianAssaultWaveCompleted(null, "wave_complete_interface");
     }
 
-    private static String normalizeMessage(String message)
+    private void onBarbarianAssaultWaveCompleted(String wave, String signal)
     {
-        if (message == null)
+        if (barbarianAssaultWaveCompleted
+            && (wave == null || barbarianAssaultWave == null
+                || wave.equals(barbarianAssaultWave)))
         {
-            return null;
+            return;
         }
-        return message.replaceAll("(?i)<br\\s*/?>", " ")
-            .replaceAll("<[^>]*>", "")
-            .replace('\u00a0', ' ')
-            .replaceAll("\\s+", " ")
-            .trim();
+        if (wave != null)
+        {
+            barbarianAssaultWave = wave;
+        }
+        barbarianAssaultWaveCompleted = true;
+        Map<String, String> metadata = new LinkedHashMap<>();
+        metadata.put("signal", signal);
+        if (barbarianAssaultWave != null)
+        {
+            metadata.put("wave", barbarianAssaultWave);
+        }
+        emit("barbarian_assault_wave", 1, metadata);
     }
 
     /** Seed a monotonic Jagex activity counter without recording progress. */

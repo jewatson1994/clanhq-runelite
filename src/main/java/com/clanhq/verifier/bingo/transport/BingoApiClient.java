@@ -12,7 +12,6 @@ import java.util.concurrent.CompletableFuture;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
-import okhttp3.HttpUrl;
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -45,14 +44,10 @@ public final class BingoApiClient
         if (baseUrl == null)
         {
             future.complete(new BingoManifestResult(null,
-                "Configure the ClanHQ API URL, installation token, and event code first."));
+                "Configure the ClanHQ API URL and installation token first."));
             return future;
         }
-        HttpUrl url = HttpUrl.parse(baseUrl + "/api/v1/bingo/manifest")
-            .newBuilder()
-            .addQueryParameter("code", config.bingoEventCode().trim())
-            .build();
-        Request request = request(url.toString())
+        Request request = request(baseUrl + "/api/v1/bingo/manifest")
             .get()
             .build();
         httpClient.newCall(request).enqueue(new Callback()
@@ -75,7 +70,8 @@ public final class BingoApiClient
                     if (!response.isSuccessful())
                     {
                         future.complete(new BingoManifestResult(null,
-                            responseMessage(body, response.code())));
+                            responseMessage(body, response.code()),
+                            responseSiteUrl(body)));
                         return;
                     }
                     future.complete(new BingoManifestResult(
@@ -107,7 +103,7 @@ public final class BingoApiClient
         if (baseUrl == null)
         {
             future.complete(new BingoTransportResult(false,
-                "Configure the ClanHQ API URL, installation token, and event code first."));
+                "Configure the ClanHQ API URL and installation token first."));
             return future;
         }
         RequestBody body = screenshot == null
@@ -166,7 +162,7 @@ public final class BingoApiClient
         if (baseUrl == null)
         {
             future.complete(new BingoTransportResult(false,
-                "Configure the ClanHQ API URL, installation token, and event code first."));
+                "Configure the ClanHQ API URL and installation token first."));
             return future;
         }
         Request request = request(baseUrl + "/api/v1/bingo/characters")
@@ -217,9 +213,7 @@ public final class BingoApiClient
         String baseUrl = destinationService.normalize(config.apiBaseUrl());
         String token = config.installationToken() == null
             ? "" : config.installationToken().trim();
-        String eventCode = config.bingoEventCode() == null
-            ? "" : config.bingoEventCode().trim();
-        return baseUrl == null || token.isEmpty() || eventCode.isEmpty()
+        return baseUrl == null || token.isEmpty()
             ? null : baseUrl;
     }
 
@@ -254,5 +248,23 @@ public final class BingoApiClient
             // Fall through to a stable HTTP error.
         }
         return "ClanHQ returned HTTP " + status;
+    }
+
+    private static String responseSiteUrl(String body)
+    {
+        try
+        {
+            JsonObject parsed = new JsonParser().parse(body).getAsJsonObject();
+            if (parsed.has("site_url") && parsed.get("site_url").isJsonPrimitive())
+            {
+                String value = parsed.get("site_url").getAsString().trim();
+                return value.isEmpty() ? null : value;
+            }
+        }
+        catch (RuntimeException ignored)
+        {
+            // The response may be a non-JSON network error.
+        }
+        return null;
     }
 }

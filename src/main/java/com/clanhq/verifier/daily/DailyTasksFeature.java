@@ -12,14 +12,22 @@ import javax.swing.SwingUtilities;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import net.runelite.client.config.ConfigManager;
+import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SkillIconManager;
+import net.runelite.client.game.SpriteManager;
+import net.runelite.client.plugins.Plugin;
+import net.runelite.client.ui.overlay.infobox.InfoBoxManager;
 
 public final class DailyTasksFeature implements ClanHQFeature
 {
@@ -29,11 +37,18 @@ public final class DailyTasksFeature implements ClanHQFeature
     private final DailyTasksOverlay overlay;
     private final ScheduledExecutorService executor;
     private final Runnable overviewChanged;
+    private final ItemManager itemManager;
+    private final SkillIconManager skillIconManager;
+    private final SpriteManager spriteManager;
+    private final Plugin plugin;
+    private final InfoBoxManager infoBoxManager;
+    private final Map<String, DailyTaskInfoBox> infoBoxes = new HashMap<>();
     private volatile ScheduledFuture<?> rotationRefresh;
     private volatile DailyTasksSnapshot snapshot;
     private volatile CompletableFuture<Void> pendingDropObservations =
         CompletableFuture.completedFuture(null);
     private volatile boolean running;
+    private final AtomicBoolean refreshInFlight = new AtomicBoolean();
 
     public DailyTasksFeature(DailyTasksApiClient apiClient,
         ClanHQVerifierConfig config,
@@ -42,17 +57,53 @@ public final class DailyTasksFeature implements ClanHQFeature
         ScheduledExecutorService executor,
         Runnable overviewChanged)
     {
+        this(apiClient, config, configManager, skillIconManager, executor,
+            overviewChanged, null, null, null, null);
+    }
+
+    public DailyTasksFeature(DailyTasksApiClient apiClient,
+        ClanHQVerifierConfig config,
+        ConfigManager configManager,
+        SkillIconManager skillIconManager,
+        ScheduledExecutorService executor,
+        Runnable overviewChanged,
+        ItemManager itemManager)
+    {
+        this(apiClient, config, configManager, skillIconManager, executor,
+            overviewChanged, itemManager, null, null, null);
+    }
+
+    public DailyTasksFeature(DailyTasksApiClient apiClient,
+        ClanHQVerifierConfig config,
+        ConfigManager configManager,
+        SkillIconManager skillIconManager,
+        ScheduledExecutorService executor,
+        Runnable overviewChanged,
+        ItemManager itemManager,
+        Plugin plugin,
+        InfoBoxManager infoBoxManager,
+        SpriteManager spriteManager)
+    {
         this.apiClient = apiClient;
         this.config = config;
         this.executor = executor;
         this.overviewChanged = overviewChanged;
+        this.itemManager = itemManager;
+        this.skillIconManager = skillIconManager;
+        this.spriteManager = spriteManager;
+        this.plugin = plugin;
+        this.infoBoxManager = infoBoxManager;
         this.panel = new DailyTasksPanel(
             this::refresh,
             this::claim,
             skillIconManager);
-        this.overlay = new DailyTasksOverlay(() -> snapshot, configManager, config,
-            (category, progress) -> SwingUtilities.invokeLater(() ->
-                panel.updateLiveProgress(category, progress)));
+        this.overlay = new DailyTasksOverlay(() -> snapshot, configManager,
+            (assignmentId, progress) -> SwingUtilities.invokeLater(() ->
+            {
+                panel.updateLiveProgress(assignmentId, progress);
+                updateInfoBoxes(snapshot);
+            }), itemManager,
+            config::dailyTasksOverlayOpacity, skillIconManager, spriteManager);
     }
 
     @Override
@@ -97,6 +148,7 @@ public final class DailyTasksFeature implements ClanHQFeature
         }
         snapshot = null;
         overlay.setSnapshot(null);
+        clearInfoBoxes();
     }
 
     public void refresh()
@@ -114,14 +166,20 @@ public final class DailyTasksFeature implements ClanHQFeature
         {
             snapshot = null;
             overlay.clearPersistedState();
+            clearInfoBoxes();
             panel.showUnpaired(
                 "Use /plugin pair in Discord, then enter the code in settings.");
+            return;
+        }
+        if (!refreshInFlight.compareAndSet(false, true))
+        {
             return;
         }
         SwingUtilities.invokeLater(() ->
             panel.setLoading("Loading today's tasks..."));
         apiClient.fetch().thenAccept(result -> SwingUtilities.invokeLater(() ->
         {
+            refreshInFlight.set(false);
             if (!running)
             {
                 return;
@@ -131,6 +189,7 @@ public final class DailyTasksFeature implements ClanHQFeature
                     this.snapshot = snapshot;
                     overviewChanged.run();
                     overlay.setSnapshot(snapshot);
+                    updateInfoBoxes(snapshot);
                     scheduleRotationRefresh(snapshot);
                     panel.showTasks(snapshot,
                         successMessage == null ? result.getMessage() : successMessage);
@@ -191,6 +250,60 @@ public final class DailyTasksFeature implements ClanHQFeature
         overlay.observeLoot(sourceName);
     }
 
+    private void updateInfoBoxes(DailyTasksSnapshot value)
+    {
+        if (infoBoxManager == null || plugin == null
+            || !config.dailyTasksOverlay()
+            || config.dailyTasksDisplayMode()
+                != ClanHQVerifierConfig.DailyTasksDisplayMode.INFO_BOXES
+            || value == null)
+        {
+            clearInfoBoxes();
+            return;
+        }
+
+        Set<String> activeKeys = new HashSet<>();
+        for (DailyTaskSummary task : value.getTasks())
+        {
+            String key = task.getId() == null
+                ? task.getCategory() + ":" + task.getName() : task.getId();
+            activeKeys.add(key);
+            DailyTaskInfoBox infoBox = infoBoxes.get(key);
+            if (infoBox == null)
+            {
+                infoBox = new DailyTaskInfoBox(task, overlay.progressFor(task),
+                    plugin, itemManager, skillIconManager, spriteManager,
+                    infoBoxManager);
+                infoBoxes.put(key, infoBox);
+                infoBoxManager.addInfoBox(infoBox);
+            }
+            else
+            {
+                infoBox.update(task, overlay.progressFor(task));
+            }
+        }
+
+        infoBoxes.entrySet().removeIf(entry ->
+        {
+            if (activeKeys.contains(entry.getKey()))
+            {
+                return false;
+            }
+            infoBoxManager.removeInfoBox(entry.getValue());
+            return true;
+        });
+    }
+
+    private void clearInfoBoxes()
+    {
+        if (infoBoxManager == null)
+        {
+            return;
+        }
+        infoBoxes.values().forEach(infoBoxManager::removeInfoBox);
+        infoBoxes.clear();
+    }
+
     /** Forward a recognized gameplay event without coupling the plugin to task state. */
     public void observeActivity(String rsn, String activity, int quantity,
         Map<String, String> metadata)
@@ -210,53 +323,30 @@ public final class DailyTasksFeature implements ClanHQFeature
 
     public void observeDrop(ObservedDrop drop)
     {
-        overlay.observeDrop(drop);
         DailyTasksSnapshot current = snapshot;
-        if (current == null || drop == null || drop.getItems() == null
-            || !isGenericTaskContext(current))
+        Map<String, ItemDropMatcher.Match> matches = ItemDropMatcher.findMatches(
+            current, drop, itemManager);
+        overlay.observeDrop(drop);
+        if (matches.isEmpty())
         {
             return;
         }
         List<CompletableFuture<Boolean>> submissions = new ArrayList<>();
         for (DailyTaskSummary task : current.getTasks())
         {
-            if (task.getVerificationType() != VerificationType.ITEM_DROP
-                || task.getVerificationItemId() == null
-                || task.getId() == null || task.getId().trim().isEmpty())
+            ItemDropMatcher.Match match = matches.get(task.getId());
+            if (match == null)
             {
                 continue;
             }
-            int quantity = 0;
-            for (net.runelite.client.game.ItemStack item : drop.getItems())
-            {
-                if (item.getId() == task.getVerificationItemId())
-                {
-                    quantity += Math.max(0, item.getQuantity());
-                }
-            }
-            if (quantity > 0)
-            {
-                submissions.add(apiClient.submitItemDropObservation(task.getId(),
-                    drop, task.getVerificationItemId(), quantity));
-            }
+            submissions.add(apiClient.submitItemDropObservation(task.getId(),
+                drop, match.getCanonicalItemId(), match.getQuantity()));
         }
         if (!submissions.isEmpty())
         {
             pendingDropObservations = CompletableFuture.allOf(
                 submissions.toArray(new CompletableFuture<?>[0]));
         }
-    }
-
-    private static boolean isGenericTaskContext(DailyTasksSnapshot value)
-    {
-        if (value.getContext() == null)
-        {
-            return false;
-        }
-        String type = value.getContext().getType();
-        return type != null && !type.trim().isEmpty()
-            && !"daily".equalsIgnoreCase(type)
-            && !"daily_tasks".equalsIgnoreCase(type);
     }
 
     private void scheduleRotationRefresh(DailyTasksSnapshot value)

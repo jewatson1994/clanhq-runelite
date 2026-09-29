@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Supplier;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
 
@@ -27,6 +28,7 @@ public final class EventFeature implements ClanHQFeature
     private volatile List<ClanEventSummary> currentEvents =
         Collections.emptyList();
     private final Map<Long, Instant> lastSkillSubmissions = new HashMap<>();
+    private final AtomicBoolean refreshInFlight = new AtomicBoolean();
 
     public EventFeature(EventApiClient apiClient, Supplier<String> rsnSupplier)
     {
@@ -76,10 +78,15 @@ public final class EventFeature implements ClanHQFeature
 
     public void refresh()
     {
+        if (!running || !refreshInFlight.compareAndSet(false, true))
+        {
+            return;
+        }
         panel.setLoading();
         apiClient.fetchEvents().thenAccept(result ->
             SwingUtilities.invokeLater(() ->
             {
+                refreshInFlight.set(false);
                 if (!running)
                 {
                     return;

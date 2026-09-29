@@ -37,14 +37,16 @@ import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.VarbitChanged;
+import net.runelite.api.events.WidgetLoaded;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.VarbitID;
-import net.runelite.api.widgets.Widget;
-import net.runelite.api.widgets.ComponentID;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SkillIconManager;
+import net.runelite.client.game.SpriteManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.loottracker.LootReceived;
@@ -52,6 +54,7 @@ import net.runelite.client.ui.ClientToolbar;
 import net.runelite.client.ui.DrawManager;
 import net.runelite.client.ui.NavigationButton;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.ui.overlay.infobox.InfoBoxManager;
 import net.runelite.client.util.ImageUtil;
 import net.runelite.client.util.Text;
 import okhttp3.OkHttpClient;
@@ -81,6 +84,9 @@ public final class ClanHQVerifierPlugin extends Plugin
     @Inject private SkillIconManager skillIconManager;
     @Inject private ClanHQVerifierConfig config;
     @Inject private ConfigManager configManager;
+    @Inject private ItemManager itemManager;
+    @Inject private InfoBoxManager infoBoxManager;
+    @Inject private SpriteManager spriteManager;
 
     private ClanHQPanel shellPanel;
     private BingoFeature bingoFeature;
@@ -90,7 +96,6 @@ public final class ClanHQVerifierPlugin extends Plugin
     private ActivityTelemetryDetector activityTelemetryDetector;
     private OverviewFeature overviewFeature;
     private volatile String loggedInRsn;
-    private String lastActivityDialogueText;
     private List<ClanHQFeature> features = Collections.emptyList();
     private NavigationButton navigationButton;
 
@@ -124,6 +129,7 @@ public final class ClanHQVerifierPlugin extends Plugin
             || "eventsEnabled".equals(event.getKey())
             || "dailyTasksEnabled".equals(event.getKey())
             || "dailyTasksOverlay".equals(event.getKey())
+            || "dailyTasksDisplayMode".equals(event.getKey())
             || "bingoPasswordOverlay".equals(event.getKey()))
         {
             SwingUtilities.invokeLater(this::rebuildFeatures);
@@ -174,9 +180,6 @@ public final class ClanHQVerifierPlugin extends Plugin
                 snapshotService,
                 clientThread,
                 submissionConsent,
-                new EventApiClient(
-                    httpClient, config, apiDestinationService),
-                this::currentRsn,
                 () -> { if (overviewFeature != null) overviewFeature.refreshSummary(); });
             enabled.add(bingoFeature);
             if (config.bingoPasswordOverlay())
@@ -200,12 +203,18 @@ public final class ClanHQVerifierPlugin extends Plugin
                 configManager,
                 skillIconManager,
                 executor,
-                () -> { if (overviewFeature != null) overviewFeature.refreshSummary(); });
+                () -> { if (overviewFeature != null) overviewFeature.refreshSummary(); },
+                itemManager,
+                this,
+                infoBoxManager,
+                spriteManager);
             activityTelemetryDetector = new ActivityTelemetryDetector(
                 dailyTasksFeature, this::currentRsn);
             clientThread.invokeLater(this::resetActivityTelemetry);
             enabled.add(dailyTasksFeature);
-            if (config.dailyTasksOverlay())
+            if (config.dailyTasksOverlay()
+                && config.dailyTasksDisplayMode()
+                    != ClanHQVerifierConfig.DailyTasksDisplayMode.INFO_BOXES)
             {
                 overlayManager.add(dailyTasksFeature.getOverlay());
             }
@@ -308,6 +317,16 @@ public final class ClanHQVerifierPlugin extends Plugin
     }
 
     @Subscribe
+    public void onWidgetLoaded(WidgetLoaded event)
+    {
+        if (activityTelemetryDetector != null
+            && event.getGroupId() == InterfaceID.BARBASSAULT_WAVECOMPLETE)
+        {
+            activityTelemetryDetector.onBarbarianAssaultWaveCompleted();
+        }
+    }
+
+    @Subscribe
     public void onVarbitChanged(VarbitChanged event)
     {
         if (activityTelemetryDetector == null)
@@ -317,6 +336,30 @@ public final class ClanHQVerifierPlugin extends Plugin
         if (event.getVarbitId() == VarbitID.HOSIDIUS_TITHE_SCORE)
         {
             activityTelemetryDetector.onTitheSackAmount(event.getValue());
+        }
+        else if (event.getVarbitId()
+            == VarbitID.COLLECTION_MINIGAMES_PEST_COMPLETED)
+        {
+            activityTelemetryDetector.onCompletionCounter(
+                "pest_control_game", event.getValue());
+        }
+        else if (event.getVarbitId()
+            == VarbitID.COLLECTION_OTHER_HUNTER_GUILD_COMPLETED)
+        {
+            activityTelemetryDetector.onCompletionCounter(
+                "hunter_rumour", event.getValue());
+        }
+        else if (event.getVarbitId()
+            == VarbitID.COLLECTION_MINIGAMES_TRAWLER_COMPLETED)
+        {
+            activityTelemetryDetector.onCompletionCounter(
+                "fishing_trawler_game", event.getValue());
+        }
+        else if (event.getVarbitId()
+            == VarbitID.COLLECTION_MINIGAMES_GIANTSFOUNDRY_COMPLETED)
+        {
+            activityTelemetryDetector.onCompletionCounter(
+                "giants_foundry_commission", event.getValue());
         }
         else if (event.getVarbitId()
             == VarbitID.COLLECTION_MINIGAMES_CONSTRUCTIONCONTRACTS_COMPLETED)
@@ -373,30 +416,6 @@ public final class ClanHQVerifierPlugin extends Plugin
                 overviewFeature.refresh();
             }
         }
-        detectActivityDialogue();
-    }
-
-    private void detectActivityDialogue()
-    {
-        if (activityTelemetryDetector == null)
-        {
-            lastActivityDialogueText = null;
-            return;
-        }
-        Widget dialogueText = client.getWidget(ComponentID.DIALOG_NPC_TEXT);
-        if (dialogueText == null || dialogueText.isHidden()
-            || dialogueText.getText() == null
-            || dialogueText.getText().trim().isEmpty())
-        {
-            lastActivityDialogueText = null;
-            return;
-        }
-        String currentText = dialogueText.getText();
-        if (!currentText.equals(lastActivityDialogueText))
-        {
-            lastActivityDialogueText = currentText;
-            activityTelemetryDetector.onPestControlDialogue(currentText);
-        }
     }
 
     private String currentRsn()
@@ -419,6 +438,18 @@ public final class ClanHQVerifierPlugin extends Plugin
                 VarbitID.VARLAMORE_WYRM_AGILITY_BASIC_PROGRESS),
             client.getVarbitValue(
                 VarbitID.VARLAMORE_WYRM_AGILITY_ADVANCED_PROGRESS));
+        detector.resetCompletionCounter("pest_control_game",
+            client.getVarbitValue(
+                VarbitID.COLLECTION_MINIGAMES_PEST_COMPLETED));
+        detector.resetCompletionCounter("hunter_rumour",
+            client.getVarbitValue(
+                VarbitID.COLLECTION_OTHER_HUNTER_GUILD_COMPLETED));
+        detector.resetCompletionCounter("fishing_trawler_game",
+            client.getVarbitValue(
+                VarbitID.COLLECTION_MINIGAMES_TRAWLER_COMPLETED));
+        detector.resetCompletionCounter("giants_foundry_commission",
+            client.getVarbitValue(
+                VarbitID.COLLECTION_MINIGAMES_GIANTSFOUNDRY_COMPLETED));
         detector.resetCompletionCounter("mahogany_homes_contract",
             client.getVarbitValue(
                 VarbitID.COLLECTION_MINIGAMES_CONSTRUCTIONCONTRACTS_COMPLETED));

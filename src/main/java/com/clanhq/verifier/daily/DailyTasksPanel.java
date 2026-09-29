@@ -126,7 +126,7 @@ final class DailyTasksPanel extends JPanel
         boolean unsupported = false;
         for (DailyTaskSummary task : snapshot.getTasks())
         {
-            TaskCard card = new TaskCard("Claim Task",
+            TaskCard card = new TaskCard(task.getId(), "Claim Task",
                 () -> claimAction.accept(task.getCategory()), task.getCategory(),
                 skillIconManager);
             cards.add(card);
@@ -145,8 +145,7 @@ final class DailyTasksPanel extends JPanel
             }
         }
         updateSummary();
-        resetLabel.setText("Resets at: "
-            + RESET_FORMAT.format(rotationEnd(snapshot)));
+        resetLabel.setText(resetText(snapshot));
         showStatus(unsupported
             ? "A task requires a newer ClanHQ plugin."
             : (isNormalLoadMessage(message) ? "" : message));
@@ -159,9 +158,9 @@ final class DailyTasksPanel extends JPanel
      * stream. The server snapshot remains authoritative for claim state; this
      * only keeps the panel in step with the live overlay between refreshes.
      */
-    void updateLiveProgress(String category, int progress)
+    void updateLiveProgress(String assignmentId, int progress)
     {
-        TaskCard card = cardFor(category);
+        TaskCard card = cardForAssignment(assignmentId);
         if (card == null)
         {
             return;
@@ -186,7 +185,7 @@ final class DailyTasksPanel extends JPanel
 
     void setClaiming(String category)
     {
-        TaskCard card = cardFor(category);
+        TaskCard card = cardForCategory(category);
         if (card != null)
         {
             card.setClaiming();
@@ -195,18 +194,34 @@ final class DailyTasksPanel extends JPanel
 
     void restoreClaim(String category)
     {
-        TaskCard card = cardFor(category);
+        TaskCard card = cardForCategory(category);
         if (card != null)
         {
             card.restoreClaim();
         }
     }
 
-    private TaskCard cardFor(String category)
+    private TaskCard cardForCategory(String category)
     {
         for (TaskCard card : cards)
         {
             if (category != null && card.category.equals(category))
+            {
+                return card;
+            }
+        }
+        return null;
+    }
+
+    private TaskCard cardForAssignment(String assignmentId)
+    {
+        if (assignmentId == null)
+        {
+            return null;
+        }
+        for (TaskCard card : cards)
+        {
+            if (assignmentId.equals(card.assignmentId))
             {
                 return card;
             }
@@ -283,6 +298,19 @@ final class DailyTasksPanel extends JPanel
             || "daily_tasks".equalsIgnoreCase(type);
     }
 
+    static String resetText(DailyTasksSnapshot snapshot)
+    {
+        String nextReset = RESET_FORMAT.format(rotationEnd(snapshot));
+        String type = snapshot.getContext() == null ? "" : snapshot.getContext().getType();
+        if ("DROP_RUSH".equalsIgnoreCase(type) || "DRIP_RUSH".equalsIgnoreCase(type))
+        {
+            String end = snapshot.getContext().getEndsAt() == null ? ""
+                : "<br>Rush ends: " + RESET_FORMAT.format(snapshot.getContext().getEndsAt());
+            return "<html>Tasks reset: " + nextReset + end + "</html>";
+        }
+        return "Resets at: " + nextReset;
+    }
+
     private static java.time.Instant rotationEnd(DailyTasksSnapshot snapshot)
     {
         return snapshot.getContext() != null
@@ -342,6 +370,7 @@ final class DailyTasksPanel extends JPanel
 
     private static final class TaskCard extends JPanel
     {
+        private final String assignmentId;
         private final JButton claimButton;
         private final JLabel details = new JLabel();
         private final JLabel progressValue = new JLabel();
@@ -356,9 +385,10 @@ final class DailyTasksPanel extends JPanel
         private int awarded;
         private boolean serverCompleted;
 
-        private TaskCard(String buttonText, Runnable action, String category,
+        private TaskCard(String assignmentId, String buttonText, Runnable action, String category,
             SkillIconManager skillIconManager)
         {
+            this.assignmentId = assignmentId;
             this.category = category;
             this.skillIconManager = skillIconManager;
             setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
@@ -425,7 +455,17 @@ final class DailyTasksPanel extends JPanel
             claimButton.setVisible(!task.isCompleted());
             StringBuilder value = new StringBuilder("<html><body style='width: ")
                 .append(CONTENT_WIDTH).append("px'>")
-                .append("<b>").append(escapeHtml(task.getName())).append("</b><br>")
+                .append(task.isDailyDrop() ? "<b>DAILY DROP</b> • " : "");
+            if (task.isDailyDrop() && hasTier(task))
+            {
+                value.append("<font color='#B8B8B8'>[")
+                    .append(escapeHtml(task.getTier())).append("]</font><br>");
+            }
+            else
+            {
+                value.append("<br>");
+            }
+            value.append("<b>").append(escapeHtml(task.getName())).append("</b><br>")
                 .append("<font color='#B8B8B8'>")
                 .append(escapeHtml(task.getDescription()
                     .replace(" experience", " XP"))).append("</font></body></html>");
@@ -450,6 +490,11 @@ final class DailyTasksPanel extends JPanel
             details.setText(value.toString());
             revalidate();
             repaint();
+        }
+
+        private static boolean hasTier(DailyTaskSummary task)
+        {
+            return task.getTier() != null && !task.getTier().trim().isEmpty();
         }
 
         private void updateLiveProgress(int value)
@@ -520,7 +565,7 @@ final class DailyTasksPanel extends JPanel
                 icon.setIcon(null);
                 return;
             }
-            Skill skill = DailyTaskSkillMatcher.findTaskSkill(task);
+            Skill skill = findSkill(task.getName());
             BufferedImage image = skill == null
                 ? null : skillIconManager.getSkillImage(skill);
             if (image == null)
@@ -561,6 +606,21 @@ final class DailyTasksPanel extends JPanel
                     .replace(".0K", "K");
             }
             return NUMBERS.format(value);
+        }
+
+        private static Skill findSkill(String taskName)
+        {
+            String normalized = taskName == null ? ""
+                : taskName.toLowerCase(Locale.ROOT);
+            for (Skill skill : Skill.values())
+            {
+                String name = skill.getName().toLowerCase(Locale.ROOT);
+                if (normalized.contains(name))
+                {
+                    return skill;
+                }
+            }
+            return null;
         }
 
         @Override

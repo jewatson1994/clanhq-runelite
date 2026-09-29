@@ -38,23 +38,50 @@ public final class ActivityTelemetryDetectorTest
     }
 
     @Test
-    public void recognizesRuneLiteBarbarianAssaultDurationMessage()
+    public void recognizesBarbarianAssaultWaveMessage()
     {
-        detector.onChatMessage("Wave 10 duration: 4:29");
-
+        detector.onChatMessage("Wave complete!");
         assertEquals(Arrays.asList("barbarian_assault_wave"), activities());
     }
 
     @Test
-    public void recognizesExactPestControlRewardDialogueOncePerCallback()
+    public void recognizesRuneLiteBarbarianAssaultDurationMessage()
     {
-        detector.onPestControlDialogue(
-            "Congratulations! You managed to destroy all the portals!<br>"
-                + "We've awarded you <col=0000ff>8 Void Knight Commendation points</col>. "
-                + "Please also accept these coins as a reward.");
+        detector.onChatMessage("---- Wave: 10");
+        detector.onChatMessage("Wave 10 duration: 4:29");
 
-        assertEquals(Arrays.asList("pest_control_game"), activities());
-        assertEquals(1, observations.get(0).quantity);
+        assertEquals(Arrays.asList("barbarian_assault_wave"), activities());
+        assertEquals("10", observations.get(0).metadata.get("wave"));
+    }
+
+    @Test
+    public void waveInterfaceDoesNotDoubleCountDurationAnnouncement()
+    {
+        detector.onChatMessage("---- Wave: 10");
+        detector.onBarbarianAssaultWaveCompleted();
+        detector.onChatMessage("Wave 10 duration: 4:29");
+
+        assertEquals(1, observations.size());
+    }
+
+    @Test
+    public void waveInterfaceCountsWithoutDurationChatSetting()
+    {
+        detector.onChatMessage("---- Wave: 4");
+        detector.onBarbarianAssaultWaveCompleted();
+
+        assertEquals(Arrays.asList("barbarian_assault_wave"), activities());
+        assertEquals("4", observations.get(0).metadata.get("wave"));
+    }
+
+    @Test
+    public void sessionResetAllowsTheNextWaveCompletion()
+    {
+        detector.onBarbarianAssaultWaveCompleted();
+        detector.resetSession(1_000, 0, 0, 0);
+        detector.onBarbarianAssaultWaveCompleted();
+
+        assertEquals(2, observations.size());
     }
 
     @Test
@@ -140,8 +167,8 @@ public final class ActivityTelemetryDetectorTest
     @Test
     public void doesNotDiscardIdenticalConsecutiveCompletions()
     {
-        detector.onChatMessage("Wave 9 duration: 2:05");
-        detector.onChatMessage("Wave 9 duration: 2:05");
+        detector.onChatMessage("Wave complete!");
+        detector.onChatMessage("Wave complete!");
         assertEquals(2, observations.size());
     }
 
@@ -222,7 +249,7 @@ public final class ActivityTelemetryDetectorTest
             (rsn, activity, quantity, metadata) -> observations.add(
                 new Observation(rsn, activity, quantity, metadata)),
             () -> null);
-        detector.onChatMessage("Wave 9 duration: 2:05");
+        detector.onChatMessage("Wave complete!");
         assertTrue(observations.isEmpty());
     }
 

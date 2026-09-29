@@ -1,6 +1,9 @@
 package com.clanhq.verifier.daily.model;
 
 import com.clanhq.verifier.task.VerificationType;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public final class DailyTaskSummary
 {
@@ -16,13 +19,16 @@ public final class DailyTaskSummary
     private final Integer placement;
     private final VerificationType verificationType;
     private final Integer verificationItemId;
+    private final List<Integer> verificationItemIds;
+    private final String tier;
+    private final String taskType;
 
     public DailyTaskSummary(String category, String name, String description,
         int target, int progress, int reward, boolean completed, int awarded,
         Integer placement)
     {
         this(null, category, name, description, target, progress, reward,
-            completed, awarded, placement, VerificationType.UNKNOWN, null);
+            completed, awarded, placement, VerificationType.UNKNOWN, null, null, null, "NORMAL");
     }
 
     public DailyTaskSummary(String category, String name, String description,
@@ -30,7 +36,7 @@ public final class DailyTaskSummary
         Integer placement, VerificationType verificationType)
     {
         this(null, category, name, description, target, progress, reward,
-            completed, awarded, placement, verificationType, null);
+            completed, awarded, placement, verificationType, null, null, null, "NORMAL");
     }
 
     public DailyTaskSummary(String id, String category, String name,
@@ -38,6 +44,15 @@ public final class DailyTaskSummary
         int target, int progress, int reward, boolean completed, int awarded,
         Integer placement, VerificationType verificationType,
         Integer verificationItemId)
+    {
+        this(id, category, name, description, target, progress, reward, completed,
+            awarded, placement, verificationType, verificationItemId, null, null, "NORMAL");
+    }
+
+    public DailyTaskSummary(String id, String category, String name, String description,
+        int target, int progress, int reward, boolean completed, int awarded,
+        Integer placement, VerificationType verificationType, Integer verificationItemId,
+        List<Integer> verificationItemIds, String tier, String taskType)
     {
         this.id = id;
         this.category = category;
@@ -51,6 +66,15 @@ public final class DailyTaskSummary
         this.placement = placement;
         this.verificationType = verificationType;
         this.verificationItemId = verificationItemId;
+        List<Integer> ids = verificationItemIds == null
+            ? new ArrayList<>() : new ArrayList<>(verificationItemIds);
+        if (verificationItemId != null && !ids.contains(verificationItemId))
+        {
+            ids.add(verificationItemId);
+        }
+        this.verificationItemIds = Collections.unmodifiableList(ids);
+        this.tier = tier;
+        this.taskType = taskType == null ? "NORMAL" : taskType;
     }
 
     public String getId() { return id; }
@@ -65,4 +89,8 @@ public final class DailyTaskSummary
     public Integer getPlacement() { return placement; }
     public VerificationType getVerificationType() { return verificationType; }
     public Integer getVerificationItemId() { return verificationItemId; }
+    public List<Integer> getVerificationItemIds() { return verificationItemIds; }
+    public String getTier() { return tier; }
+    public String getTaskType() { return taskType; }
+    public boolean isDailyDrop() { return "DAILY_DROP".equalsIgnoreCase(taskType); }
 }

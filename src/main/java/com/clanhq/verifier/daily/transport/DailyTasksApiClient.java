@@ -9,12 +9,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.IOException;
-import java.io.EOFException;
-import java.io.InterruptedIOException;
-import java.net.ConnectException;
-import java.net.SocketException;
-import java.net.UnknownHostException;
-import javax.net.ssl.SSLException;
 import java.util.concurrent.CompletableFuture;
 import java.time.Instant;
 import java.util.Map;
@@ -318,23 +312,23 @@ public final class DailyTasksApiClient
         {
             return "The request was cancelled [CANCELLED].";
         }
-        if (exception instanceof UnknownHostException)
+        if (exception instanceof java.net.UnknownHostException)
         {
             return "The server address could not be resolved [DNS_FAILURE].";
         }
-        if (exception instanceof SSLException)
+        if (exception instanceof javax.net.ssl.SSLException)
         {
             return "A secure connection could not be established [TLS_FAILURE].";
         }
-        if (exception instanceof ConnectException)
+        if (exception instanceof java.net.ConnectException)
         {
             return "A connection to the server could not be established [CONNECT_FAILURE].";
         }
-        if (exception instanceof InterruptedIOException)
+        if (exception instanceof java.io.InterruptedIOException)
         {
             return "The request timed out or was interrupted [TIMEOUT_OR_INTERRUPTED].";
         }
-        if (exception instanceof SocketException || exception instanceof EOFException)
+        if (exception instanceof java.net.SocketException || exception instanceof java.io.EOFException)
         {
             return "The connection closed before a response arrived [CONNECTION_LOST].";
         }

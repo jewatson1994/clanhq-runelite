@@ -87,6 +87,15 @@ public final class DailyTasksSnapshot
             Integer verificationItemId = verification.has("item_id")
                 && !verification.get("item_id").isJsonNull()
                     ? verification.get("item_id").getAsInt() : null;
+            List<Integer> verificationItemIds = new ArrayList<>();
+            String itemIdsKey = verification.has("item_ids") ? "item_ids" : "acceptable_item_ids";
+            if (verification.has(itemIdsKey) && verification.get(itemIdsKey).isJsonArray())
+            {
+                for (JsonElement item : verification.getAsJsonArray(itemIdsKey))
+                {
+                    verificationItemIds.add(item.getAsInt());
+                }
+            }
             String category = value.has("category")
                 ? value.get("category").getAsString()
                 : categoryFor(VerificationType.from(verificationName));
@@ -96,6 +105,14 @@ public final class DailyTasksSnapshot
             {
                 category = "ACTIVITIES";
             }
+            else if ("DAILY_DROP".equalsIgnoreCase(category.trim()))
+            {
+                category = "DROP";
+            }
+            String taskType = value.has("task_type")
+                ? value.get("task_type").getAsString() : "NORMAL";
+            String tier = value.has("tier") && !value.get("tier").isJsonNull()
+                ? value.get("tier").getAsString() : null;
             tasks.add(new DailyTaskSummary(
                 value.has("id") && !value.get("id").isJsonNull()
                     ? value.get("id").getAsString() : null,
@@ -109,7 +126,10 @@ public final class DailyTasksSnapshot
                 awarded,
                 value.has("placement") && !value.get("placement").isJsonNull()
                     ? value.get("placement").getAsInt() : null,
-                VerificationType.from(verificationName), verificationItemId));
+                VerificationType.from(verificationName), verificationItemId,
+                verificationItemIds,
+                tier,
+                taskType));
         }
         return new DailyTasksSnapshot(
             periodDate,
