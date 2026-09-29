@@ -81,6 +81,62 @@ public final class ActivityTelemetryDetectorTest
         assertTrue(observations.isEmpty());
     }
 
+    /**
+     * Regression coverage for the Mahogany Homes fix: the
+     * COLLECTION_MINIGAMES_CONSTRUCTIONCONTRACTS_COMPLETED varbit can sit
+     * stale until the player opens that Collection Log page, so the turn-in
+     * chat line ("You have completed N contracts with a total of M
+     * points.") is a second, timelier source for the same completion
+     * counter. This exact wording is what OSRS actually sends on turn-in.
+     */
+    @Test
+    public void recognizesMahoganyHomesContractCompletionChatMessage()
+    {
+        detector.resetCompletionCounter("mahogany_homes_contract", 553);
+        detector.onChatMessage(
+            "You have completed 554 contracts with a total of 197 points.");
+
+        assertEquals(Arrays.asList("mahogany_homes_contract"), activities());
+        assertEquals(1, observations.get(0).quantity);
+    }
+
+    @Test
+    public void mahoganyHomesChatMessageWithoutABaselineDoesNotEmit()
+    {
+        // Mirrors ignoresCounterInitializationAndReset: the very first
+        // signal this session only seeds the baseline (resetActivityTelemetry
+        // normally seeds it from the varbit at login before any chat line
+        // can arrive, so this is the "no baseline yet" edge case, not the
+        // common path).
+        detector.onChatMessage(
+            "You have completed 554 contracts with a total of 197 points.");
+        assertTrue(observations.isEmpty());
+    }
+
+    @Test
+    public void mahoganyHomesChatAndVarbitSignalsDoNotDoubleCount()
+    {
+        detector.resetCompletionCounter("mahogany_homes_contract", 553);
+        detector.onChatMessage(
+            "You have completed 554 contracts with a total of 197 points.");
+        // The Collection Log varbit later catching up to the same absolute
+        // value (e.g. once the player opens that page) must be a no-op.
+        detector.onCompletionCounter("mahogany_homes_contract", 554);
+
+        assertEquals(1, observations.size());
+    }
+
+    @Test
+    public void mahoganyHomesChatMessageHandlesCommaFormattedCounts()
+    {
+        detector.resetCompletionCounter("mahogany_homes_contract", 999);
+        detector.onChatMessage(
+            "You have completed 1,000 contracts with a total of 500 points.");
+
+        assertEquals(Arrays.asList("mahogany_homes_contract"), activities());
+        assertEquals(1, observations.get(0).quantity);
+    }
+
     @Test
     public void doesNotDiscardIdenticalConsecutiveCompletions()
     {

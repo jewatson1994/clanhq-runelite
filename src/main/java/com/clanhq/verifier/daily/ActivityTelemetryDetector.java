@@ -7,6 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /** Converts gameplay signals into generic telemetry, without task logic. */
@@ -26,6 +27,25 @@ public final class ActivityTelemetryDetector
             + "we(?:'|’)?ve awarded you [\\d,]+ void knight "
             + "commendation points?\\. please also accept these coins "
             + "as a reward\\.$",
+        Pattern.CASE_INSENSITIVE);
+    /**
+     * Sent immediately on turning a Mahogany Homes contract in, e.g.
+     * "You have completed 554 contracts with a total of 197 points."
+     * Unlike its sibling COLLECTION_MINIGAMES_*_COMPLETED varbits, the
+     * Construction Contracts one (VarbitID.
+     * COLLECTION_MINIGAMES_CONSTRUCTIONCONTRACTS_COMPLETED, read in
+     * ClanHQVerifierPlugin.onVarbitChanged) does not reliably update the
+     * moment a contract is completed - it can sit stale until the player
+     * happens to open that Collection Log page - so Daily Task progress
+     * for mahogany_homes_contract could appear stuck at 0 all session even
+     * though contracts were being completed. This chat line carries the
+     * same absolute, ever-increasing completed-contracts count the varbit
+     * does, so it is routed through the same onCompletionCounter
+     * delta/baseline tracking as a second, timelier signal for this one
+     * activity.
+     */
+    private static final Pattern MAHOGANY_HOMES_CONTRACTS_COMPLETED = Pattern.compile(
+        "^You have completed ([\\d,]+) contracts? with a total of",
         Pattern.CASE_INSENSITIVE);
 
     static
@@ -85,6 +105,13 @@ public final class ActivityTelemetryDetector
         {
             return;
         }
+        Matcher mahoganyHomesContracts =
+            MAHOGANY_HOMES_CONTRACTS_COMPLETED.matcher(message);
+        if (mahoganyHomesContracts.find())
+        {
+            onMahoganyHomesContractsCompleted(mahoganyHomesContracts.group(1));
+            return;
+        }
         for (Map.Entry<String, Pattern> entry : CHAT_COMPLETIONS.entrySet())
         {
             if (entry.getValue().matcher(message).find())
@@ -126,6 +153,28 @@ public final class ActivityTelemetryDetector
         if (SUPPORTED_ACTIVITIES.contains(activity))
         {
             completionCounters.put(activity, value);
+        }
+    }
+
+    /**
+     * Parse the absolute lifetime count out of a Mahogany Homes contract
+     * turn-in chat line and feed it through the same delta/baseline
+     * tracking as the varbit-sourced completion counters. Safe to combine
+     * with the varbit signal for the same activity: both always report the
+     * true absolute count, so whichever arrives first drives the emitted
+     * delta and a later, matching value from the other source is a no-op.
+     */
+    private void onMahoganyHomesContractsCompleted(String rawCount)
+    {
+        try
+        {
+            onCompletionCounter("mahogany_homes_contract",
+                Integer.parseInt(rawCount.replace(",", "")));
+        }
+        catch (NumberFormatException ignored)
+        {
+            // Unexpected chat formatting - the varbit listener in
+            // ClanHQVerifierPlugin.onVarbitChanged remains as a fallback.
         }
     }
 
