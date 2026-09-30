@@ -107,6 +107,11 @@ final class DailyTasksPanel extends JPanel
         showStatus(message);
     }
 
+    void showClaimSyncStatus(String message)
+    {
+        showStatus(message);
+    }
+
     void showTasks(DailyTasksSnapshot snapshot, String message)
     {
         String contextTitle = snapshot.getContext() == null
@@ -138,7 +143,7 @@ final class DailyTasksPanel extends JPanel
             }
             card.showTask(task, snapshot.getCurrencyName(),
                 snapshot.getCurrencySymbol());
-            card.setEnabled(!task.isCompleted());
+            card.setEnabled(!task.isCompleted() && task.getProgress() >= task.getTarget());
             if (requiresNewerPlugin(snapshot, task))
             {
                 unsupported = true;
@@ -190,6 +195,16 @@ final class DailyTasksPanel extends JPanel
         {
             card.setClaiming();
         }
+    }
+
+    void setPending(String category)
+    {
+        TaskCard card = cardForCategory(category);
+        if (card != null)
+        {
+            card.setPending();
+        }
+        showStatus("Claim saved; syncing with ClanHQ automatically.");
     }
 
     void restoreClaim(String category)
@@ -505,6 +520,10 @@ final class DailyTasksPanel extends JPanel
             if (currentProgress >= target)
             {
                 progress.setForeground(DAILY_GREEN);
+                if (!serverCompleted && !pending)
+                {
+                    claimButton.setEnabled(true);
+                }
             }
             progressValue.setText(compact(currentProgress) + " / "
                 + compact(target));
@@ -532,16 +551,27 @@ final class DailyTasksPanel extends JPanel
             claimButton.setEnabled(false);
         }
 
+        private boolean pending;
+
+        private void setPending()
+        {
+            pending = true;
+            claimButton.setText("Syncing...");
+            claimButton.setEnabled(false);
+        }
+
         private void restoreClaim()
         {
+            pending = false;
             claimButton.setText(claimText);
-            claimButton.setEnabled(true);
+            claimButton.setEnabled(!serverCompleted && currentProgress >= target);
         }
 
         private String claimText = "Claim";
 
         private void clear()
         {
+            pending = false;
             icon.setIcon(null);
             icon.setText(defaultIcon());
             progress.setValue(0);
@@ -629,7 +659,8 @@ final class DailyTasksPanel extends JPanel
             super.setEnabled(enabled);
             if (claimButton != null)
             {
-                claimButton.setEnabled(enabled);
+                claimButton.setEnabled(enabled && !pending && !serverCompleted
+                    && currentProgress >= target);
             }
         }
     }

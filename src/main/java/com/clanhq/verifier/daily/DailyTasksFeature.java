@@ -4,13 +4,18 @@ import com.clanhq.verifier.ClanHQVerifierConfig;
 import com.clanhq.verifier.daily.model.DailyTaskSummary;
 import com.clanhq.verifier.daily.model.DailyTasksSnapshot;
 import com.clanhq.verifier.daily.transport.DailyTasksApiClient;
+import com.clanhq.verifier.daily.transport.DailyTasksResult;
 import com.clanhq.verifier.feature.ClanHQFeature;
 import com.clanhq.verifier.loot.ObservedDrop;
 import com.clanhq.verifier.task.VerificationType;
+import com.google.gson.JsonObject;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
 import java.time.Duration;
 import java.time.Instant;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -21,7 +26,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.SkillIconManager;
@@ -31,6 +37,7 @@ import net.runelite.client.ui.overlay.infobox.InfoBoxManager;
 
 public final class DailyTasksFeature implements ClanHQFeature
 {
+    private static final Logger log = LoggerFactory.getLogger(DailyTasksFeature.class);
     private final DailyTasksApiClient apiClient;
     private final ClanHQVerifierConfig config;
     private final DailyTasksPanel panel;
@@ -48,7 +55,16 @@ public final class DailyTasksFeature implements ClanHQFeature
     private volatile CompletableFuture<Void> pendingDropObservations =
         CompletableFuture.completedFuture(null);
     private volatile boolean running;
-    private final AtomicBoolean refreshInFlight = new AtomicBoolean();
+    private final ReconciliationLoop<DailyTasksResult> reconciliation;
+    private volatile String refreshMessage;
+    private final ConfigManager configManager;
+    private final PendingClaimStore pendingClaimStore;
+    private volatile boolean claimInFlight;
+    private volatile Instant nextClaimAttempt = Instant.EPOCH;
+    private volatile long deliveryGeneration;
+    private volatile ScheduledFuture<?> deliveryTimeout;
+    private volatile String installationScope;
+    private static final String INSTALLATION_SCOPE_KEY = "dailyTasksProgressInstallation";
 
     public DailyTasksFeature(DailyTasksApiClient apiClient,
         ClanHQVerifierConfig config,
@@ -86,6 +102,8 @@ public final class DailyTasksFeature implements ClanHQFeature
     {
         this.apiClient = apiClient;
         this.config = config;
+        this.configManager = configManager;
+        this.pendingClaimStore = new PendingClaimStore(configManager);
         this.executor = executor;
         this.overviewChanged = overviewChanged;
         this.itemManager = itemManager;
@@ -104,6 +122,9 @@ public final class DailyTasksFeature implements ClanHQFeature
                 updateInfoBoxes(snapshot);
             }), itemManager,
             config::dailyTasksOverlayOpacity, skillIconManager, spriteManager);
+        ensureInstallationScope();
+        this.reconciliation = new ReconciliationLoop<>(executor,
+            SwingUtilities::invokeLater, apiClient::fetch, this::receiveRefresh);
     }
 
     @Override
@@ -133,13 +154,16 @@ public final class DailyTasksFeature implements ClanHQFeature
     public void startUp()
     {
         running = true;
-        refresh();
+        reconciliation.start();
     }
 
     @Override
     public void shutDown()
     {
         running = false;
+        invalidateDelivery();
+        reconciliation.stop();
+        refreshMessage = null;
         ScheduledFuture<?> scheduled = rotationRefresh;
         if (scheduled != null)
         {
@@ -158,10 +182,13 @@ public final class DailyTasksFeature implements ClanHQFeature
 
     private void refresh(String successMessage)
     {
-        if (!running)
-        {
-            return;
-        }
+        if (successMessage != null) { refreshMessage = successMessage; }
+        reconciliation.refresh();
+    }
+
+    private void receiveRefresh(DailyTasksResult result, Throwable error)
+    {
+        ensureInstallationScope();
         if (normalized(config.installationToken()).isEmpty())
         {
             snapshot = null;
@@ -171,19 +198,13 @@ public final class DailyTasksFeature implements ClanHQFeature
                 "Use /plugin pair in Discord, then enter the code in settings.");
             return;
         }
-        if (!refreshInFlight.compareAndSet(false, true))
+        if (error != null)
         {
+            log.warn("sync client=runelite phase=reconcile status=failed reason={}",
+                error.getClass().getSimpleName());
+            panel.showError("Refresh failed; retrying automatically shortly.", true);
             return;
         }
-        SwingUtilities.invokeLater(() ->
-            panel.setLoading("Loading today's tasks..."));
-        apiClient.fetch().thenAccept(result -> SwingUtilities.invokeLater(() ->
-        {
-            refreshInFlight.set(false);
-            if (!running)
-            {
-                return;
-            }
             result.getSnapshot().ifPresentOrElse(
                 snapshot -> {
                     this.snapshot = snapshot;
@@ -192,11 +213,14 @@ public final class DailyTasksFeature implements ClanHQFeature
                     updateInfoBoxes(snapshot);
                     scheduleRotationRefresh(snapshot);
                     panel.showTasks(snapshot,
-                        successMessage == null ? result.getMessage() : successMessage);
+                        refreshMessage == null ? result.getMessage() : refreshMessage);
+                    refreshMessage = null;
                     overlay.publishLiveProgress();
+                    reconcilePendingClaims(snapshot);
+                    log.debug("sync client=runelite phase=reconcile status=applied period={}",
+                        snapshot.getPeriodDate());
                 },
                 () -> panel.showError(result.getMessage(), true));
-        }));
     }
 
     public void claim(String category)
@@ -207,42 +231,198 @@ public final class DailyTasksFeature implements ClanHQFeature
             panel.showError("Refresh today's tasks before claiming.", true);
             return;
         }
-        panel.setLoading("Checking saved client progress for the "
-            + category.toLowerCase() + " task...");
-        panel.setClaiming(category);
-        CompletableFuture<Void> observations = pendingDropObservations;
-        observations.handle((ignored, error) -> null)
-            .thenCompose(ignored -> apiClient.claim(
-                category,
-                current.getPeriodDate(),
-                overlay.buildClientProgress(null)))
-            .thenAccept(result -> SwingUtilities.invokeLater(() ->
+        Instant clickedAt = Instant.now();
+        if (!clickedAt.isBefore(current.getResetAt()))
         {
-            if (!running)
+            panel.showError("This task period ended; refresh for the next one.", true);
+            return;
+        }
+        DailyTaskSummary chosen = null;
+        for (DailyTaskSummary task : current.getTasks())
+        {
+            if (category.equals(task.getCategory()) && !task.isCompleted()
+                && overlay.progressFor(task) >= task.getTarget())
             {
-                return;
+                chosen = task;
+                break;
             }
-            if (!result.isSuccessful())
+        }
+        if (chosen == null)
+        {
+            panel.showError("This task is not claimable yet.", true);
+            return;
+        }
+        String contextId = current.getContext() == null
+            ? "" : current.getContext().getId();
+        pendingClaimStore.enqueue(installationScope, current.getPeriodDate(),
+            current.getResetAt().toString(), clickedAt.toString(), contextId, category,
+            chosen.getId() == null ? "" : chosen.getId(),
+            overlay.buildClientProgress(null));
+        panel.setPending(category);
+        flushPendingClaim();
+    }
+
+    private void reconcilePendingClaims(DailyTasksSnapshot current)
+    {
+        String contextId = current.getContext() == null
+            ? "" : current.getContext().getId();
+        boolean olderPending = false;
+        boolean currentPending = false;
+        for (JsonObject pending : pendingClaimStore.forScope(installationScope))
+        {
+            if (!current.getPeriodDate().equals(PendingClaimStore.string(pending,
+                    "period_date"))
+                || !current.getResetAt().toString().equals(
+                    PendingClaimStore.string(pending, "reset_at"))
+                || !contextId.equals(PendingClaimStore.string(pending, "context_id")))
             {
-                panel.restoreClaim(category);
-                panel.showError(result.getMessage(), true);
-                return;
+                olderPending = true;
+                continue;
             }
-            String message = result.getMessage();
-            if (result.getRewardAmount() > 0)
+            String taskId = PendingClaimStore.string(pending, "task_id");
+            String category = PendingClaimStore.string(pending, "category");
+            for (DailyTaskSummary task : current.getTasks())
             {
-                message += " Awarded " + result.getRewardAmount() + " "
-                    + result.getCurrencyName()
-                    + (result.getCurrencySymbol().isEmpty()
-                        ? "." : " " + result.getCurrencySymbol() + ".");
+                if (task.isCompleted() && (taskId.isEmpty()
+                    ? category.equals(task.getCategory())
+                    : taskId.equals(task.getId())))
+                {
+                    pendingClaimStore.acknowledge(
+                        PendingClaimStore.string(pending, "claim_id"));
+                    pending = null;
+                    break;
+                }
             }
-            refresh(message);
-            }));
+            if (pending != null)
+            {
+                currentPending = true;
+                panel.setPending(category);
+            }
+        }
+        if (olderPending && !currentPending)
+        {
+            panel.showClaimSyncStatus("An earlier claim is saved; syncing during its grace period if eligible.");
+        }
+        flushPendingClaim();
+    }
+
+    private void flushPendingClaim()
+    {
+        if (!running || claimInFlight || Instant.now().isBefore(nextClaimAttempt))
+        {
+            return;
+        }
+        for (JsonObject pending : pendingClaimStore.forScope(installationScope))
+        {
+            Instant deadline;
+            try
+            {
+                deadline = Instant.parse(PendingClaimStore.string(pending, "reset_at"))
+                    .plus(Duration.ofHours(2));
+            }
+            catch (RuntimeException error)
+            {
+                continue;
+            }
+            if (Instant.now().isAfter(deadline))
+            {
+                continue;
+            }
+            claimInFlight = true;
+            nextClaimAttempt = Instant.now().plusSeconds(30);
+            long generation = ++deliveryGeneration;
+            if (executor != null)
+            {
+                deliveryTimeout = executor.schedule(() -> SwingUtilities.invokeLater(() ->
+                {
+                    if (generation != deliveryGeneration || !running) { return; }
+                    claimInFlight = false;
+                    deliveryGeneration++;
+                    panel.showClaimSyncStatus(
+                        "Claim saved; delivery timed out. Retrying automatically.");
+                }), 20, TimeUnit.SECONDS);
+            }
+            String category = PendingClaimStore.string(pending, "category");
+            pendingDropObservations.handle((ignored, error) -> null)
+                .thenCompose(ignored -> apiClient.claim(category,
+                    PendingClaimStore.string(pending, "period_date"),
+                    pending.getAsJsonArray("client_progress"),
+                    PendingClaimStore.string(pending, "claim_id"),
+                    PendingClaimStore.string(pending, "clicked_at"),
+                    PendingClaimStore.string(pending, "reset_at"),
+                    PendingClaimStore.string(pending, "context_id")))
+                .whenComplete((result, error) -> SwingUtilities.invokeLater(() ->
+                {
+                    if (generation != deliveryGeneration || !running) { return; }
+                    if (deliveryTimeout != null) { deliveryTimeout.cancel(false); }
+                    claimInFlight = false;
+                    deliveryGeneration++;
+                    if (error == null && result != null && result.isSuccessful())
+                    {
+                        pendingClaimStore.acknowledge(
+                            PendingClaimStore.string(pending, "claim_id"));
+                        refresh("Claim sent; confirming payout with ClanHQ.");
+                    }
+                    else
+                    {
+                        panel.showClaimSyncStatus(
+                            "Claim saved; syncing with ClanHQ automatically.");
+                        log.warn("sync client=runelite phase=claim_delivery claim_id={} status=pending",
+                            PendingClaimStore.string(pending, "claim_id"));
+                    }
+                }));
+            return;
+        }
+    }
+
+    private void invalidateDelivery()
+    {
+        deliveryGeneration++;
+        claimInFlight = false;
+        if (deliveryTimeout != null) { deliveryTimeout.cancel(false); }
+        deliveryTimeout = null;
     }
 
     public void observeSkillExperience(String skillName, int experience)
     {
         overlay.observeSkillExperience(skillName, experience);
+    }
+
+    private void ensureInstallationScope()
+    {
+        String token = normalized(config.installationToken());
+        String scope = token.isEmpty() ? "" : tokenFingerprint(token);
+        if (scope.equals(installationScope)) { return; }
+        String stored = configManager.getConfiguration(
+            ClanHQVerifierConfig.GROUP, INSTALLATION_SCOPE_KEY);
+        if (!scope.equals(stored))
+        {
+            invalidateDelivery();
+            snapshot = null;
+            overlay.clearPersistedState();
+            configManager.setConfiguration(
+                ClanHQVerifierConfig.GROUP, INSTALLATION_SCOPE_KEY, scope);
+        }
+        installationScope = scope;
+    }
+
+    private static String tokenFingerprint(String token)
+    {
+        try
+        {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                .digest(token.getBytes(StandardCharsets.UTF_8));
+            StringBuilder value = new StringBuilder(digest.length * 2);
+            for (byte part : digest)
+            {
+                value.append(String.format("%02x", part & 0xff));
+            }
+            return value.toString();
+        }
+        catch (NoSuchAlgorithmException error)
+        {
+            throw new IllegalStateException("SHA-256 is unavailable", error);
+        }
     }
 
     public void observeLoot(String sourceName)
@@ -313,7 +493,8 @@ public final class DailyTasksFeature implements ClanHQFeature
         {
             return;
         }
-        apiClient.submitActivity(rsn, activity, quantity, metadata);
+        apiClient.submitActivity(rsn, activity, quantity, metadata)
+            .whenComplete((ignored, error) -> refresh());
     }
 
     public DailyTasksSnapshot getSnapshot()
@@ -346,6 +527,7 @@ public final class DailyTasksFeature implements ClanHQFeature
         {
             pendingDropObservations = CompletableFuture.allOf(
                 submissions.toArray(new CompletableFuture<?>[0]));
+            pendingDropObservations.whenComplete((ignored, error) -> refresh());
         }
     }
 
@@ -361,8 +543,10 @@ public final class DailyTasksFeature implements ClanHQFeature
         {
             previous.cancel(false);
         }
-        long delay = Math.max(1, Duration.between(Instant.now(),
-            value.getContext().getRotationEndsAt()).toMillis());
+        long delay = Duration.between(Instant.now(),
+            value.getContext().getRotationEndsAt()).toMillis();
+        // An expired server snapshot must not create a millisecond retry loop.
+        if (delay <= 0) { return; }
         rotationRefresh = executor.schedule(() ->
         {
             if (running)

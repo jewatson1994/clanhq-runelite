@@ -20,9 +20,12 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public final class DailyTasksApiClient
 {
+    private static final Logger log = LoggerFactory.getLogger(DailyTasksApiClient.class);
     /** Capabilities with an implemented RuneLite observation source. */
     private static final String CAPABILITIES =
         "SKILL_XP,NPC_KILL,ITEM_DROP,ACTIVITY_TELEMETRY";
@@ -56,6 +59,8 @@ public final class DailyTasksApiClient
             @Override
             public void onFailure(Call call, IOException exception)
             {
+                log.warn("sync phase=read request_id={} status=transport_failure",
+                    request.header("X-ClanHQ-Correlation-ID"));
                 future.complete(new DailyTasksResult(null,
                     "ClanHQ could not be reached."));
             }
@@ -66,6 +71,8 @@ public final class DailyTasksApiClient
             {
                 try (Response closeable = response)
                 {
+                    log.debug("sync phase=read request_id={} status={}",
+                        response.header("X-ClanHQ-Request-ID"), response.code());
                     String body = body(response);
                     if (!response.isSuccessful())
                     {
@@ -195,6 +202,22 @@ public final class DailyTasksApiClient
         String periodDate,
         JsonArray clientProgress)
     {
+        return claim(category, periodDate, clientProgress, null);
+    }
+
+    public CompletableFuture<DailyActionResult> claim(
+        String category,
+        String periodDate,
+        JsonArray clientProgress,
+        String claimId)
+    {
+        return claim(category, periodDate, clientProgress, claimId, null, null, null);
+    }
+
+    public CompletableFuture<DailyActionResult> claim(
+        String category, String periodDate, JsonArray clientProgress,
+        String claimId, String clickedAt, String resetAt, String contextId)
+    {
         CompletableFuture<DailyActionResult> future = new CompletableFuture<>();
         Request base = authenticatedRequest("/api/v1/daily-tasks/claim");
         if (base == null)
@@ -206,6 +229,13 @@ public final class DailyTasksApiClient
         }
         JsonObject payload = new JsonObject();
         payload.addProperty("category", category);
+        if (claimId != null)
+        {
+            payload.addProperty("claim_id", claimId);
+            payload.addProperty("clicked_at", clickedAt);
+            payload.addProperty("reset_at", resetAt);
+            payload.addProperty("context_id", contextId);
+        }
         if (periodDate != null && clientProgress != null)
         {
             payload.addProperty("period_date", periodDate);
@@ -224,11 +254,15 @@ public final class DailyTasksApiClient
         String failureMessage,
         String rewardField)
     {
+        log.info("sync phase=mutation request_id={} path={} status=sent",
+            request.header("X-ClanHQ-Correlation-ID"), request.url().encodedPath());
         httpClient.newCall(request).enqueue(new Callback()
         {
             @Override
             public void onFailure(Call call, IOException exception)
             {
+                log.warn("sync phase=mutation request_id={} status=unconfirmed",
+                    request.header("X-ClanHQ-Correlation-ID"));
                 future.complete(new DailyActionResult(
                     false, failureMessage + " " + transportFailure(exception, call.isCanceled())
                         + " Refresh daily tasks before trying Claim again; the outcome is unconfirmed.",
@@ -241,6 +275,8 @@ public final class DailyTasksApiClient
             {
                 try (Response closeable = response)
                 {
+                    log.info("sync phase=mutation request_id={} status={}",
+                        response.header("X-ClanHQ-Request-ID"), response.code());
                     String body = body(response);
                     int reward = response.isSuccessful()
                         ? rewardAmount(body, rewardField) : 0;
@@ -278,6 +314,7 @@ public final class DailyTasksApiClient
         return new Request.Builder()
             .url(baseUrl + path)
             .header("Authorization", "Bearer " + token)
+            .header("X-ClanHQ-Correlation-ID", UUID.randomUUID().toString().replace("-", ""))
             .header("X-ClanHQ-Plugin-Version", "1")
             .header("X-ClanHQ-Plugin-Capabilities", CAPABILITIES)
             .get()
