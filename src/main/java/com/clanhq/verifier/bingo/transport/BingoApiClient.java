@@ -4,6 +4,7 @@ import com.clanhq.verifier.ClanHQVerifierConfig;
 import com.clanhq.verifier.bingo.model.BingoDrop;
 import com.clanhq.verifier.bingo.model.BingoCharacterSubmission;
 import com.clanhq.verifier.bingo.model.BingoManifest;
+import com.clanhq.verifier.bingo.model.RaidProgress;
 import com.clanhq.verifier.service.ApiDestinationService;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -195,6 +196,105 @@ public final class BingoApiClient
                     future.complete(new BingoTransportResult(false,
                         "ClanHQ returned an invalid response."));
                 }
+            }
+        });
+        return future;
+    }
+
+    /**
+     * Fetches the local player's permanent, clan-wide raid-unique
+     * progress. Returns an empty result (not a failure) when Bingo is
+     * disabled server-side, same as the manifest endpoint.
+     */
+    public CompletableFuture<RaidProgressResult> fetchRaidProgress()
+    {
+        CompletableFuture<RaidProgressResult> future =
+            new CompletableFuture<>();
+        String baseUrl = configuredBaseUrl();
+        if (baseUrl == null)
+        {
+            future.complete(new RaidProgressResult(null,
+                "Configure the ClanHQ API URL and installation token first."));
+            return future;
+        }
+        Request request = request(baseUrl + "/api/v1/raid-progress")
+            .get()
+            .build();
+        httpClient.newCall(request).enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException exception)
+            {
+                future.complete(new RaidProgressResult(null,
+                    "ClanHQ could not be reached."));
+            }
+
+            @Override
+            public void onResponse(Call call, Response response)
+                throws IOException
+            {
+                try (Response closeable = response)
+                {
+                    String body = response.body() == null
+                        ? "" : response.body().string();
+                    if (!response.isSuccessful())
+                    {
+                        future.complete(new RaidProgressResult(null,
+                            responseMessage(body, response.code())));
+                        return;
+                    }
+                    future.complete(new RaidProgressResult(
+                        RaidProgress.fromJson(body), null));
+                }
+                catch (IOException | RuntimeException exception)
+                {
+                    future.complete(new RaidProgressResult(null,
+                        "ClanHQ returned an invalid raid progress response."));
+                }
+            }
+        });
+        return future;
+    }
+
+    /**
+     * Silently reports a raid-unique item drop in the background. This is
+     * independent of the Bingo screenshot/manual-confirm submission flow
+     * (see {@link #submit}) by design: it is a passive progress counter,
+     * not something that pays out a prize, so there is no user-facing
+     * confirmation step and failures are swallowed rather than surfaced -
+     * the next successful {@link #fetchRaidProgress()} call will simply
+     * reflect whatever did get recorded.
+     */
+    public CompletableFuture<Void> reportRaidDrop(int itemId)
+    {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        String baseUrl = configuredBaseUrl();
+        if (baseUrl == null)
+        {
+            future.complete(null);
+            return future;
+        }
+        JsonObject payload = new JsonObject();
+        payload.addProperty("item_id", itemId);
+        Request request = request(baseUrl + "/api/v1/raid-progress/drops")
+            .post(RequestBody.create(JSON, payload.toString()))
+            .build();
+        httpClient.newCall(request).enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(Call call, IOException exception)
+            {
+                // Best-effort: a future fetchRaidProgress() refresh (or
+                // the next drop of the same item, since recording is
+                // idempotent) will reconcile any drop we failed to report.
+                future.complete(null);
+            }
+
+            @Override
+            public void onResponse(Call call, Response response)
+            {
+                response.close();
+                future.complete(null);
             }
         });
         return future;

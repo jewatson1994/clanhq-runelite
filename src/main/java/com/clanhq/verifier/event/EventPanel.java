@@ -1,17 +1,20 @@
 package com.clanhq.verifier.event;
 
 import com.clanhq.verifier.event.model.ClanEventSummary;
+import com.clanhq.verifier.event.model.EventStanding;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.text.NumberFormat;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.BooleanSupplier;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -32,15 +35,22 @@ final class EventPanel extends JPanel
     private static final Color ACTIVE_COLOR = new Color(112, 194, 130);
     private static final Color SCHEDULED_COLOR = new Color(111, 166, 224);
     private static final Color BINGO_COLOR = new Color(178, 137, 224);
+    private static final NumberFormat SCORE_FORMAT =
+        NumberFormat.getIntegerInstance(Locale.US);
     private String serverName = "ClanHQ";
     private final JLabel titleLabel = new JLabel("ClanHQ Events");
     private final JLabel subtitleLabel = new JLabel();
     private final JLabel statusLabel = new JLabel();
     private final JPanel eventsPanel = verticalPanel();
     private final JButton refreshButton = new JButton("Refresh Events");
+    private final BooleanSupplier showLeaderboard;
+    private final BooleanSupplier showMyRank;
 
-    EventPanel(Runnable refreshAction)
+    EventPanel(Runnable refreshAction, BooleanSupplier showLeaderboard,
+        BooleanSupplier showMyRank)
     {
+        this.showLeaderboard = showLeaderboard;
+        this.showMyRank = showMyRank;
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         setBackground(ColorScheme.DARK_GRAY_COLOR);
@@ -166,11 +176,54 @@ final class EventPanel extends JPanel
         details.add(Box.createRigidArea(new Dimension(0, 5)));
         details.add(new JLabel(html("<b>End</b><br>"
             + formatDateTime(event.getEndAt(), event.getEndDate()))));
+        addStandings(details, event);
         panel.add(details, BorderLayout.CENTER);
         panel.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.setMaximumSize(new Dimension(
             WRAP_WIDTH + 20, panel.getPreferredSize().height));
         return panel;
+    }
+
+    /**
+     * Appends a compact leaderboard block to an event card, gated behind
+     * the same "Show leaderboard" / "Show my rank" settings as the
+     * in-game overlay (see {@link EventOverlay}) so the two surfaces stay
+     * consistent rather than needing their own separate toggles.
+     */
+    private void addStandings(JPanel details, ClanEventSummary event)
+    {
+        List<EventStanding> standings = event.getStandings();
+        EventStanding myStanding = event.getMyStanding();
+        boolean leaderboardOn = showLeaderboard.getAsBoolean();
+        boolean myRankOn = showMyRank.getAsBoolean();
+        boolean hasLeaderboard = leaderboardOn && !standings.isEmpty();
+        boolean hasMyRank = myRankOn && myStanding != null;
+        if (!hasLeaderboard && !hasMyRank)
+        {
+            return;
+        }
+        details.add(Box.createRigidArea(new Dimension(0, 5)));
+        details.add(new JLabel(html("<b>Leaderboard</b>")));
+        int shown = 0;
+        if (hasLeaderboard)
+        {
+            for (EventStanding standing : standings)
+            {
+                shown++;
+                details.add(new JLabel(html(
+                    shown + ". " + escapeHtml(standing.getRsn())
+                        + " — " + SCORE_FORMAT.format(standing.getScore()))));
+            }
+        }
+        if (hasMyRank && (!hasLeaderboard || myStanding.getRank() > shown
+            || myStanding.getRank() <= 0))
+        {
+            JLabel mine = new JLabel(html("<font color='#70C090'>You ("
+                + (myStanding.getRank() > 0 ? "#" + myStanding.getRank() : "?")
+                + "): " + escapeHtml(myStanding.getRsn()) + " — "
+                + SCORE_FORMAT.format(myStanding.getScore()) + "</font>"));
+            details.add(mine);
+        }
     }
 
     private static JPanel emptyState(String message)
@@ -222,8 +275,11 @@ final class EventPanel extends JPanel
 
     private static String formatDateTime(Instant instant, LocalDate fallback)
     {
-        return instant == null ? DATE_FORMAT.format(fallback)
-            : DATE_TIME_FORMAT.format(instant);
+        if (instant != null)
+        {
+            return DATE_TIME_FORMAT.format(instant);
+        }
+        return fallback == null ? "TBD" : DATE_FORMAT.format(fallback);
     }
 
     private static String html(String text)

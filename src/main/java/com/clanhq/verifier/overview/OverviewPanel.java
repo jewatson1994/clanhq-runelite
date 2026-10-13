@@ -30,6 +30,7 @@ final class OverviewPanel extends JPanel
     private final JLabel characters = new JLabel();
     private final JLabel balance = new JLabel();
     private final JPanel statsPeriods = new JPanel();
+    private final JPanel leaderboardPanel = new JPanel();
     private final JButton pair = new JButton("Pair ClanHQ");
     private final JButton connection = new JButton("Connection Settings");
     private final JButton refresh = new JButton("↻ Refresh");
@@ -71,6 +72,14 @@ final class OverviewPanel extends JPanel
         content.add(Box.createVerticalStrut(8));
         content.add(separator());
         content.add(Box.createVerticalStrut(7));
+        leaderboardPanel.setLayout(new BoxLayout(leaderboardPanel, BoxLayout.Y_AXIS));
+        leaderboardPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
+        leaderboardPanel.setAlignmentX(LEFT_ALIGNMENT);
+        leaderboardPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE,
+            Integer.MAX_VALUE));
+        leaderboardPanel.setVisible(false);
+        content.add(leaderboardPanel);
+        content.add(Box.createVerticalStrut(8));
 
         pair.addActionListener(event -> pairAction.run());
         connection.addActionListener(event -> disconnectAction.run());
@@ -112,6 +121,7 @@ final class OverviewPanel extends JPanel
                 : " " + value.getCurrencySymbol()));
         balance.setVisible(true);
         renderStats(value);
+        renderLeaderboard(value.getAllTimeLeaderboard());
         pair.setVisible(false);
         connection.setVisible(true);
         refresh.setVisible(true);
@@ -142,6 +152,7 @@ final class OverviewPanel extends JPanel
         linkStatus.setVisible(false);
         balance.setVisible(true);
         statsPeriods.setVisible(false);
+        leaderboardPanel.setVisible(false);
         pair.setVisible(true);
         connection.setVisible(false);
         refresh.setVisible(false);
@@ -250,6 +261,26 @@ final class OverviewPanel extends JPanel
         addStatsPeriod("ALL TIME", value.getAllTimeEarned(), value.getAllTimeRank());
         statsPeriods.setVisible(true);
         statsPeriods.revalidate();
+    }
+
+    private void renderLeaderboard(List<CurrencyLeaderboardEntry> entries)
+    {
+        leaderboardPanel.removeAll();
+        if (entries == null || entries.isEmpty())
+        {
+            leaderboardPanel.setVisible(false);
+            return;
+        }
+        addSectionHeading(leaderboardPanel, "TOP 10 — ALL TIME");
+        int rank = 1;
+        for (CurrencyLeaderboardEntry entry : entries)
+        {
+            addFullWidth(leaderboardPanel, new JLabel(
+                stat(rank + ". " + entry.getRsn(), NUMBERS.format(entry.getScore()))));
+            rank++;
+        }
+        leaderboardPanel.setVisible(true);
+        leaderboardPanel.revalidate();
     }
 
     private void addStatsPeriod(String titleText, int earned)

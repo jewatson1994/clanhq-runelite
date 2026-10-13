@@ -21,11 +21,12 @@ public final class IdentitySnapshot
     private final int monthEarned;
     private final int allTimeEarned;
     private final int allTimeRank;
+    private final List<CurrencyLeaderboardEntry> allTimeLeaderboard;
 
     private IdentitySnapshot(String deviceName, List<String> rsns, int balance,
         String currencyName, String currencySymbol, String serverName,
         int todayEarned, int weekEarned, int monthEarned, int allTimeEarned,
-        int allTimeRank)
+        int allTimeRank, List<CurrencyLeaderboardEntry> allTimeLeaderboard)
     {
         this.deviceName = deviceName;
         this.rsns = Collections.unmodifiableList(new ArrayList<>(rsns));
@@ -38,6 +39,8 @@ public final class IdentitySnapshot
         this.monthEarned = monthEarned;
         this.allTimeEarned = allTimeEarned;
         this.allTimeRank = allTimeRank;
+        this.allTimeLeaderboard = Collections.unmodifiableList(
+            new ArrayList<>(allTimeLeaderboard));
     }
 
     public static IdentitySnapshot fromJson(String json)
@@ -63,6 +66,16 @@ public final class IdentitySnapshot
         {
             allTimeEarned = balanceValue.getAsInt();
         }
+        List<CurrencyLeaderboardEntry> allTimeLeaderboard = new ArrayList<>();
+        if (root.has("all_time_leaderboard")
+            && root.get("all_time_leaderboard").isJsonArray())
+        {
+            for (JsonElement element : root.getAsJsonArray("all_time_leaderboard"))
+            {
+                allTimeLeaderboard.add(
+                    CurrencyLeaderboardEntry.fromJson(element.getAsJsonObject()));
+            }
+        }
         return new IdentitySnapshot(
             root.get("device_name").getAsString(),
             rsns,
@@ -78,7 +91,8 @@ public final class IdentitySnapshot
             root.has("month_earned") ? root.get("month_earned").getAsInt() : 0,
             allTimeEarned,
             root.has("all_time_rank") && !root.get("all_time_rank").isJsonNull()
-                ? root.get("all_time_rank").getAsInt() : 0);
+                ? root.get("all_time_rank").getAsInt() : 0,
+            allTimeLeaderboard);
     }
 
     public String getDeviceName() { return deviceName; }
@@ -92,4 +106,8 @@ public final class IdentitySnapshot
     public int getMonthEarned() { return monthEarned; }
     public int getAllTimeEarned() { return allTimeEarned; }
     public int getAllTimeRank() { return allTimeRank; }
+    public List<CurrencyLeaderboardEntry> getAllTimeLeaderboard()
+    {
+        return allTimeLeaderboard;
+    }
 }

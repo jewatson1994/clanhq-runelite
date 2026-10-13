@@ -1,10 +1,14 @@
 package com.clanhq.verifier.event.model;
 
 import com.clanhq.verifier.task.VerificationType;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 public final class ClanEventSummary
 {
@@ -20,6 +24,8 @@ public final class ClanEventSummary
     private final String eventCode;
     private final String serverName;
     private final VerificationType verificationType;
+    private final List<EventStanding> standings;
+    private final EventStanding myStanding;
 
     public ClanEventSummary(long eventId, String eventType, String name,
         String target, LocalDate startDate, LocalDate endDate, String status,
@@ -42,6 +48,27 @@ public final class ClanEventSummary
         String eventCode, Instant startAt, Instant endAt, String serverName,
         VerificationType verificationType)
     {
+        this(eventId, eventType, name, target, startDate, endDate, status,
+            eventCode, startAt, endAt, serverName, verificationType, null,
+            null);
+    }
+
+    public ClanEventSummary(long eventId, String eventType, String name,
+        String target, LocalDate startDate, LocalDate endDate, String status,
+        String eventCode, Instant startAt, Instant endAt, String serverName,
+        VerificationType verificationType, List<EventStanding> standings)
+    {
+        this(eventId, eventType, name, target, startDate, endDate, status,
+            eventCode, startAt, endAt, serverName, verificationType,
+            standings, null);
+    }
+
+    public ClanEventSummary(long eventId, String eventType, String name,
+        String target, LocalDate startDate, LocalDate endDate, String status,
+        String eventCode, Instant startAt, Instant endAt, String serverName,
+        VerificationType verificationType, List<EventStanding> standings,
+        EventStanding myStanding)
+    {
         this.eventId = eventId;
         this.eventType = eventType;
         this.name = name;
@@ -55,6 +82,10 @@ public final class ClanEventSummary
         this.serverName = serverName;
         this.verificationType = verificationType == null
             ? VerificationType.UNKNOWN : verificationType;
+        this.standings = standings == null
+            ? Collections.emptyList()
+            : Collections.unmodifiableList(new ArrayList<>(standings));
+        this.myStanding = myStanding;
     }
 
     public static ClanEventSummary fromJson(String json)
@@ -85,14 +116,28 @@ public final class ClanEventSummary
                 : VerificationType.from(eventType.startsWith("SKILL_")
                     ? "SKILL_XP" : eventType.startsWith("BOSS_")
                         ? "NPC_KILL" : null);
+        List<EventStanding> standings = new ArrayList<>();
+        if (value.has("standings") && value.get("standings").isJsonArray())
+        {
+            for (JsonElement element : value.getAsJsonArray("standings"))
+            {
+                standings.add(EventStanding.fromJson(element.getAsJsonObject()));
+            }
+        }
+        EventStanding myStanding = value.has("my_standing")
+            && value.get("my_standing").isJsonObject()
+                ? EventStanding.fromJson(value.getAsJsonObject("my_standing"))
+                : null;
         return new ClanEventSummary(
             value.get("event_id").getAsLong(),
             eventType,
             value.get("name").getAsString(),
             value.has("target") && !value.get("target").isJsonNull()
                 ? value.get("target").getAsString() : null,
-            LocalDate.parse(value.get("start_date").getAsString()),
-            LocalDate.parse(value.get("end_date").getAsString()),
+            value.has("start_date") && !value.get("start_date").isJsonNull()
+                ? LocalDate.parse(value.get("start_date").getAsString()) : null,
+            value.has("end_date") && !value.get("end_date").isJsonNull()
+                ? LocalDate.parse(value.get("end_date").getAsString()) : null,
             value.get("status").getAsString(),
             value.has("event_code") && !value.get("event_code").isJsonNull()
                 ? value.get("event_code").getAsString() : "",
@@ -100,7 +145,9 @@ public final class ClanEventSummary
             endAt,
             value.has("server_name") && !value.get("server_name").isJsonNull()
                 ? value.get("server_name").getAsString() : "ClanHQ",
-            verificationType);
+            verificationType,
+            standings,
+            myStanding);
     }
 
     public long getEventId() { return eventId; }
@@ -115,6 +162,8 @@ public final class ClanEventSummary
     public String getEventCode() { return eventCode; }
     public String getServerName() { return serverName; }
     public VerificationType getVerificationType() { return verificationType; }
+    public List<EventStanding> getStandings() { return standings; }
+    public EventStanding getMyStanding() { return myStanding; }
 
     public boolean isActive()
     {

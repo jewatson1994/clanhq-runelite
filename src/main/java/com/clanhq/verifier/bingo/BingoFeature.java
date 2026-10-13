@@ -1,8 +1,10 @@
 package com.clanhq.verifier.bingo;
 
+import com.clanhq.verifier.ClanHQVerifierConfig;
 import com.clanhq.verifier.bingo.model.BingoDrop;
 import com.clanhq.verifier.bingo.model.BingoItem;
 import com.clanhq.verifier.bingo.model.BingoManifest;
+import com.clanhq.verifier.bingo.model.RaidProgress;
 import com.clanhq.verifier.bingo.model.BingoCharacterSubmission;
 import com.clanhq.verifier.bingo.transport.BingoApiClient;
 import com.clanhq.verifier.bingo.service.BingoScreenshotService;
@@ -10,12 +12,15 @@ import com.clanhq.verifier.service.LocalPlayerSnapshotService;
 import com.clanhq.verifier.service.SubmissionConsentService;
 import com.clanhq.verifier.feature.ClanHQFeature;
 import com.clanhq.verifier.loot.ObservedDrop;
+import java.awt.image.BufferedImage;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
+import net.runelite.client.game.ItemManager;
 import net.runelite.client.game.ItemStack;
 import net.runelite.client.callback.ClientThread;
 
@@ -28,8 +33,11 @@ public final class BingoFeature implements ClanHQFeature
     private final LocalPlayerSnapshotService snapshotService;
     private final ClientThread clientThread;
     private final SubmissionConsentService consentService;
+    private final ItemManager itemManager;
+    private final Supplier<ClanHQVerifierConfig.BingoSubmitMode> submitModeSupplier;
     private final Runnable overviewChanged;
     private volatile BingoManifest manifest;
+    private volatile RaidProgress raidProgress = RaidProgress.empty();
     private volatile boolean running;
     private volatile BingoCharacterSubmission pendingCharacterSubmission;
 
@@ -40,6 +48,8 @@ public final class BingoFeature implements ClanHQFeature
         LocalPlayerSnapshotService snapshotService,
         ClientThread clientThread,
         SubmissionConsentService consentService,
+        ItemManager itemManager,
+        Supplier<ClanHQVerifierConfig.BingoSubmitMode> submitModeSupplier,
         Runnable overviewChanged)
     {
         this.apiClient = apiClient;
@@ -48,8 +58,10 @@ public final class BingoFeature implements ClanHQFeature
         this.snapshotService = snapshotService;
         this.clientThread = clientThread;
         this.consentService = consentService;
+        this.itemManager = itemManager;
+        this.submitModeSupplier = submitModeSupplier;
         this.overviewChanged = overviewChanged;
-        this.panel = new BingoPanel(this::refreshManifest);
+        this.panel = new BingoPanel(this::refreshAll);
     }
 
     @Override
@@ -86,7 +98,7 @@ public final class BingoFeature implements ClanHQFeature
     public void startUp()
     {
         running = true;
-        refreshManifest();
+        refreshAll();
     }
 
     @Override
@@ -94,7 +106,18 @@ public final class BingoFeature implements ClanHQFeature
     {
         running = false;
         manifest = null;
+        raidProgress = RaidProgress.empty();
         pendingCharacterSubmission = null;
+    }
+
+    /**
+     * Refreshes both the Bingo manifest and the raid-unique progress
+     * display together - what the panel's "Refresh" button triggers.
+     */
+    public void refreshAll()
+    {
+        refreshManifest();
+        refreshRaidProgress();
     }
 
     public void refreshManifest()
@@ -123,6 +146,26 @@ public final class BingoFeature implements ClanHQFeature
                     panel.showManifestError(result.getMessage(),
                         result.getSiteUrl().orElse(null));
                 });
+            }));
+    }
+
+    /**
+     * Refreshes the permanent, clan-wide raid-unique progress display
+     * (e.g. "CoX - 3/12"). Independent of the active Bingo manifest/event:
+     * it simply comes back empty when Bingo is disabled server-side, same
+     * as the rest of this feature.
+     */
+    public void refreshRaidProgress()
+    {
+        apiClient.fetchRaidProgress().thenAccept(result ->
+            SwingUtilities.invokeLater(() ->
+            {
+                if (!running)
+                {
+                    return;
+                }
+                raidProgress = result.getProgress().orElse(RaidProgress.empty());
+                panel.showRaidProgress(raidProgress);
             }));
     }
 
@@ -209,10 +252,29 @@ public final class BingoFeature implements ClanHQFeature
 
     public void onDrop(ObservedDrop observedDrop)
     {
-        BingoManifest active = manifest;
-        if (!running || active == null || observedDrop == null
+        if (!running || observedDrop == null
             || observedDrop.getPlayer() == null
             || observedDrop.getPlayer().trim().isEmpty())
+        {
+            return;
+        }
+        // Raid-unique progress is a permanent, clan-wide tracker: it must
+        // keep recognizing drops even when there is no active Bingo
+        // manifest/event right now (e.g. between events), so it is
+        // checked against the independently-fetched raidProgress catalog
+        // rather than the (possibly null) active manifest below.
+        RaidProgress tracked = raidProgress;
+        for (ItemStack observed : observedDrop.getItems())
+        {
+            if (tracked.isTracked(observed.getId()))
+            {
+                apiClient.reportRaidDrop(observed.getId())
+                    .thenRun(this::refreshRaidProgress);
+            }
+        }
+
+        BingoManifest active = manifest;
+        if (active == null)
         {
             return;
         }
@@ -223,6 +285,7 @@ public final class BingoFeature implements ClanHQFeature
             {
                 continue;
             }
+
             BingoDrop bingoDrop = new BingoDrop(
                 active.getEventId(),
                 observedDrop.getPlayer(),
@@ -232,23 +295,64 @@ public final class BingoFeature implements ClanHQFeature
                 observedDrop.getSourceName() == null ? "Unknown loot source"
                     : observedDrop.getSourceName(),
                 observedDrop.getObservedAt());
-            SwingUtilities.invokeLater(() -> panel.showDetected(
-                item.getName(), bingoDrop.getQuantity(), bingoDrop.getSourceName()));
-            CompletableFuture<byte[]> screenshot =
-                screenshotsEnabled.getAsBoolean()
-                    ? screenshotService.capture(bingoDrop, active.getName())
-                        .handle((bytes, error) -> error == null ? bytes : null)
-                    : CompletableFuture.completedFuture(null);
-            screenshot.thenCompose(bytes -> apiClient.submit(bingoDrop, bytes))
-                .thenAccept(result ->
-                SwingUtilities.invokeLater(() ->
-                {
-                    if (running)
-                    {
-                        panel.showDelivery(item.getName(),
-                            result.isSuccessful(), result.getMessage());
-                    }
-                }));
+
+            if (submitModeSupplier.get()
+                == ClanHQVerifierConfig.BingoSubmitMode.MANUAL_CONFIRM)
+            {
+                BufferedImage icon = itemManager == null
+                    ? null : itemManager.getImage(item.getItemId());
+                SwingUtilities.invokeLater(() -> panel.addPendingUserDrop(
+                    icon, item.getName(), bingoDrop.getQuantity(),
+                    bingoDrop.getSourceName(), bingoDrop.getOccurredAt(),
+                    handle -> submitDrop(bingoDrop, active, handle)));
+            }
+            else
+            {
+                SwingUtilities.invokeLater(() -> panel.showUserActivityDetected(
+                    item.getName(), bingoDrop.getQuantity(),
+                    bingoDrop.getSourceName()));
+                submitDrop(bingoDrop, active, null);
+            }
         }
+    }
+
+    /**
+     * Captures a screenshot (if enabled) and submits the drop to ClanHQ.
+     * Shared by both submit modes: Automatic calls this immediately after
+     * detection, Manual calls it once the player clicks "Send to ClanHQ"
+     * (or "Retry") on the pending card. When {@code handle} is non-null
+     * the outcome is reported back onto that card; otherwise it goes to
+     * the User Activity log the way automatic submissions always have.
+     */
+    private void submitDrop(BingoDrop bingoDrop, BingoManifest active,
+        BingoPanel.PendingDropHandle handle)
+    {
+        if (handle != null)
+        {
+            SwingUtilities.invokeLater(handle::markSending);
+        }
+        CompletableFuture<byte[]> screenshot =
+            screenshotsEnabled.getAsBoolean()
+                ? screenshotService.capture(bingoDrop, active.getName())
+                    .handle((bytes, error) -> error == null ? bytes : null)
+                : CompletableFuture.completedFuture(null);
+        screenshot.thenCompose(bytes -> apiClient.submit(bingoDrop, bytes))
+            .thenAccept(result ->
+            SwingUtilities.invokeLater(() ->
+            {
+                if (!running)
+                {
+                    return;
+                }
+                if (handle != null)
+                {
+                    handle.markResult(result.isSuccessful(), result.getMessage());
+                }
+                else
+                {
+                    panel.showUserActivityDelivery(bingoDrop.getItem().getName(),
+                        result.isSuccessful(), result.getMessage());
+                }
+            }));
     }
 }

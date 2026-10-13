@@ -33,7 +33,10 @@ public final class ActivityTelemetryDetectorTest
             "pest_control_game", "hunter_rumour", "fishing_trawler_game",
             "barbarian_assault_wave", "giants_foundry_commission",
             "mahogany_homes_contract", "agility_lap",
-            "tithe_farm_fruit_deposited"));
+            "tithe_farm_fruit_deposited",
+            "clue_scrolls_beginner", "clue_scrolls_easy",
+            "clue_scrolls_medium", "clue_scrolls_hard", "clue_scrolls_elite",
+            "clue_scrolls_master", "clue_scrolls_all"));
         assertEquals(expected, ActivityTelemetryDetector.supportedActivities());
     }
 
@@ -162,6 +165,67 @@ public final class ActivityTelemetryDetectorTest
 
         assertEquals(Arrays.asList("mahogany_homes_contract"), activities());
         assertEquals(1, observations.get(0).quantity);
+    }
+
+    /**
+     * Regression coverage for the clue scroll fix: completions are
+     * WOM/hiscores-tracked by default, which depends on the official
+     * hiscores catching up and on that day's WOM baseline having captured
+     * successfully for the player - a master clue could be completed and
+     * simply never register. This chat line ("You have completed N TIER
+     * Treasure Trails.") is confirmed wording (OSRS Wiki: Clue scroll
+     * (hard)) and is reported immediately, with no baseline required.
+     */
+    @Test
+    public void recognizesClueScrollCompletionChatMessage()
+    {
+        detector.onChatMessage("You have completed 87 hard Treasure Trails.");
+
+        assertEquals(Arrays.asList("clue_scrolls_hard", "clue_scrolls_all"),
+            activities());
+        assertEquals(1, observations.get(0).quantity);
+        assertEquals(1, observations.get(1).quantity);
+    }
+
+    @Test
+    public void recognizesEveryClueScrollTierCompletionMessage()
+    {
+        List<String> tiers = Arrays.asList(
+            "beginner", "easy", "medium", "hard", "elite", "master");
+        for (String tier : tiers)
+        {
+            detector.onChatMessage(
+                "You have completed 1 " + tier + " Treasure Trails.");
+        }
+
+        List<String> expected = new ArrayList<>();
+        for (String tier : tiers)
+        {
+            expected.add("clue_scrolls_" + tier);
+            expected.add("clue_scrolls_all");
+        }
+        assertEquals(expected, activities());
+    }
+
+    @Test
+    public void clueScrollCompletionDoesNotRequireABaseline()
+    {
+        // Unlike the Jagex completion-counter activities, there is no
+        // varbit to seed from at login, so the very first completion of a
+        // session must still register - not just the second.
+        detector.onChatMessage("You have completed 1 master Treasure Trails.");
+
+        assertEquals(Arrays.asList("clue_scrolls_master", "clue_scrolls_all"),
+            activities());
+    }
+
+    @Test
+    public void everyClueScrollCompletionCountsSeparately()
+    {
+        detector.onChatMessage("You have completed 1 master Treasure Trails.");
+        detector.onChatMessage("You have completed 2 master Treasure Trails.");
+
+        assertEquals(4, observations.size());
     }
 
     @Test
