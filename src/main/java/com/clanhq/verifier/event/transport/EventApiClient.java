@@ -49,7 +49,7 @@ public final class EventApiClient
             return future;
         }
         Request request = new Request.Builder()
-            .url(baseUrl + "/api/v1/events")
+            .url(baseUrl + "/api/v1/events?include_tbd=true")
             .header("Authorization", "Bearer " + token)
             .header("X-ClanHQ-Plugin-Version", "1")
             .header("X-ClanHQ-Plugin-Capabilities", CAPABILITIES)

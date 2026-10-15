@@ -47,6 +47,21 @@ public final class ActivityTelemetryDetector
         "^You have completed ([\\d,]+) contracts? with a total of",
         Pattern.CASE_INSENSITIVE);
 
+    /**
+     * Sent on turning in a completed Treasure Trail, e.g. "You have
+     * completed 87 hard Treasure Trails." (confirmed wording, OSRS Wiki:
+     * Clue scroll (hard)). Unlike the Collection Log varbits backing
+     * pest_control_game and friends, there is no known client-side varbit
+     * exposing a per-tier clue count to seed a baseline from at login, so
+     * this is treated as a one-off "a trail was just turned in" signal
+     * rather than an absolute Jagex-maintained counter - every match is
+     * its own +1, not a delta against a previous reading.
+     */
+    private static final Pattern CLUE_SCROLL_COMPLETED = Pattern.compile(
+        "^You have completed [\\d,]+ (beginner|easy|medium|hard|elite|master) "
+            + "Treasure Trails?\\.?",
+        Pattern.CASE_INSENSITIVE);
+
     static
     {
         Map<String, Pattern> patterns = new LinkedHashMap<>();
@@ -59,7 +74,10 @@ public final class ActivityTelemetryDetector
             "pest_control_game", "hunter_rumour", "fishing_trawler_game",
             "barbarian_assault_wave", "giants_foundry_commission",
             "mahogany_homes_contract", "agility_lap",
-            "tithe_farm_fruit_deposited");
+            "tithe_farm_fruit_deposited",
+            "clue_scrolls_beginner", "clue_scrolls_easy",
+            "clue_scrolls_medium", "clue_scrolls_hard", "clue_scrolls_elite",
+            "clue_scrolls_master", "clue_scrolls_all");
         SUPPORTED_ACTIVITIES = Collections.unmodifiableSet(supported);
     }
 
@@ -129,6 +147,12 @@ public final class ActivityTelemetryDetector
             onMahoganyHomesContractsCompleted(mahoganyHomesContracts.group(1));
             return;
         }
+        Matcher clueScrollCompleted = CLUE_SCROLL_COMPLETED.matcher(message);
+        if (clueScrollCompleted.find())
+        {
+            onClueScrollCompleted(clueScrollCompleted.group(1).toLowerCase());
+            return;
+        }
         for (Map.Entry<String, Pattern> entry : CHAT_COMPLETIONS.entrySet())
         {
             if (entry.getValue().matcher(message).find())
@@ -196,6 +220,26 @@ public final class ActivityTelemetryDetector
         {
             // Unexpected chat formatting - the varbit listener in
             // ClanHQVerifierPlugin.onVarbitChanged remains as a fallback.
+        }
+    }
+
+    /**
+     * Record one Treasure Trail completion, plus a matching bump to the
+     * "any tier" aggregate activity (a tier completion is always also an
+     * "all tiers" completion). See CLUE_SCROLL_COMPLETED for why this is a
+     * discrete +1 event rather than a counter delta.
+     */
+    private void onClueScrollCompleted(String tier)
+    {
+        String activity = "clue_scrolls_" + tier;
+        if (!SUPPORTED_ACTIVITIES.contains(activity))
+        {
+            return;
+        }
+        emit(activity, 1, Collections.emptyMap());
+        if (SUPPORTED_ACTIVITIES.contains("clue_scrolls_all"))
+        {
+            emit("clue_scrolls_all", 1, Collections.emptyMap());
         }
     }
 

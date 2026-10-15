@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.swing.JComponent;
@@ -30,11 +31,12 @@ public final class EventFeature implements ClanHQFeature
     private final Map<Long, Instant> lastSkillSubmissions = new HashMap<>();
     private final AtomicBoolean refreshInFlight = new AtomicBoolean();
 
-    public EventFeature(EventApiClient apiClient, Supplier<String> rsnSupplier)
+    public EventFeature(EventApiClient apiClient, Supplier<String> rsnSupplier,
+        BooleanSupplier showLeaderboard, BooleanSupplier showMyRank)
     {
         this.apiClient = apiClient;
         this.rsnSupplier = rsnSupplier;
-        this.panel = new EventPanel(this::refresh);
+        this.panel = new EventPanel(this::refresh, showLeaderboard, showMyRank);
     }
 
     @Override
@@ -74,6 +76,11 @@ public final class EventFeature implements ClanHQFeature
         {
             lastSkillSubmissions.clear();
         }
+    }
+
+    public List<ClanEventSummary> getCurrentEvents()
+    {
+        return currentEvents;
     }
 
     public void refresh()

@@ -18,173 +18,17 @@ public interface ClanHQVerifierConfig extends Config
         INFO_BOXES
     }
 
-    @ConfigSection(
-        name = "Features",
-        description = "ClanHQ tools available in the side panel",
-        position = -1)
-    String FEATURES_SECTION = "features";
-
-    @ConfigItem(
-        keyName = "eventsEnabled",
-        name = "Events",
-        description = "Join and display ClanHQ competitions",
-        section = FEATURES_SECTION,
-        position = 1)
-    default boolean eventsEnabled()
+    enum BingoSubmitMode
     {
-        return true;
-    }
-
-    @ConfigItem(
-        keyName = "bingoEnabled",
-        name = "Bingo",
-        description = "Load the active Bingo board and submit eligible Loot Tracker events",
-        section = FEATURES_SECTION,
-        position = 2)
-    default boolean bingoEnabled()
-    {
-        return false;
-    }
-
-    @ConfigItem(
-        keyName = "dailyTasksEnabled",
-        name = "Tasks",
-        description = "View and claim ClanHQ currency daily tasks",
-        section = FEATURES_SECTION,
-        position = 3)
-    default boolean dailyTasksEnabled()
-    {
-        return true;
-    }
-
-    @ConfigItem(
-        keyName = "bingoScreenshotsEnabled",
-        name = "Bingo screenshots",
-        description = "Attach a watermarked gameplay screenshot to Bingo drops",
-        section = FEATURES_SECTION,
-        position = 4)
-    default boolean bingoScreenshotsEnabled()
-    {
-        return false;
+        AUTOMATIC,
+        MANUAL_CONFIRM
     }
 
     @ConfigSection(
-        name = "Task overlay",
-        description = "Customize the in-game daily task display",
-        position = 0)
-    String TASK_OVERLAY_SECTION = "taskOverlay";
-
-    @ConfigItem(
-        keyName = "dailyTasksOverlay",
-        name = "Show overlay",
-        description = "Show today's ClanHQ task progress in the game overlay",
-        section = TASK_OVERLAY_SECTION,
-        position = 0)
-    default boolean dailyTasksOverlay()
-    {
-        return true;
-    }
-
-    @ConfigItem(
-        keyName = "dailyTasksDisplayMode",
-        name = "Display mode",
-        description = "Choose between the compact task overlay and RuneLite info boxes",
-        section = TASK_OVERLAY_SECTION,
-        position = 1)
-    default DailyTasksDisplayMode dailyTasksDisplayMode()
-    {
-        return DailyTasksDisplayMode.OVERLAY;
-    }
-
-    @Range(min = 0, max = 255)
-    @ConfigItem(
-        keyName = "dailyTasksOverlayOpacity",
-        name = "Opacity",
-        description = "Background opacity (0 is transparent, 255 is opaque)",
-        section = TASK_OVERLAY_SECTION,
-        position = 2)
-    default int dailyTasksOverlayOpacity()
-    {
-        return 220;
-    }
-
-    @ConfigSection(
-        name = "ClanHQ connection",
+        name = "ClanHQ Connection",
         description = "Where review evidence will be submitted",
-        position = 1)
+        position = -2)
     String CONNECTION_SECTION = "connection";
-
-    @ConfigSection(
-        name = "Bingo",
-        description = "Connect to the active ClanHQ Bingo event",
-        position = 2)
-    String BINGO_SECTION = "bingo";
-
-    @ConfigItem(
-        keyName = "bingoPasswordOverlay",
-        name = "Display Overlay",
-        description = "Show the Bingo event/challenge password overlay above your character",
-        section = BINGO_SECTION,
-        position = 0)
-    default boolean bingoPasswordOverlay()
-    {
-        return false;
-    }
-
-    @ConfigItem(
-        keyName = "bingoPasswordOverlayDateTime",
-        name = "Date & Time",
-        description = "Also show the current date and time in the password overlay",
-        section = BINGO_SECTION,
-        position = 1)
-    default boolean bingoPasswordOverlayDateTime()
-    {
-        return false;
-    }
-
-    @ConfigItem(
-        keyName = "bingoEventPassword",
-        name = "Event Password",
-        description = "Shown in the overlay unless your clan has set one for the active Bingo event",
-        section = BINGO_SECTION,
-        position = 2)
-    default String bingoEventPassword()
-    {
-        return "";
-    }
-
-    @ConfigItem(
-        keyName = "bingoChallengePassword",
-        name = "Challenge Password",
-        description = "Shown in the overlay unless your clan has set one for the active Bingo event",
-        section = BINGO_SECTION,
-        position = 3)
-    default String bingoChallengePassword()
-    {
-        return "";
-    }
-
-    @ConfigItem(
-        keyName = "bingoEventPasswordColor",
-        name = "Event Password Color",
-        description = "Colors below must be different",
-        section = BINGO_SECTION,
-        position = 4)
-    default Color bingoEventPasswordColor()
-    {
-        return Color.GREEN;
-    }
-
-    @ConfigItem(
-        keyName = "bingoChallengePasswordColor",
-        name = "Challenge Password Color",
-        description = "Colors below must be different",
-        section = BINGO_SECTION,
-        position = 5)
-    default Color bingoChallengePasswordColor()
-    {
-        return Color.WHITE;
-    }
 
     @ConfigItem(
         keyName = "apiBaseUrl",
@@ -243,6 +87,179 @@ public interface ClanHQVerifierConfig extends Config
     default String pendingInstallationToken()
     {
         return "";
+    }
+
+    @ConfigSection(
+        name = "Events",
+        description = "Join and display ClanHQ competitions",
+        position = -1)
+    String EVENTS_SECTION = "events";
+
+    @ConfigItem(
+        keyName = "eventsEnabled",
+        name = "Enabled",
+        description = "Join and display ClanHQ competitions",
+        section = EVENTS_SECTION,
+        position = 0)
+    default boolean eventsEnabled()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "eventsShowLeaderboard",
+        name = "Show leaderboard",
+        description = "Show the top 3 standings for active Skill/Boss of the Week competitions, in the overlay and the Events tab",
+        section = EVENTS_SECTION,
+        position = 1)
+    default boolean eventsShowLeaderboard()
+    {
+        return false;
+    }
+
+    @ConfigItem(
+        keyName = "eventsShowMyRank",
+        name = "Show my rank",
+        description = "Show your own position and score for active competitions, even outside the top 3, in the overlay and the Events tab",
+        section = EVENTS_SECTION,
+        position = 2)
+    default boolean eventsShowMyRank()
+    {
+        return false;
+    }
+
+    @ConfigSection(
+        name = "Tasks",
+        description = "View and claim ClanHQ currency daily tasks",
+        position = 0)
+    String TASKS_SECTION = "tasks";
+
+    @ConfigItem(
+        keyName = "dailyTasksEnabled",
+        name = "Enabled",
+        description = "View and claim ClanHQ currency daily tasks",
+        section = TASKS_SECTION,
+        position = 0)
+    default boolean dailyTasksEnabled()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "dailyTasksOverlay",
+        name = "Show overlay",
+        description = "Show today's ClanHQ task progress in the game overlay",
+        section = TASKS_SECTION,
+        position = 1)
+    default boolean dailyTasksOverlay()
+    {
+        return true;
+    }
+
+    @ConfigItem(
+        keyName = "dailyTasksDisplayMode",
+        name = "Display mode",
+        description = "Choose between the compact task overlay and RuneLite info boxes",
+        section = TASKS_SECTION,
+        position = 2)
+    default DailyTasksDisplayMode dailyTasksDisplayMode()
+    {
+        return DailyTasksDisplayMode.OVERLAY;
+    }
+
+    @Range(min = 0, max = 255)
+    @ConfigItem(
+        keyName = "dailyTasksOverlayOpacity",
+        name = "Opacity",
+        description = "Background opacity (0 is transparent, 255 is opaque)",
+        section = TASKS_SECTION,
+        position = 3)
+    default int dailyTasksOverlayOpacity()
+    {
+        return 220;
+    }
+
+    @ConfigSection(
+        name = "Bingo",
+        description = "Connect to the active ClanHQ Bingo event",
+        position = 1)
+    String BINGO_SECTION = "bingo";
+
+    @ConfigItem(
+        keyName = "bingoEnabled",
+        name = "Enabled",
+        description = "Load the active Bingo board and submit eligible Loot Tracker events",
+        section = BINGO_SECTION,
+        position = 0)
+    default boolean bingoEnabled()
+    {
+        return false;
+    }
+
+    @ConfigItem(
+        keyName = "bingoScreenshotsEnabled",
+        name = "Screenshots",
+        description = "Attach a watermarked gameplay screenshot to Bingo drops",
+        section = BINGO_SECTION,
+        position = 1)
+    default boolean bingoScreenshotsEnabled()
+    {
+        return false;
+    }
+
+    @ConfigItem(
+        keyName = "bingoSubmitMode",
+        name = "Drop Submission",
+        description = "Automatic sends eligible drops immediately; Manual shows a Send to ClanHQ button first",
+        section = BINGO_SECTION,
+        position = 2)
+    default BingoSubmitMode bingoSubmitMode()
+    {
+        return BingoSubmitMode.AUTOMATIC;
+    }
+
+    @ConfigItem(
+        keyName = "bingoPasswordOverlay",
+        name = "Display Overlay",
+        description = "Show the Bingo name, your RSN/team, and passwords above your character",
+        section = BINGO_SECTION,
+        position = 3)
+    default boolean bingoPasswordOverlay()
+    {
+        return false;
+    }
+
+    @ConfigItem(
+        keyName = "bingoChallengePassword",
+        name = "Challenge Password",
+        description = "Shown in the overlay unless your clan has set one for the active Bingo event",
+        section = BINGO_SECTION,
+        position = 4)
+    default String bingoChallengePassword()
+    {
+        return "";
+    }
+
+    @ConfigItem(
+        keyName = "bingoEventPasswordColor",
+        name = "Event Password Color",
+        description = "Colors below must be different. The Event Password itself always comes from ClanHQ - there is nothing to type in",
+        section = BINGO_SECTION,
+        position = 5)
+    default Color bingoEventPasswordColor()
+    {
+        return Color.GREEN;
+    }
+
+    @ConfigItem(
+        keyName = "bingoChallengePasswordColor",
+        name = "Challenge Password Color",
+        description = "Colors below must be different",
+        section = BINGO_SECTION,
+        position = 6)
+    default Color bingoChallengePasswordColor()
+    {
+        return Color.WHITE;
     }
 
 }

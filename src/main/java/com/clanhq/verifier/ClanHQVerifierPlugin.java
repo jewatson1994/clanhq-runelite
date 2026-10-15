@@ -10,6 +10,7 @@ import com.clanhq.verifier.daily.DailyTasksFeature;
 import com.clanhq.verifier.daily.ActivityTelemetryDetector;
 import com.clanhq.verifier.daily.transport.DailyTasksApiClient;
 import com.clanhq.verifier.event.EventFeature;
+import com.clanhq.verifier.event.EventOverlay;
 import com.clanhq.verifier.event.transport.EventApiClient;
 import com.clanhq.verifier.feature.ClanHQFeature;
 import com.clanhq.verifier.overview.IdentityApiClient;
@@ -92,6 +93,7 @@ public final class ClanHQVerifierPlugin extends Plugin
     private BingoFeature bingoFeature;
     private BingoPasswordOverlay bingoPasswordOverlay;
     private EventFeature eventFeature;
+    private EventOverlay eventOverlay;
     private DailyTasksFeature dailyTasksFeature;
     private ActivityTelemetryDetector activityTelemetryDetector;
     private OverviewFeature overviewFeature;
@@ -130,7 +132,9 @@ public final class ClanHQVerifierPlugin extends Plugin
             || "dailyTasksEnabled".equals(event.getKey())
             || "dailyTasksOverlay".equals(event.getKey())
             || "dailyTasksDisplayMode".equals(event.getKey())
-            || "bingoPasswordOverlay".equals(event.getKey()))
+            || "bingoPasswordOverlay".equals(event.getKey())
+            || "eventsShowLeaderboard".equals(event.getKey())
+            || "eventsShowMyRank".equals(event.getKey()))
         {
             SwingUtilities.invokeLater(this::rebuildFeatures);
             return;
@@ -168,8 +172,15 @@ public final class ClanHQVerifierPlugin extends Plugin
         if (config.eventsEnabled())
         {
             eventFeature = new EventFeature(new EventApiClient(
-                httpClient, config, apiDestinationService), this::currentRsn);
+                httpClient, config, apiDestinationService), this::currentRsn,
+                config::eventsShowLeaderboard, config::eventsShowMyRank);
             enabled.add(eventFeature);
+            if (config.eventsShowLeaderboard() || config.eventsShowMyRank())
+            {
+                eventOverlay = new EventOverlay(eventFeature::getCurrentEvents,
+                    config::eventsShowLeaderboard, config::eventsShowMyRank);
+                overlayManager.add(eventOverlay);
+            }
         }
         if (config.bingoEnabled())
         {
@@ -180,17 +191,18 @@ public final class ClanHQVerifierPlugin extends Plugin
                 snapshotService,
                 clientThread,
                 submissionConsent,
+                itemManager,
+                config::bingoSubmitMode,
                 () -> { if (overviewFeature != null) overviewFeature.refreshSummary(); });
             enabled.add(bingoFeature);
             if (config.bingoPasswordOverlay())
             {
                 bingoPasswordOverlay = new BingoPasswordOverlay(
                     () -> bingoFeature == null ? null : bingoFeature.getManifest(),
-                    config::bingoEventPassword,
+                    this::currentRsn,
                     config::bingoChallengePassword,
                     config::bingoEventPasswordColor,
-                    config::bingoChallengePasswordColor,
-                    config::bingoPasswordOverlayDateTime);
+                    config::bingoChallengePasswordColor);
                 overlayManager.add(bingoPasswordOverlay);
             }
         }
@@ -241,6 +253,11 @@ public final class ClanHQVerifierPlugin extends Plugin
             overlayManager.remove(bingoPasswordOverlay);
             bingoPasswordOverlay = null;
         }
+        if (eventOverlay != null)
+        {
+            overlayManager.remove(eventOverlay);
+            eventOverlay = null;
+        }
         features.forEach(ClanHQFeature::shutDown);
         features = Collections.emptyList();
         overviewFeature = null;
@@ -285,10 +302,10 @@ public final class ClanHQVerifierPlugin extends Plugin
             eventFeature.onSkillExperience(
                 event.getSkill().getName(), event.getXp());
         }
-        if (dailyTasksFeature != null)
+        if (dailyTasksFeature != null && client.getGameState() == GameState.LOGGED_IN)
         {
             dailyTasksFeature.observeSkillExperience(
-                event.getSkill().getName(), event.getXp());
+                currentRsn(), event.getSkill().getName(), event.getXp());
         }
         if (activityTelemetryDetector != null
             && event.getSkill() == Skill.AGILITY
@@ -387,6 +404,7 @@ public final class ClanHQVerifierPlugin extends Plugin
         if (event.getGameState() != GameState.LOGGED_IN)
         {
             loggedInRsn = null;
+            if (dailyTasksFeature != null) { dailyTasksFeature.setAccount(null); }
             return;
         }
         loggedInRsn = currentRsn();
@@ -408,6 +426,19 @@ public final class ClanHQVerifierPlugin extends Plugin
             return;
         }
         String current = currentRsn();
+        // Bind only after login has populated the local player. Stat events
+        // arriving earlier must not use the previous character's XP baseline.
+        if (dailyTasksFeature != null && dailyTasksFeature.setAccount(current))
+        {
+            for (Skill skill : Skill.values())
+            {
+                if (skill != Skill.OVERALL)
+                {
+                    dailyTasksFeature.observeSkillExperience(
+                        current, skill.getName(), client.getSkillExperience(skill));
+                }
+            }
+        }
         if (!Objects.equals(current, loggedInRsn))
         {
             loggedInRsn = current;

@@ -18,7 +18,10 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Base64;
+import java.nio.charset.StandardCharsets;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 import net.runelite.api.MenuAction;
@@ -60,7 +63,8 @@ public final class DailyTasksOverlay extends OverlayPanel
     private static final int DIFFICULTY_ICON_SIZE = 15;
 
     private final Supplier<DailyTasksSnapshot> snapshotSupplier;
-    private final ConfigManager configManager;
+    private final Function<String, String> loadState;
+    private final BiConsumer<String, String> saveState;
     private final BiConsumer<String, Integer> liveProgressListener;
     private final ItemManager itemManager;
     private final IntSupplier opacitySupplier;
@@ -72,6 +76,8 @@ public final class DailyTasksOverlay extends OverlayPanel
     private final Map<String, Integer> latestSkillExperience = new HashMap<>();
     private volatile String selectedCategory;
     private volatile Instant loadedResetAt;
+    private String stateKey;
+    private String activeRsn = "";
 
     public DailyTasksOverlay(Supplier<DailyTasksSnapshot> snapshotSupplier,
         ConfigManager configManager)
@@ -113,8 +119,29 @@ public final class DailyTasksOverlay extends OverlayPanel
         SkillIconManager skillIconManager,
         SpriteManager spriteManager)
     {
+        this(snapshotSupplier,
+            key -> configManager.getConfiguration(ClanHQVerifierConfig.GROUP, key),
+            (key, value) -> {
+                if (value == null) { configManager.unsetConfiguration(ClanHQVerifierConfig.GROUP, key); }
+                else { configManager.setConfiguration(ClanHQVerifierConfig.GROUP, key, value); }
+            }, liveProgressListener, itemManager, opacitySupplier, skillIconManager, spriteManager);
+    }
+
+    DailyTasksOverlay(Supplier<DailyTasksSnapshot> snapshotSupplier,
+        Function<String, String> loadState, BiConsumer<String, String> saveState)
+    {
+        this(snapshotSupplier, loadState, saveState, null, null, null, null, null);
+    }
+
+    private DailyTasksOverlay(Supplier<DailyTasksSnapshot> snapshotSupplier,
+        Function<String, String> loadState, BiConsumer<String, String> saveState,
+        BiConsumer<String, Integer> liveProgressListener, ItemManager itemManager,
+        IntSupplier opacitySupplier, SkillIconManager skillIconManager,
+        SpriteManager spriteManager)
+    {
         this.snapshotSupplier = snapshotSupplier;
-        this.configManager = configManager;
+        this.loadState = loadState;
+        this.saveState = saveState;
         this.liveProgressListener = liveProgressListener == null
             ? (category, progress) -> { } : liveProgressListener;
         this.itemManager = itemManager;
@@ -122,7 +149,6 @@ public final class DailyTasksOverlay extends OverlayPanel
             ? () -> DEFAULT_OVERLAY_OPACITY : opacitySupplier;
         this.skillIconManager = skillIconManager;
         this.spriteManager = spriteManager;
-        loadPersistedState();
         setPosition(OverlayPosition.TOP_LEFT);
         // OverlayManager loads persisted bounds after construction. This
         // preferred width is only the first-run default.
@@ -142,11 +168,41 @@ public final class DailyTasksOverlay extends OverlayPanel
             entry -> selectTask("DROP"));
     }
 
+    /** Each character gets a separate key, including in clients sharing a profile.
+     * The old profile-wide state cannot be safely attributed and is never loaded. */
+    public boolean setAccount(String installationScope, String rsn)
+    {
+        synchronized (stateLock)
+        {
+            String account = normalize(rsn);
+            String key = account.isEmpty() || installationScope == null || installationScope.isEmpty()
+                ? null : STATE_KEY + "V2_" + installationScope + "_"
+                    + Base64.getUrlEncoder().withoutPadding().encodeToString(
+                        account.getBytes(StandardCharsets.UTF_8));
+            if (java.util.Objects.equals(stateKey, key)) { return false; }
+            liveProgress.clear();
+            skillBaselines.clear();
+            latestSkillExperience.clear();
+            loadedResetAt = null;
+            stateKey = key;
+            activeRsn = key == null ? "" : account;
+            if (key != null)
+            {
+                loadPersistedState();
+                setSnapshot(snapshotSupplier.get());
+            }
+        }
+        publishLiveProgress();
+        revalidate();
+        return true;
+    }
+
     /** Replace the server snapshot and preserve local progress for this period. */
     public void setSnapshot(DailyTasksSnapshot snapshot)
     {
         synchronized (stateLock)
         {
+            if (stateKey == null) { return; }
             boolean newPeriod = snapshot != null && (loadedResetAt == null
                 || !loadedResetAt.equals(snapshot.getResetAt()));
             if (newPeriod)
@@ -187,25 +243,20 @@ public final class DailyTasksOverlay extends OverlayPanel
     }
 
     /** Apply a local skill XP event to the matching skilling task. */
-    public void observeSkillExperience(String skillName, int experience)
+    public void observeSkillExperience(String rsn, String skillName, int experience)
     {
         // RuneLite can briefly report -1 or 0 while the logged-in skill table
         // is still initializing. Never use those values as a task baseline.
-        if (experience <= 0)
+        if (experience <= 0 || skillName == null)
         {
             return;
         }
         synchronized (stateLock)
         {
+            if (stateKey == null || !activeRsn.equals(normalize(rsn))) { return; }
             latestSkillExperience.put(normalize(skillName), experience);
-        }
-        DailyTasksSnapshot snapshot = snapshotSupplier.get();
-        if (snapshot == null || skillName == null)
-        {
-            return;
-        }
-        synchronized (stateLock)
-        {
+            DailyTasksSnapshot snapshot = snapshotSupplier.get();
+            if (snapshot == null) { return; }
             for (DailyTaskSummary task : snapshot.getTasks())
             {
                 if (!"SKILLING".equals(task.getCategory())
@@ -237,6 +288,7 @@ public final class DailyTasksOverlay extends OverlayPanel
         }
         synchronized (stateLock)
         {
+            if (stateKey == null) { return; }
             for (DailyTaskSummary task : snapshot.getTasks())
             {
                 if (("PVM".equals(task.getCategory())
@@ -270,6 +322,7 @@ public final class DailyTasksOverlay extends OverlayPanel
         }
         synchronized (stateLock)
         {
+            if (stateKey == null) { return; }
             for (DailyTaskSummary task : snapshot.getTasks())
             {
                 ItemDropMatcher.Match match = matches.get(task.getId());
@@ -417,30 +470,34 @@ public final class DailyTasksOverlay extends OverlayPanel
 
     public JsonArray buildClientProgress(String category)
     {
-        JsonArray values = new JsonArray();
-        DailyTasksSnapshot snapshot = snapshotSupplier.get();
-        if (snapshot == null)
+        synchronized (stateLock)
         {
+            JsonArray values = new JsonArray();
+            DailyTasksSnapshot snapshot = snapshotSupplier.get();
+            if (snapshot == null || stateKey == null)
+            {
+                return values;
+            }
+            for (DailyTaskSummary task : snapshot.getTasks())
+            {
+                if (category != null && !category.equals(task.getCategory()))
+                {
+                    continue;
+                }
+                JsonObject value = new JsonObject();
+                value.addProperty("rsn", activeRsn);
+                if (task.getId() != null && !task.getId().trim().isEmpty())
+                {
+                    value.addProperty("id", task.getId());
+                }
+                value.addProperty("category", task.getCategory());
+                value.addProperty("name", task.getName());
+                value.addProperty("target", task.getTarget());
+                value.addProperty("progress", progressFor(task));
+                values.add(value);
+            }
             return values;
         }
-        for (DailyTaskSummary task : snapshot.getTasks())
-        {
-            if (category != null && !category.equals(task.getCategory()))
-            {
-                continue;
-            }
-            JsonObject value = new JsonObject();
-            if (task.getId() != null && !task.getId().trim().isEmpty())
-            {
-                value.addProperty("id", task.getId());
-            }
-            value.addProperty("category", task.getCategory());
-            value.addProperty("name", task.getName());
-            value.addProperty("target", task.getTarget());
-            value.addProperty("progress", progressFor(task));
-            values.add(value);
-        }
-        return values;
     }
 
     public void clearPersistedState()
@@ -451,16 +508,14 @@ public final class DailyTasksOverlay extends OverlayPanel
             skillBaselines.clear();
             latestSkillExperience.clear();
             loadedResetAt = null;
-            configManager.unsetConfiguration(
-                ClanHQVerifierConfig.GROUP, STATE_KEY);
+            if (stateKey != null) { saveState.accept(stateKey, null); }
         }
         revalidate();
     }
 
     private void loadPersistedState()
     {
-        String raw = configManager.getConfiguration(
-            ClanHQVerifierConfig.GROUP, STATE_KEY);
+        String raw = loadState.apply(stateKey);
         if (raw == null || raw.trim().isEmpty())
         {
             return;
@@ -478,13 +533,17 @@ public final class DailyTasksOverlay extends OverlayPanel
         }
         catch (RuntimeException ignored)
         {
-            configManager.unsetConfiguration(ClanHQVerifierConfig.GROUP, STATE_KEY);
+            liveProgress.clear();
+            skillBaselines.clear();
+            latestSkillExperience.clear();
+            loadedResetAt = null;
+            saveState.accept(stateKey, null);
         }
     }
 
     private void persistState()
     {
-        if (loadedResetAt == null)
+        if (loadedResetAt == null || stateKey == null)
         {
             return;
         }
@@ -493,8 +552,7 @@ public final class DailyTasksOverlay extends OverlayPanel
         root.add("progress", writeIntMap(liveProgress));
         root.add("baselines", writeIntMap(skillBaselines));
         root.add("latest_xp", writeIntMap(latestSkillExperience));
-        configManager.setConfiguration(
-            ClanHQVerifierConfig.GROUP, STATE_KEY, root.toString());
+        saveState.accept(stateKey, root.toString());
     }
 
     private static JsonObject writeIntMap(Map<String, Integer> values)
@@ -593,7 +651,7 @@ public final class DailyTasksOverlay extends OverlayPanel
 
     private static String normalize(String value)
     {
-        return value == null ? "" : value.replace('_', ' ')
+        return value == null ? "" : value.replace('_', ' ').replace('\u00a0', ' ')
             .trim().toLowerCase(Locale.ENGLISH);
     }
 

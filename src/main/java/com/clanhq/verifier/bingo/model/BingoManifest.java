@@ -122,7 +122,8 @@ public final class BingoManifest
                 integer(item, "item_id"),
                 text(item, "name"),
                 integer(item, "minimum_quantity"),
-                integer(item, "points")));
+                integer(item, "points"),
+                optionalNullableText(item, "raid")));
         }
         BingoCharacterCheckStatus characterCheck =
             BingoCharacterCheckStatus.empty();
