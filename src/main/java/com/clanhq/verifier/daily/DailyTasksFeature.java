@@ -9,6 +9,7 @@ import com.clanhq.verifier.feature.ClanHQFeature;
 import com.clanhq.verifier.loot.ObservedDrop;
 import com.clanhq.verifier.task.VerificationType;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonArray;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
 import java.time.Duration;
@@ -252,12 +253,18 @@ public final class DailyTasksFeature implements ClanHQFeature
             panel.showError("This task is not claimable yet.", true);
             return;
         }
+        JsonArray progress = overlay.buildClientProgress(null);
+        if (progress.size() == 0)
+        {
+            panel.showError("Log in to your RuneScape account before claiming.", true);
+            return;
+        }
         String contextId = current.getContext() == null
             ? "" : current.getContext().getId();
         pendingClaimStore.enqueue(installationScope, current.getPeriodDate(),
             current.getResetAt().toString(), clickedAt.toString(), contextId, category,
             chosen.getId() == null ? "" : chosen.getId(),
-            overlay.buildClientProgress(null));
+            progress);
         panel.setPending(category);
         flushPendingClaim();
     }
@@ -383,9 +390,30 @@ public final class DailyTasksFeature implements ClanHQFeature
         deliveryTimeout = null;
     }
 
-    public void observeSkillExperience(String skillName, int experience)
+    public boolean setAccount(String rsn)
     {
-        overlay.observeSkillExperience(skillName, experience);
+        ensureInstallationScope();
+        boolean changed = overlay.setAccount(installationScope, rsn);
+        if (changed)
+        {
+            SwingUtilities.invokeLater(() -> {
+                DailyTasksSnapshot current = snapshot;
+                if (current != null)
+                {
+                    // Cards normally retain the highest live value. Rebuild
+                    // them when switching accounts so that value cannot leak.
+                    panel.showTasks(current, "Account progress updated.");
+                    overlay.publishLiveProgress();
+                    updateInfoBoxes(current);
+                }
+            });
+        }
+        return changed;
+    }
+
+    public void observeSkillExperience(String rsn, String skillName, int experience)
+    {
+        overlay.observeSkillExperience(rsn, skillName, experience);
     }
 
     private void ensureInstallationScope()
@@ -395,11 +423,11 @@ public final class DailyTasksFeature implements ClanHQFeature
         if (scope.equals(installationScope)) { return; }
         String stored = configManager.getConfiguration(
             ClanHQVerifierConfig.GROUP, INSTALLATION_SCOPE_KEY);
+        invalidateDelivery();
+        snapshot = null;
+        overlay.setAccount(scope, null);
         if (!scope.equals(stored))
         {
-            invalidateDelivery();
-            snapshot = null;
-            overlay.clearPersistedState();
             configManager.setConfiguration(
                 ClanHQVerifierConfig.GROUP, INSTALLATION_SCOPE_KEY, scope);
         }

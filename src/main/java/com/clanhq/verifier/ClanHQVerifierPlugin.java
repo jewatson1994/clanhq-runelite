@@ -302,10 +302,10 @@ public final class ClanHQVerifierPlugin extends Plugin
             eventFeature.onSkillExperience(
                 event.getSkill().getName(), event.getXp());
         }
-        if (dailyTasksFeature != null)
+        if (dailyTasksFeature != null && client.getGameState() == GameState.LOGGED_IN)
         {
             dailyTasksFeature.observeSkillExperience(
-                event.getSkill().getName(), event.getXp());
+                currentRsn(), event.getSkill().getName(), event.getXp());
         }
         if (activityTelemetryDetector != null
             && event.getSkill() == Skill.AGILITY
@@ -404,6 +404,7 @@ public final class ClanHQVerifierPlugin extends Plugin
         if (event.getGameState() != GameState.LOGGED_IN)
         {
             loggedInRsn = null;
+            if (dailyTasksFeature != null) { dailyTasksFeature.setAccount(null); }
             return;
         }
         loggedInRsn = currentRsn();
@@ -425,6 +426,19 @@ public final class ClanHQVerifierPlugin extends Plugin
             return;
         }
         String current = currentRsn();
+        // Bind only after login has populated the local player. Stat events
+        // arriving earlier must not use the previous character's XP baseline.
+        if (dailyTasksFeature != null && dailyTasksFeature.setAccount(current))
+        {
+            for (Skill skill : Skill.values())
+            {
+                if (skill != Skill.OVERALL)
+                {
+                    dailyTasksFeature.observeSkillExperience(
+                        current, skill.getName(), client.getSkillExperience(skill));
+                }
+            }
+        }
         if (!Objects.equals(current, loggedInRsn))
         {
             loggedInRsn = current;

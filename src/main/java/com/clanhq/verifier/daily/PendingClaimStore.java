@@ -37,7 +37,8 @@ final class PendingClaimStore
                 JsonObject claim = value.getAsJsonObject();
                 if (claim.has("claim_id") && claim.has("scope")
                     && claim.has("period_date") && claim.has("reset_at")
-                    && claim.has("category") && claim.has("client_progress"))
+                    && claim.has("category") && claim.has("client_progress")
+                    && hasAccountBoundSkillProgress(claim))
                 {
                     claims.add(claim);
                 }
@@ -48,6 +49,22 @@ final class PendingClaimStore
             // Preserve malformed data for support rather than silently deleting it.
             claims.clear();
         }
+    }
+
+    private static boolean hasAccountBoundSkillProgress(JsonObject claim)
+    {
+        if (!"SKILLING".equals(string(claim, "category"))) { return true; }
+        // Older clients could save inflated XP after switching accounts. Those
+        // claims have no RSN and must not be replayed automatically on upgrade.
+        for (JsonElement value : claim.getAsJsonArray("client_progress"))
+        {
+            JsonObject progress = value.getAsJsonObject();
+            if ("SKILLING".equals(string(progress, "category")))
+            {
+                return !string(progress, "rsn").trim().isEmpty();
+            }
+        }
+        return false;
     }
 
     synchronized JsonObject enqueue(String scope, String periodDate,
